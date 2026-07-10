@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SM BOQ Tool — Panduan Pengguna (ID)</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pu-50:  #f5f3ff;
+    --pu-100: #ddd6fe;
+    --pu-200: #c4b5fd;
+    --pu-500: #6d28d9;
+    --pu-600: #5b21b6;
+    --pu-700: #4c1d95;
+    --pu-800: #3b0764;
+    --gold:   #c8a96e;
+    --ink:    #1a1d2e;
+    --ink-soft: #6c7080;
+    --line:   #e8eaf0;
+    --warn-bg: #fef3c7;
+    --warn-border: #f59e0b;
+    --warn-text: #92400e;
+    --tip-bg: #f0fdf4;
+    --tip-border: #86efac;
+    --tip-text: #14532d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Base (print-calibrated) ── */
+  body {
+    font-family: 'Manrope', sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.55;
+    color: var(--ink);
+    background: #fff;
+  }
+
+  @page {
+    size: A4;
+    margin: 13mm 13mm 15mm 13mm;
+    @bottom-center {
+      content: counter(page) " / " counter(pages);
+      font-family: 'Manrope', sans-serif;
+      font-size: 7.5pt;
+      color: #9ca3af;
+    }
+  }
+
+  /* ── Screen wrapper ── */
+  @media screen {
+    html { background: #dde0e8; min-height: 100vh; padding: 28px 16px; }
+    body {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 56px;
+      font-size: 14px;
+      line-height: 1.65;
+      box-shadow: 0 2px 8px rgba(0,0,0,.10), 0 8px 32px rgba(0,0,0,.08);
+      border-radius: 4px;
+    }
+    .cover { height: auto !important; padding: 36px 0 40px; border-bottom: 2px solid var(--pu-100); margin-bottom: 44px; page-break-after: unset; }
+    .toc   { page-break-after: unset; padding-bottom: 36px; border-bottom: 1px solid var(--line); margin-bottom: 40px; }
+    .chapter { page-break-before: unset; margin-top: 44px; }
+    .chapter:first-of-type { margin-top: 0; }
+    h1 { font-size: 22px; margin: 36px 0 14px; padding-bottom: 10px; }
+    h1:first-child { margin-top: 0; }
+    h2 { font-size: 15px; margin: 22px 0 8px; }
+    h3 { font-size: 14px; margin: 16px 0 6px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { margin: 6px 0 10px 20px; }
+    li { margin-bottom: 4px; }
+    .note, .tip, .info { padding: 10px 14px; margin: 10px 0; font-size: 13px; }
+    table { margin: 10px 0 14px; font-size: 13px; }
+    thead th { padding: 8px 12px; }
+    tbody td { padding: 7px 12px; }
+    .section-card { padding: 14px 18px; margin: 10px 0; }
+    .steps { margin: 8px 0 12px; }
+    .steps li { gap: 10px; margin-bottom: 8px; }
+    .steps li::before { width: 20px; height: 20px; font-size: 11px; }
+    .interface-grid { gap: 10px; margin: 10px 0; }
+    .zone { padding: 10px 14px; }
+    .zone-name { font-size: 13px; margin-bottom: 4px; }
+    .zone p { font-size: 12px; }
+    .toc-item { padding: 6px 0; font-size: 14px; }
+    .cover-title { font-size: 38px; margin-bottom: 10px; }
+    .cover-subtitle { font-size: 17px; }
+    .cover-brand { font-size: 11px; margin-bottom: 14px; }
+    .cover-mid { padding: 20px 24px; border-radius: 10px; }
+    .cover-mid p { font-size: 14px; }
+    .cover-bottom { font-size: 12px; padding-top: 16px; }
+    .page-footer { margin-top: 36px; padding-top: 12px; font-size: 11px; }
+    .badge { font-size: 10px; padding: 2px 7px; }
+  }
+
+  /* ── Cover Page ── */
+  .cover {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    page-break-after: always;
+    padding: 8mm 0;
+  }
+  .cover-top { border-top: 4px solid var(--pu-700); padding-top: 8mm; }
+  .cover-brand {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 3mm;
+  }
+  .cover-brand span { color: var(--gold); }
+  .cover-title {
+    font-size: 24pt;
+    font-weight: 800;
+    color: var(--pu-700);
+    line-height: 1.15;
+    margin-bottom: 2mm;
+  }
+  .cover-subtitle { font-size: 11pt; font-weight: 500; color: var(--ink-soft); }
+  .cover-mid {
+    background: var(--pu-700);
+    color: #fff;
+    padding: 5mm 7mm;
+    border-radius: 6px;
+  }
+  .cover-mid p { font-size: 9.5pt; line-height: 1.6; opacity: .9; }
+  .cover-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-top: 1px solid var(--line);
+    padding-top: 3.5mm;
+    font-size: 7.5pt;
+    color: var(--ink-soft);
+  }
+  .cover-bottom strong { color: var(--ink); }
+
+  /* ── Typography ── */
+  h1 {
+    font-size: 13pt;
+    font-weight: 800;
+    color: var(--pu-700);
+    margin: 5mm 0 2mm;
+    padding-bottom: 1.5mm;
+    border-bottom: 2px solid var(--pu-100);
+    page-break-after: avoid;
+  }
+  h2 {
+    font-size: 10pt;
+    font-weight: 700;
+    color: var(--pu-700);
+    margin: 3.5mm 0 1.5mm;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 3mm 0 1mm;
+    page-break-after: avoid;
+  }
+  p  { margin-bottom: 1.5mm; }
+  ul, ol { margin: 1mm 0 1.8mm 4.5mm; }
+  li { margin-bottom: 0.7mm; }
+  strong { font-weight: 700; }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5pt;
+    background: var(--pu-50);
+    padding: 0 4px;
+    border-radius: 3px;
+    color: var(--pu-700);
+  }
+
+  /* ── Callouts ── */
+  .note {
+    background: var(--warn-bg);
+    border-left: 3px solid var(--warn-border);
+    padding: 2mm 3.5mm;
+    border-radius: 0 4px 4px 0;
+    margin: 2mm 0;
+    font-size: 8.5pt;
+    color: var(--warn-text);
+  }
+  .note strong { color: var(--warn-text); }
+  .tip {
+    background: var(--tip-bg);
+    border-left: 3px solid var(--tip-border);
+    padding: 2mm 3.5mm;
+    border-radius: 0 4px 4px 0;
+    margin: 2mm 0;
+    font-size: 8.5pt;
+    color: var(--tip-text);
+  }
+  .info {
+    background: var(--pu-50);
+    border-left: 3px solid var(--pu-500);
+    padding: 2mm 3.5mm;
+    border-radius: 0 4px 4px 0;
+    margin: 2mm 0;
+    font-size: 8.5pt;
+    color: var(--pu-700);
+  }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2mm 0 3mm;
+    font-size: 8.5pt;
+    page-break-inside: avoid;
+  }
+  thead tr { background: var(--pu-700); color: #fff; }
+  thead th { padding: 2mm 3mm; font-weight: 600; text-align: left; }
+  tbody td { padding: 1.5mm 3mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:nth-child(even) td { background: var(--pu-50); }
+  td:first-child { font-weight: 600; white-space: nowrap; color: var(--pu-700); }
+
+  /* ── Section cards ── */
+  .section-card {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 3mm 4mm;
+    margin: 2mm 0;
+    page-break-inside: avoid;
+  }
+  .section-card h3 { margin-top: 0; }
+
+  /* ── Workflow steps ── */
+  .steps { counter-reset: step; list-style: none; margin: 1.5mm 0 2.5mm 0; }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 2.5mm;
+    align-items: flex-start;
+    margin-bottom: 1.5mm;
+  }
+  .steps li::before {
+    content: counter(step);
+    background: var(--pu-700);
+    color: #fff;
+    font-size: 7pt;
+    font-weight: 700;
+    width: 4.5mm;
+    height: 4.5mm;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.3mm;
+  }
+
+  /* ── Interface map ── */
+  .interface-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5mm; margin: 2mm 0; }
+  .zone { border: 1px solid var(--pu-200); border-radius: 5px; padding: 2.5mm 3.5mm; background: var(--pu-50); }
+  .zone-name { font-weight: 700; color: var(--pu-700); font-size: 8.5pt; margin-bottom: 0.8mm; }
+  .zone p { font-size: 8pt; color: var(--ink-soft); margin: 0; }
+
+  /* ── Page breaks ── */
+  .chapter { page-break-before: always; }
+  .chapter:first-of-type { page-break-before: avoid; }
+  .toc { page-break-after: always; }
+  .toc h1 { margin-top: 0; }
+
+  /* ── TOC ── */
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 1mm 0;
+    border-bottom: 1px dotted var(--line);
+    font-size: 9pt;
+  }
+  .toc-item .toc-num { font-weight: 700; color: var(--pu-700); margin-right: 2.5mm; flex-shrink: 0; }
+  .toc-item .toc-title { flex: 1; }
+  .toc-item .toc-pg { font-size: 8pt; color: var(--ink-soft); font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Footer ── */
+  .page-footer {
+    margin-top: 5mm;
+    padding-top: 2mm;
+    border-top: 1px solid var(--line);
+    font-size: 7.5pt;
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; background: var(--pu-700); color: #fff; font-size: 7pt; font-weight: 700; padding: 1px 4px; border-radius: 3px; vertical-align: middle; }
+  .badge.gold { background: var(--gold); color: #3d2c00; }
+  .badge.gray { background: #e5e7eb; color: #374151; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cover { height: 257mm; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ COVER ═══════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-top">
+    <div class="cover-brand">PT. Mitra Usaha Lancar Jaya · <span>MulyaOne</span> · Alat Internal</div>
+    <div class="cover-title">SM BOQ Tool<br>Panduan Pengguna</div>
+    <div class="cover-subtitle">Stella Mobili — Alat Input Bill of Quantities</div>
+  </div>
+  <div class="cover-mid">
+    <p>Panduan ini mencakup semua yang dibutuhkan PIC baru untuk membuat Bill of Quantities per ruangan, mengelola item, mengekspor ke Excel dan PDF, serta mengirimkan ke SM Jakarta untuk verifikasi harga.</p>
+    <p style="margin-top:3mm;font-size:9pt;opacity:.7">Format quick-start — estimasi waktu baca: 10 menit</p>
+  </div>
+  <div class="cover-bottom">
+    <div>
+      <strong>Stella Mobili</strong><br>
+      Jl. Tegalsari 37<br>
+      More Value · More Possibilities
+    </div>
+    <div style="text-align:right">
+      <strong>Bahasa:</strong> Indonesia (ID)<br>
+      <strong>Versi alat:</strong> Price List v26.06.02<br>
+      <strong>Dokumen:</strong> Juni 2026
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ DAFTAR ISI ═══════════════════════════════════════ -->
+<div class="toc">
+  <h1>Daftar Isi</h1>
+  <div class="toc-item"><span class="toc-num">1</span><span class="toc-title">Pendahuluan</span><span class="toc-pg">3</span></div>
+  <div class="toc-item"><span class="toc-num">2</span><span class="toc-title">Gambaran Antarmuka</span><span class="toc-pg">3</span></div>
+  <div class="toc-item"><span class="toc-num">3</span><span class="toc-title">Memulai Proyek Baru</span><span class="toc-pg">4</span></div>
+  <div class="toc-item"><span class="toc-num">4</span><span class="toc-title">Menambah Item</span><span class="toc-pg">4</span></div>
+  <div class="toc-item" style="padding-left:6mm;font-size:9.5pt"><span class="toc-num" style="color:var(--ink-soft)">4.1</span><span class="toc-title">Kitchen</span><span class="toc-pg">4</span></div>
+  <div class="toc-item" style="padding-left:6mm;font-size:9.5pt"><span class="toc-num" style="color:var(--ink-soft)">4.2</span><span class="toc-title">Wardrobe</span><span class="toc-pg">5</span></div>
+  <div class="toc-item" style="padding-left:6mm;font-size:9.5pt"><span class="toc-num" style="color:var(--ink-soft)">4.3</span><span class="toc-title">Accessories</span><span class="toc-pg">5</span></div>
+  <div class="toc-item" style="padding-left:6mm;font-size:9.5pt"><span class="toc-num" style="color:var(--ink-soft)">4.4</span><span class="toc-title">Item Custom</span><span class="toc-pg">5</span></div>
+  <div class="toc-item"><span class="toc-num">5</span><span class="toc-title">Mengelola Tabel</span><span class="toc-pg">6</span></div>
+  <div class="toc-item"><span class="toc-num">6</span><span class="toc-title">Overview &amp; Totals</span><span class="toc-pg">6</span></div>
+  <div class="toc-item"><span class="toc-num">7</span><span class="toc-title">Versi Price List</span><span class="toc-pg">7</span></div>
+  <div class="toc-item"><span class="toc-num">8</span><span class="toc-title">Menyimpan &amp; Memuat</span><span class="toc-pg">7</span></div>
+  <div class="toc-item"><span class="toc-num">9</span><span class="toc-title">Ekspor (Excel &amp; PDF)</span><span class="toc-pg">7</span></div>
+  <div class="toc-item"><span class="toc-num">10</span><span class="toc-title">Tips &amp; Trik</span><span class="toc-pg">8</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════ BAB 1 ═══════════════════════════════════════ -->
+<div class="chapter">
+  <h1>1 · Pendahuluan</h1>
+  <p><strong>SM BOQ Tool</strong> adalah alat Bill of Quantities berbasis browser yang dibuat khusus untuk PIC Stella Mobili. Gunakan alat ini untuk menyusun daftar item furnitur per ruangan — kabinet dapur, lemari pakaian, dan aksesori — lengkap dengan harga showroom. Hasilnya dapat diekspor ke Excel atau PDF untuk presentasi klien, lalu dikirim ke SM Jakarta untuk verifikasi harga akhir.</p>
+  <p><strong>Tidak perlu instalasi.</strong> Buka <code>StellaMobili_BOM_Tool.html</code> di browser modern mana pun (Chrome, Edge, atau Firefox direkomendasikan). Seluruh alat — termasuk database harga lengkap — berjalan di dalam satu file tersebut.</p>
+  <div class="info">
+    Semua harga yang ditampilkan adalah <strong>Harga Showroom</strong> (belum termasuk PPN). Penentuan harga jual dan diskon ditangani terpisah oleh tim Sales.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ BAB 2 ═══════════════════════════════════════ -->
+<h1>2 · Gambaran Antarmuka</h1>
+<p>Alat ini terbagi menjadi empat zona utama:</p>
+<div class="interface-grid">
+  <div class="zone">
+    <div class="zone-name">Topbar</div>
+    <p>Logo merek, breadcrumb proyek, pill versi price list (kanan atas), dan tombol aksi load/save.</p>
+  </div>
+  <div class="zone">
+    <div class="zone-name">Sidebar</div>
+    <p>Daftar unit (ruangan/lokasi), navigasi ke Overview dan Totals, tombol <strong>View Database</strong> dan <strong>Import Price List</strong> di bagian bawah.</p>
+  </div>
+  <div class="zone">
+    <div class="zone-name">Area Utama</div>
+    <p>Area kerja utama. Berpindah antara tampilan <strong>Overview</strong>, <strong>Totals Matrix</strong>, dan <strong>pengeditan Unit</strong> sesuai yang diklik.</p>
+  </div>
+  <div class="zone">
+    <div class="zone-name">Notifikasi Toast</div>
+    <p>Konfirmasi singkat dan peringatan muncul di sudut kanan bawah dan menghilang otomatis.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ BAB 3 ═══════════════════════════════════════ -->
+<h1>3 · Memulai Proyek Baru</h1>
+<ol class="steps">
+  <li>Buka alat — dimulai dengan satu unit default bernama "Kitchen" dan proyek yang kosong.</li>
+  <li>Di tampilan <strong>Overview</strong>, isi kolom: <strong>Project Name</strong>, <strong>Client</strong>, <strong>PIC</strong>, <strong>Date</strong>, dan <strong>Notes to SM Jakarta</strong>.</li>
+  <li>Periksa dropdown <strong>Price List</strong> — secara default menampilkan versi terbaru. Biarkan apa adanya untuk proyek baru.</li>
+  <li>Ganti nama unit default dengan mengklik namanya di sidebar lalu mengetik nama baru (mis. "Kamar Master"). Tambah unit baru dengan tombol <strong>+ Add Unit</strong> di Overview.</li>
+</ol>
+<div class="tip">
+  <strong>Unit = Ruangan atau Lokasi.</strong> Buat satu unit per ruangan (mis. Kamar Master, Dapur, Ruang Tamu). Setiap unit akan mendapat sheet sendiri di ekspor Excel.
+</div>
+
+<!-- ═══════════════════════════════════════ BAB 4 ═══════════════════════════════════════ -->
+<h1 class="chapter">4 · Menambah Item</h1>
+<p>Klik nama unit di sidebar untuk membuka tampilan pengeditannya. Akan terlihat tiga tab di bagian atas: <strong>Kitchen</strong>, <strong>Wardrobe</strong>, dan <strong>Accessories</strong>. Setiap tab memiliki <em>add bar</em> di atas dan tabel item yang sudah ditambahkan di bawahnya.</p>
+
+<h2>4.1 Kitchen</h2>
+<ol class="steps">
+  <li>Pilih <strong>Category</strong> (Base Unit, Wall Unit, Tall Unit, dll.).</li>
+  <li>Pilih <strong>Finish</strong> dari dropdown. Badge <strong>Thickness</strong> (ketebalan) akan terisi otomatis jika data tersedia, atau menampilkan <code>—</code> jika tidak ada data ketebalan untuk finish tersebut.</li>
+  <li>Pilih <strong>Handle</strong>: <code>Standard</code> atau <code>Gola</code>.</li>
+  <li>Klik kolom <strong>Search / Browse</strong> dan mulai mengetik, atau klik untuk melihat semua item sesuai kategori dan finish yang dipilih. Klik item untuk memilihnya — preview harga akan muncul di kanan.</li>
+  <li>Atur <strong>Qty</strong> (bilangan bulat atau desimal satu tempat, mis. <code>1.5</code>). Tekan <strong>Enter</strong> untuk langsung menambahkan, atau klik <strong>+ Add</strong>.</li>
+</ol>
+<div class="note">
+  <strong>⚠ Validasi Gola:</strong> Handle Gola hanya tersedia untuk kombinasi item + finish tertentu. Jika Gola dipilih untuk item yang tidak mendukung, alat akan memblokir penambahan dan menampilkan pesan error. Ganti ke Standard atau pilih finish yang berbeda.
+</div>
+
+<h2>4.2 Wardrobe</h2>
+<p>Alurnya sama, namun kontrol filter berubah sesuai kategori yang dipilih:</p>
+<table>
+  <thead><tr><th>Tipe Kategori</th><th>Kontrol yang Muncul</th><th>Contoh</th></tr></thead>
+  <tbody>
+    <tr><td>Berbasis Finish</td><td>Dropdown Finish, Thickness (tampil <code>—</code> jika tidak diketahui)</td><td>Swing Door 110°, Sliding Door, Upper Cabinet</td></tr>
+    <tr><td>Berbasis Kaca</td><td>Jenis Kaca + Jenis Engsel / Bingkai</td><td>Swing Glass Door, Sliding Glass Door, Upper Cabinet Mirror</td></tr>
+    <tr><td>Tanpa Finish</td><td>Langsung ke pencarian (tidak ada pemilih finish)</td><td>Aluminium Marble Door Frame, Wardrobe Component</td></tr>
+  </tbody>
+</table>
+
+<h2>4.3 Accessories</h2>
+<p>Pilih <strong>Category</strong> (Solid Surface, Lighting, Handles, dll.), cari atau telusuri item, atur qty, lalu klik <strong>+ Add</strong>. Tidak ada pemilihan finish untuk accessories.</p>
+
+<h2>4.4 Item Custom</h2>
+<p>Klik tombol <strong>Custom</strong> di tab mana pun untuk menambah item yang tidak ada di database harga. Isi deskripsi, finish/material, ketebalan (opsional, teks bebas), harga satuan (IDR), qty, jenis unit, dan catatan opsional. Item custom ditandai dengan badge <span class="badge">CUSTOM</span> di tabel.</p>
+
+<!-- ═══════════════════════════════════════ BAB 5 ═══════════════════════════════════════ -->
+<h1 class="chapter">5 · Mengelola Tabel</h1>
+<p>Setelah item ditambahkan, Anda dapat mengedit, mengurutkan ulang, atau menghapusnya langsung dari tabel.</p>
+<table>
+  <thead><tr><th>Aksi</th><th>Cara Melakukannya</th></tr></thead>
+  <tbody>
+    <tr><td>Ganti finish</td><td>Klik <strong>ikon pensil</strong> di kolom Finish. Modal akan menampilkan semua finish dan harga yang tersedia untuk item tersebut.</td></tr>
+    <tr><td>Edit jumlah (qty)</td><td>Klik kolom qty dan ketik, atau gunakan tombol panah atas/bawah. Desimal satu tempat diperbolehkan (mis. 1.5).</td></tr>
+    <tr><td>Tambah catatan</td><td>Klik kolom Notes pada baris tersebut dan ketik (mis. "ukuran custom", "cek stok").</td></tr>
+    <tr><td>Duplikasi baris</td><td>Klik <strong>ikon copy</strong> di ujung kanan baris.</td></tr>
+    <tr><td>Hapus baris</td><td>Klik <strong>ikon ×</strong> di ujung kanan baris.</td></tr>
+    <tr><td>Urutkan ulang baris</td><td>Seret <strong>handle titik-titik</strong> di ujung kiri baris ke atas atau ke bawah.</td></tr>
+    <tr><td>Pilih beberapa baris</td><td>Centang kotak di sebelah kiri. Gunakan checkbox header untuk memilih semua.</td></tr>
+    <tr><td>Ganti finish massal</td><td>Pilih baris → klik <strong>Change Finish</strong> di action bar biru yang muncul.</td></tr>
+    <tr><td>Salin ke unit lain</td><td>Pilih baris → klik <strong>Copy to Unit</strong> di action bar biru (hanya muncul jika ada 2+ unit). Pilih unit tujuan dari daftar.</td></tr>
+    <tr><td>Hapus massal</td><td>Pilih baris → klik <strong>Delete Selected</strong> di action bar biru.</td></tr>
+  </tbody>
+</table>
+<div class="tip">
+  <strong>Unit juga bisa diurutkan ulang</strong> dengan menyeret handle titik-titik di sebelah nama unit di sidebar.
+</div>
+
+<!-- ═══════════════════════════════════════ BAB 6 ═══════════════════════════════════════ -->
+<h1>6 · Overview &amp; Totals</h1>
+
+<h2>Overview</h2>
+<p>Klik <strong>Overview</strong> di sidebar kapan saja untuk kembali ke ringkasan proyek. Di sini Anda dapat:</p>
+<ul>
+  <li>Mengedit semua kolom informasi proyek</li>
+  <li>Melihat kartu statistik: total unit, total item, nomor revisi, dan grand total</li>
+  <li>Melihat tabel <strong>Units Overview</strong> — subtotal Kitchen / Wardrobe / Accessories per unit</li>
+  <li>Klik nama unit mana pun untuk langsung ke tampilan pengeditannya</li>
+  <li>Menyimpan, mengekspor ke Excel, atau menyimpan ke PDF</li>
+</ul>
+
+<h2>Totals Matrix</h2>
+<p>Klik <strong>Totals</strong> di sidebar untuk melihat rincian lengkap: setiap unit sebagai baris, setiap seksi (Kitchen / Wardrobe / Accessories) sebagai kolom, dengan baris grand total di bagian bawah. Berguna untuk review akhir sebelum ekspor.</p>
+
+<!-- ═══════════════════════════════════════ BAB 7 ═══════════════════════════════════════ -->
+<h1>7 · Versi Price List</h1>
+<p>Dropdown <strong>Price List</strong> di Informasi Proyek menampilkan versi price list SM yang digunakan proyek ini.</p>
+<ul>
+  <li><strong>Proyek baru</strong> selalu menggunakan versi terbaru yang tersimpan di dalam alat.</li>
+  <li>Ketika <strong>memuat proyek lama</strong> (disimpan dengan price list sebelumnya), muncul chip amber <strong>⚠ versi lebih baru tersedia</strong> di sebelah dropdown.</li>
+  <li><strong>Mengganti versi</strong> akan memperbarui harga semua item non-custom secara otomatis menggunakan data versi yang dipilih. Anda dapat beralih kembali kapan saja.</li>
+</ul>
+<div class="note">
+  <strong>Kapan harus mengganti versi:</strong> Ganti ke price list yang lebih baru hanya ketika siap mempresentasikan harga terbaru kepada klien. Penggantian akan memperbarui semua harga item — bandingkan grand total baru sebelum mengirimkan.
+</div>
+
+<!-- ═══════════════════════════════════════ BAB 8 ═══════════════════════════════════════ -->
+<h1>8 · Menyimpan &amp; Memuat</h1>
+
+<h2>Menyimpan</h2>
+<p>Klik <strong>Save .smbq</strong> di header Overview. Browser akan mengunduh file bernama <code>{Nama Proyek} {Versi Price List}.smbq</code> (mis. <code>Pak Budi – Kebayoran v26.06.02.smbq</code>). Setiap penyimpanan menambah angka pada kartu statistik <strong>Revision</strong>.</p>
+
+<h2>Memuat</h2>
+<p>Klik <strong>ikon upload</strong> di topbar. Pilih file <code>.smbq</code>. Alat akan memulihkan seluruh proyek: semua unit, item, jumlah, catatan, dan versi price list yang tersimpan saat file dibuat.</p>
+
+<div class="info">
+  <strong>File .smbq adalah teks biasa (JSON)</strong> — aman untuk dikirim via email, diarsipkan, atau dicadangkan. Simpan setiap revisi sebagai file terpisah. SM Jakarta nantinya akan mengelola riwayat revisi melalui sistem CRM.
+</div>
+
+<!-- ═══════════════════════════════════════ BAB 9 ═══════════════════════════════════════ -->
+<h1>9 · Ekspor</h1>
+
+<h2>Ekspor ke Excel <span class="badge gold">EXCEL</span></h2>
+<p>Klik <strong>Export Excel</strong> di header Overview. Alat menghasilkan file <code>.xlsx</code> dengan satu sheet per unit ditambah sheet <strong>Summary</strong> (informasi proyek, total per unit, dan daftar item lengkap). Nama file: <code>{Nama Proyek} {Versi Price List}.xlsx</code>.</p>
+
+<h2>Simpan ke PDF</h2>
+<p>Klik <strong>Save PDF</strong> di header Overview. Alat membangun tampilan cetak dan membuka <strong>dialog print</strong> browser Anda.</p>
+<ol class="steps">
+  <li>Di dialog print, atur <strong>Destination</strong> ke <em>Save as PDF</em>.</li>
+  <li>Atur ukuran kertas ke <strong>A4</strong>, orientasi <strong>Portrait</strong>.</li>
+  <li>Aktifkan <strong>Background graphics</strong> agar header ungu tercetak dengan benar.</li>
+  <li>Klik <strong>Save</strong>. Nama file default akan menjadi <code>{Nama Proyek} {Versi Price List}</code>.</li>
+</ol>
+
+<!-- ═══════════════════════════════════════ BAB 10 ═══════════════════════════════════════ -->
+<h1 class="chapter">10 · Tips &amp; Trik</h1>
+
+<div class="section-card" style="border-color:var(--pu-200);background:var(--pu-50)">
+  <h3 style="color:var(--pu-700)">Clone Unit untuk Membandingkan Finish</h3>
+  <p>Cara cepat menyajikan ruangan yang sama dengan dua finish berbeda kepada klien secara berdampingan:</p>
+  <ol class="steps">
+    <li>Bangun satu unit secara lengkap dengan <strong>Finish A</strong> (mis. TZ High Gloss).</li>
+    <li>Di sidebar, klik <strong>ikon clone</strong> (simbol copy) di sebelah nama unit. Salinan identik akan dibuat secara otomatis.</li>
+    <li>Buka unit hasil clone dan pilih tab <strong>Kitchen</strong> atau <strong>Wardrobe</strong>.</li>
+    <li>Centang <strong>checkbox header</strong> untuk memilih semua baris.</li>
+    <li>Di action bar biru yang muncul, klik <strong>Change Finish</strong>.</li>
+    <li>Pilih <strong>Finish B</strong> (mis. Classic Doors PVC) lalu klik <strong>Apply</strong>.</li>
+  </ol>
+  <p style="margin-top:2mm">Kedua unit kini muncul di <strong>Totals Matrix</strong> dan di ekspor PDF — klien dapat langsung membandingkan grand total masing-masing pilihan finish.</p>
+  <div class="tip" style="margin-top:2mm">Item yang tidak tersedia dalam Finish B akan tetap menggunakan finish aslinya dan dihitung sebagai "dilewati" dalam notifikasi konfirmasi.</div>
+</div>
+
+<h2 style="margin-top:5mm">Tips Cepat Lainnya</h2>
+
+<table>
+  <thead><tr><th>Situasi</th><th>Yang Harus Dilakukan</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Jumlah desimal</td>
+      <td>Ketik langsung di kolom qty (mis. <code>1.5</code> untuk 1,5 set solid surface). Nilai disimpan hingga 1 tempat desimal.</td>
+    </tr>
+    <tr>
+      <td>Instruksi per item</td>
+      <td>Gunakan kolom <strong>Notes</strong> untuk instruksi khusus yang akan muncul di ekspor (mis. "ukuran custom", "konfirmasi ketersediaan dengan SM Jakarta").</td>
+    </tr>
+    <tr>
+      <td>Cek isi database</td>
+      <td>Klik <strong>View Database</strong> di sidebar sebelum menambah item. Telusuri berdasarkan seksi dan kategori, lalu klik item untuk melihat semua finish dan harga yang tersedia.</td>
+    </tr>
+    <tr>
+      <td>Lacak versi yang dikirim</td>
+      <td>Kartu statistik <strong>Revision</strong> bertambah setiap kali menyimpan. Catat nomor revisi saat mengirim file ke SM Jakarta agar mudah diidentifikasi jika ada pertanyaan.</td>
+    </tr>
+    <tr>
+      <td>Item tidak ada di database</td>
+      <td>Gunakan tombol <strong>Custom</strong>. Item custom tidak terpengaruh oleh pergantian versi price list — harganya tetap persis seperti yang Anda masukkan.</td>
+    </tr>
+    <tr>
+      <td>Urutkan ulang ruangan</td>
+      <td>Seret unit ke atas atau ke bawah di sidebar menggunakan handle titik-titik. Urutan baru akan tercermin di ekspor Excel dan PDF.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-footer">
+  <span>SM BOQ Tool — Panduan Pengguna (ID) · Stella Mobili · PT. Mitra Usaha Lancar Jaya</span>
+  <span>Juni 2026</span>
+</div>
+
+</body>
+</html>
