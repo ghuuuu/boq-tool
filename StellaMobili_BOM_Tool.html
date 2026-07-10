@@ -207,9 +207,9 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .input,.select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s;font-size:13px;font-family:inherit}
 .input:focus,.select:focus{outline:none;border-color:var(--pu-500);box-shadow:0 0 0 3px rgba(138,90,59,.16)}
 .input.compact{padding:6px 9px;font-size:13px}
-.input.qty{width:75px;text-align:right;font-family:'IBM Plex Mono',monospace}
-.input.qty.show-spin{appearance:auto;-moz-appearance:auto}
-.input.qty.show-spin::-webkit-outer-spin-button,.input.qty.show-spin::-webkit-inner-spin-button{-webkit-appearance:auto;margin:0}
+.input.qty{width:96px;text-align:center;padding-right:6px;font-family:'IBM Plex Mono',monospace}
+.input.show-spin{appearance:auto;-moz-appearance:auto}
+.input.show-spin::-webkit-outer-spin-button,.input.show-spin::-webkit-inner-spin-button{-webkit-appearance:inner-spin-button;opacity:1;width:24px;cursor:pointer;margin-left:6px}
 .input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .input.readonly{background:var(--panel);color:var(--ink-soft);cursor:default}
 .input-search{padding-left:32px}
@@ -1060,7 +1060,7 @@ function buildAddBar(sec){
         </div>
       </div>
       <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="kit-preview" style="width:130px;min-height:38px;display:flex;align-items:center">—</div></div>
-      <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="kit-qty" value="1" min="1" step="any" style="width:70px" onkeydown="if(event.key==='Enter')addRow('kitchen')"></div>
+      <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="kit-qty" value="1" min="1" step="any" style="width:96px" onkeydown="if(event.key==='Enter')addRow('kitchen')"></div>
       <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
         <button class="btn primary" onclick="addRow('kitchen')">+ Add</button>
         <button class="btn" onclick="openCustomModal('kitchen')" title="Add custom item">Custom</button>
@@ -1090,7 +1090,7 @@ function buildAddBar(sec){
         </div>
       </div>
       <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="wd-preview" style="width:130px;min-height:38px;display:flex;align-items:center">—</div></div>
-      <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="wd-qty" value="1" min="1" step="any" style="width:70px" onkeydown="if(event.key==='Enter')addRow('wardrobe')"></div>
+      <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="wd-qty" value="1" min="1" step="any" style="width:96px" onkeydown="if(event.key==='Enter')addRow('wardrobe')"></div>
       <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
         <button class="btn primary" onclick="addRow('wardrobe')">+ Add</button>
         <button class="btn" onclick="openCustomModal('wardrobe')">Custom</button>
@@ -1112,7 +1112,7 @@ function buildAddBar(sec){
       </div>
     </div>
     <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="acc-preview" style="width:130px;min-height:38px;display:flex;align-items:center">—</div></div>
-    <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="acc-qty" value="1" min="1" step="any" style="width:70px" onkeydown="if(event.key==='Enter')addRow('accessories')"></div>
+    <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="acc-qty" value="1" min="1" step="any" style="width:96px" onkeydown="if(event.key==='Enter')addRow('accessories')"></div>
     <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
       <button class="btn primary" onclick="addRow('accessories')">+ Add</button>
       <button class="btn" onclick="openCustomModal('accessories')">Custom</button>
@@ -1519,7 +1519,7 @@ function buildTableCard(unit, sec){
       </td>
       <td><div class="item-name">${esc(r.desc)}</div><div class="item-sub">${subcatBadge}${dimsBadge}</div></td>
       <td class="col-price mono">${fmt(r.price)}</td>
-      <td class="col-qty"><input class="input compact qty show-spin" type="number" value="${r.qty}" min="1" step="any" onchange="updateQty('${sec}','${r.id}',this.value)" style="width:70px"></td>
+      <td class="col-qty"><input class="input compact qty show-spin" type="number" value="${r.qty}" min="1" step="any" onchange="updateQty('${sec}','${r.id}',this.value)" style="width:96px"></td>
       <td class="col-total mono" style="font-weight:700;color:var(--pu-700)">${fmt(r.price*r.qty)}</td>
       <td><input class="notes-input" type="text" placeholder="Notes…" value="${escAttr(r.notes||'')}" onchange="updateNotes('${sec}','${r.id}',this.value)">${r.notes?`<span class="notes-print-val">${esc(r.notes)}</span>`:''}</td>
       <td class="col-actions"><div class="row" style="gap:4px;justify-content:flex-end">
@@ -1836,7 +1836,7 @@ function openCustomModal(sec){
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="field"><label>Unit Price (IDR)</label><input class="input" type="number" id="cm-price" placeholder="0" min="0"></div>
-      <div class="field"><label>Qty</label><input class="input" type="number" id="cm-qty" value="1" min="1" step="any" onkeydown="if(event.key==='Enter')confirmCustom()"></div>
+      <div class="field"><label>Qty</label><input class="input show-spin" type="number" id="cm-qty" value="1" min="1" step="any" onkeydown="if(event.key==='Enter')confirmCustom()"></div>
     </div>
     <div class="field"><label>Notes</label><input class="input" type="text" id="cm-notes" placeholder="Optional"></div>
   </div>
