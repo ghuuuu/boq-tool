@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SM BOQ Tool — User Manual (EN)</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pu-50:  #f5f3ff;
+    --pu-100: #ddd6fe;
+    --pu-200: #c4b5fd;
+    --pu-500: #6d28d9;
+    --pu-600: #5b21b6;
+    --pu-700: #4c1d95;
+    --pu-800: #3b0764;
+    --gold:   #c8a96e;
+    --ink:    #1a1d2e;
+    --ink-soft: #6c7080;
+    --line:   #e8eaf0;
+    --warn-bg: #fef3c7;
+    --warn-border: #f59e0b;
+    --warn-text: #92400e;
+    --tip-bg: #f0fdf4;
+    --tip-border: #86efac;
+    --tip-text: #14532d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Base (print-calibrated) ── */
+  body {
+    font-family: 'Manrope', sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.55;
+    color: var(--ink);
+    background: #fff;
+  }
+
+  @page {
+    size: A4;
+    margin: 13mm 13mm 15mm 13mm;
+    @bottom-center {
+      content: counter(page) " / " counter(pages);
+      font-family: 'Manrope', sans-serif;
+      font-size: 7.5pt;
+      color: #9ca3af;
+    }
+  }
+
+  /* ── Screen wrapper ── */
+  @media screen {
+    html { background: #dde0e8; min-height: 100vh; padding: 28px 16px; }
+    body {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 56px;
+      font-size: 14px;
+      line-height: 1.65;
+      box-shadow: 0 2px 8px rgba(0,0,0,.10), 0 8px 32px rgba(0,0,0,.08);
+      border-radius: 4px;
+    }
+    .cover { height: auto !important; padding: 36px 0 40px; border-bottom: 2px solid var(--pu-100); margin-bottom: 44px; page-break-after: unset; }
+    .toc   { page-break-after: unset; padding-bottom: 36px; border-bottom: 1px solid var(--line); margin-bottom: 40px; }
+    .chapter { page-break-before: unset; margin-top: 44px; }
+    .chapter:first-of-type { margin-top: 0; }
+    h1 { font-size: 22px; margin: 36px 0 14px; padding-bottom: 10px; }
+    h1:first-child { margin-top: 0; }
+    h2 { font-size: 15px; margin: 22px 0 8px; }
+    h3 { font-size: 14px; margin: 16px 0 6px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { margin: 6px 0 10px 20px; }
+    li { margin-bottom: 4px; }
+    .note, .tip, .info { padding: 10px 14px; margin: 10px 0; font-size: 13px; }
+    table { margin: 10px 0 14px; font-size: 13px; }
+    thead th { padding: 8px 12px; }
+    tbody td { padding: 7px 12px; }
+    .section-card { padding: 14px 18px; margin: 10px 0; }
+    .steps { margin: 8px 0 12px; }
+    .steps li { gap: 10px; margin-bottom: 8px; }
+    .steps li::before { width: 20px; height: 20px; font-size: 11px; }
+    .interface-grid { gap: 10px; margin: 10px 0; }
+    .zone { padding: 10px 14px; }
+    .zone-name { font-size: 13px; margin-bottom: 4px; }
+    .zone p { font-size: 12px; }
+    .toc-item { padding: 6px 0; font-size: 14px; }
+    .cover-title { font-size: 38px; margin-bottom: 10px; }
+    .cover-subtitle { font-size: 17px; }
+    .cover-brand { font-size: 11px; margin-bottom: 14px; }
+    .cover-mid { padding: 20px 24px; border-radius: 10px; }
+    .cover-mid p { font-size: 14px; }
+    .cover-bottom { font-size: 12px; padding-top: 16px; }
+    .page-footer { margin-top: 36px; padding-top: 12px; font-size: 11px; }
+    .badge { font-size: 10px; padding: 2px 7px; }
+  }
+
+  /* ── Cover Page ── */
+  .cover {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    page-break-after: always;
+    padding: 8mm 0;
+  }
+  .cover-top { border-top: 4px solid var(--pu-700); padding-top: 8mm; }
+  .cover-brand {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 3mm;
+  }
+  .cover-brand span { color: var(--gold); }
+  .cover-title {
+    font-size: 24pt;
+    font-weight: 800;
+    color: var(--pu-700);
+    line-height: 1.15;
+    margin-bottom: 2mm;
+  }
+  .cover-subtitle { font-size: 11pt; font-weight: 500; color: var(--ink-soft); }
+  .cover-mid {
+    background: var(--pu-700);
+    color: #fff;
+    padding: 5mm 7mm;
+    border-radius: 6px;
+  }
+  .cover-mid p { font-size: 9.5pt; line-height: 1.6; opacity: .9; }
+  .cover-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-top: 1px solid var(--line);
+    padding-top: 3.5mm;
+    font-size: 7.5pt;
+    color: var(--ink-soft);
+  }
+  .cover-bottom strong { color: var(--ink); }
+
+  /* ── Typography ── */
+  h1 {
+    font-size: 13pt;
+    font-weight: 800;
+    color: var(--pu-700);
+    margin: 5mm 0 2mm;
+    padding-bottom: 1.5mm;
+    border-bottom: 2px solid var(--pu-100);
+    page-break-after: avoid;
+  }
+  h2 {
+    font-size: 10pt;
+    font-weight: 700;
+    color: var(--pu-700);
+    margin: 3.5mm 0 1.5mm;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 3mm 0 1mm;
+    page-break-after: avoid;
+  }
+  p  { margin-bottom: 1.5mm; }
+  ul, ol { margin: 1mm 0 1.8mm 4.5mm; }
+  li { margin-bottom: 0.7mm; }
+  strong { font-weight: 700; }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5pt;
+    background: var(--pu-50);
+    padding: 0 4px;
+    border-radius: 3px;
+    color: var(--pu-700);
+  }
+
+  /* ── Callouts ── */
+  .note {
+    background: var(--warn-bg);
+    border-left: 3px solid var(--warn-border);
+    padding: 2mm 3.5mm;
+    border-radius: 0 4px 4px 0;
+    margin: 2mm 0;
+    font-size: 8.5pt;
+    color: var(--warn-text);
+  }
+  .note strong { color: var(--warn-text); }
+  .tip {
+    background: var(--tip-bg);
+    border-left: 3px solid var(--tip-border);
+    padding: 2mm 3.5mm;
+    border-radius: 0 4px 4px 0;
+    margin: 2mm 0;
+    font-size: 8.5pt;
+    color: var(--tip-text);
+  }
+  .info {
+    background: var(--pu-50);
+    border-left: 3px solid var(--pu-500);
+    padding: 2mm 3.5mm;
+    border-radius: 0 4px 4px 0;
+    margin: 2mm 0;
+    font-size: 8.5pt;
+    color: var(--pu-700);
+  }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2mm 0 3mm;
+    font-size: 8.5pt;
+    page-break-inside: avoid;
+  }
+  thead tr { background: var(--pu-700); color: #fff; }
+  thead th { padding: 2mm 3mm; font-weight: 600; text-align: left; }
+  tbody td { padding: 1.5mm 3mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:nth-child(even) td { background: var(--pu-50); }
+  td:first-child { font-weight: 600; white-space: nowrap; color: var(--pu-700); }
+
+  /* ── Section cards ── */
+  .section-card {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 3mm 4mm;
+    margin: 2mm 0;
+    page-break-inside: avoid;
+  }
+  .section-card h3 { margin-top: 0; }
+
+  /* ── Workflow steps ── */
+  .steps { counter-reset: step; list-style: none; margin: 1.5mm 0 2.5mm 0; }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 2.5mm;
+    align-items: flex-start;
+    margin-bottom: 1.5mm;
+  }
+  .steps li::before {
+    content: counter(step);
+    background: var(--pu-700);
+    color: #fff;
+    font-size: 7pt;
+    font-weight: 700;
+    width: 4.5mm;
+    height: 4.5mm;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.3mm;
+  }
+
+  /* ── Interface map ── */
+  .interface-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5mm; margin: 2mm 0; }
+  .zone { border: 1px solid var(--pu-200); border-radius: 5px; padding: 2.5mm 3.5mm; background: var(--pu-50); }
+  .zone-name { font-weight: 700; color: var(--pu-700); font-size: 8.5pt; margin-bottom: 0.8mm; }
+  .zone p { font-size: 8pt; color: var(--ink-soft); margin: 0; }
+
+  /* ── Page breaks ── */
+  .chapter { page-break-before: always; }
+  .chapter:first-of-type { page-break-before: avoid; }
+  .toc { page-break-after: always; }
+  .toc h1 { margin-top: 0; }
+
+  /* ── TOC ── */
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 1mm 0;
+    border-bottom: 1px dotted var(--line);
+    font-size: 9pt;
+  }
+  .toc-item .toc-num { font-weight: 700; color: var(--pu-700); margin-right: 2.5mm; flex-shrink: 0; }
+  .toc-item .toc-title { flex: 1; }
+  .toc-item .toc-pg { font-size: 8pt; color: var(--ink-soft); font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Footer ── */
+  .page-footer {
+    margin-top: 5mm;
+    padding-top: 2mm;
+    border-top: 1px solid var(--line);
+    font-size: 7.5pt;
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; background: var(--pu-700); color: #fff; font-size: 7pt; font-weight: 700; padding: 1px 4px; border-radius: 3px; vertical-align: middle; }
+  .badge.gold { background: var(--gold); color: #3d2c00; }
+  .badge.gray { background: #e5e7eb; color: #374151; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cover { height: 257mm; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ COVER ═══════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-top">
+    <div class="cover-brand">PT. Mitra Usaha Lancar Jaya · <span>MulyaOne</span> · Internal Tooling</div>
+    <div class="cover-title">SM BOQ Tool<br>User Manual</div>
+    <div class="cover-subtitle">Stella Mobili — Bill of Quantities Input Tool</div>
+  </div>
+  <div class="cover-mid">
+    <p>This manual covers everything a new PIC needs to build a room-by-room Bill of Quantities, manage items, export to Excel and PDF, and send to SM Jakarta for price verification.</p>
+    <p style="margin-top:3mm;font-size:9pt;opacity:.7">Quick-start format — estimated reading time: 10 minutes</p>
+  </div>
+  <div class="cover-bottom">
+    <div>
+      <strong>Stella Mobili</strong><br>
+      Jl. Tegalsari 37<br>
+      More Value · More Possibilities
+    </div>
+    <div style="text-align:right">
+      <strong>Language:</strong> English (EN)<br>
+      <strong>Tool version:</strong> Price List v26.06.02<br>
+      <strong>Document:</strong> June 2026
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ TOC ═══════════════════════════════════════ -->
+<div class="toc">
+  <h1>Contents</h1>
+  <div class="toc-item"><span class="toc-num">1</span><span class="toc-title">Introduction</span><span class="toc-pg">3</span></div>
+  <div class="toc-item"><span class="toc-num">2</span><span class="toc-title">Interface Overview</span><span class="toc-pg">3</span></div>
+  <div class="toc-item"><span class="toc-num">3</span><span class="toc-title">Starting a New Project</span><span class="toc-pg">4</span></div>
+  <div class="toc-item"><span class="toc-num">4</span><span class="toc-title">Adding Items</span><span class="toc-pg">4</span></div>
+  <div class="toc-item" style="padding-left:6mm;font-size:9.5pt"><span class="toc-num" style="color:var(--ink-soft)">4.1</span><span class="toc-title">Kitchen</span><span class="toc-pg">4</span></div>
+  <div class="toc-item" style="padding-left:6mm;font-size:9.5pt"><span class="toc-num" style="color:var(--ink-soft)">4.2</span><span class="toc-title">Wardrobe</span><span class="toc-pg">5</span></div>
+  <div class="toc-item" style="padding-left:6mm;font-size:9.5pt"><span class="toc-num" style="color:var(--ink-soft)">4.3</span><span class="toc-title">Accessories</span><span class="toc-pg">5</span></div>
+  <div class="toc-item" style="padding-left:6mm;font-size:9.5pt"><span class="toc-num" style="color:var(--ink-soft)">4.4</span><span class="toc-title">Custom Items</span><span class="toc-pg">5</span></div>
+  <div class="toc-item"><span class="toc-num">5</span><span class="toc-title">Managing the Table</span><span class="toc-pg">6</span></div>
+  <div class="toc-item"><span class="toc-num">6</span><span class="toc-title">Overview &amp; Totals</span><span class="toc-pg">6</span></div>
+  <div class="toc-item"><span class="toc-num">7</span><span class="toc-title">Price List Versions</span><span class="toc-pg">7</span></div>
+  <div class="toc-item"><span class="toc-num">8</span><span class="toc-title">Saving &amp; Loading</span><span class="toc-pg">7</span></div>
+  <div class="toc-item"><span class="toc-num">9</span><span class="toc-title">Exporting (Excel &amp; PDF)</span><span class="toc-pg">7</span></div>
+  <div class="toc-item"><span class="toc-num">10</span><span class="toc-title">Tips &amp; Tricks</span><span class="toc-pg">8</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════ CHAPTER 1 ═══════════════════════════════════════ -->
+<div class="chapter">
+  <h1>1 · Introduction</h1>
+  <p>The <strong>SM BOQ Tool</strong> is a standalone browser-based Bill of Quantities tool built for Stella Mobili PICs. Use it to build a room-by-room list of furniture items — kitchen cabinets, wardrobes, and accessories — with showroom pricing, then export to Excel or PDF for client presentation and send to SM Jakarta for final price verification.</p>
+  <p><strong>No installation needed.</strong> Open <code>StellaMobili_BOM_Tool.html</code> in any modern browser (Chrome, Edge, or Firefox recommended). The entire tool — including the full price database — runs inside that single file.</p>
+  <div class="info">
+    All prices shown are <strong>Showroom Prices</strong> (excl. PPN). Sales pricing and discounting are handled separately by the Sales team.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ CHAPTER 2 ═══════════════════════════════════════ -->
+<h1>2 · Interface Overview</h1>
+<p>The tool is divided into four main zones:</p>
+<div class="interface-grid">
+  <div class="zone">
+    <div class="zone-name">Topbar</div>
+    <p>Brand mark, project breadcrumb, price list version pill (top right), and load/save action buttons.</p>
+  </div>
+  <div class="zone">
+    <div class="zone-name">Sidebar</div>
+    <p>Unit list (rooms/locations), navigation to Overview and Totals, <strong>View Database</strong> and <strong>Import Price List</strong> buttons at the bottom.</p>
+  </div>
+  <div class="zone">
+    <div class="zone-name">Main Area</div>
+    <p>The working area. Switches between <strong>Overview</strong>, <strong>Totals Matrix</strong>, and <strong>Unit editing</strong> views depending on what you click.</p>
+  </div>
+  <div class="zone">
+    <div class="zone-name">Toast Notifications</div>
+    <p>Brief confirmations and warnings appear in the bottom-right corner and fade automatically.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ CHAPTER 3 ═══════════════════════════════════════ -->
+<h1>3 · Starting a New Project</h1>
+<ol class="steps">
+  <li>Open the tool — it starts with one default unit called "Kitchen" and an empty project.</li>
+  <li>In the <strong>Overview</strong> view, fill in: <strong>Project Name</strong>, <strong>Client</strong>, <strong>PIC</strong>, <strong>Date</strong>, and <strong>Notes to SM Jakarta</strong>.</li>
+  <li>Check the <strong>Price List</strong> dropdown — it defaults to the latest version. Leave it as-is for new projects.</li>
+  <li>Rename the default unit by clicking its name in the sidebar and typing a new name (e.g. "Master Bedroom"). Add more units with the <strong>+ Add Unit</strong> button in Overview.</li>
+</ol>
+<div class="tip">
+  <strong>Unit = Room or Location.</strong> Create one unit per room (e.g. Master Bedroom, Kitchen, Living Room). Each unit gets its own tab in the export.
+</div>
+
+<!-- ═══════════════════════════════════════ CHAPTER 4 ═══════════════════════════════════════ -->
+<h1 class="chapter">4 · Adding Items</h1>
+<p>Click a unit name in the sidebar to open its editing view. You'll see three tabs at the top: <strong>Kitchen</strong>, <strong>Wardrobe</strong>, and <strong>Accessories</strong>. Each tab has an <em>add bar</em> at the top and a table of added items below.</p>
+
+<h2>4.1 Kitchen</h2>
+<ol class="steps">
+  <li>Select a <strong>Category</strong> (Base Unit, Wall Unit, Tall Unit, etc.).</li>
+  <li>Select a <strong>Finish</strong> from the dropdown. The <strong>Thickness</strong> badge fills in automatically when known, or shows <code>—</code> if no thickness data exists for that finish.</li>
+  <li>Select <strong>Handle</strong>: <code>Standard</code> or <code>Gola</code>.</li>
+  <li>Click the <strong>Search / Browse</strong> field and start typing, or click to see all items for the current category and finish. Click an item to select it — the price preview updates on the right.</li>
+  <li>Set <strong>Qty</strong> (whole numbers or decimals to one place, e.g. <code>1.5</code>). Press <strong>Enter</strong> to add instantly, or click <strong>+ Add</strong>.</li>
+</ol>
+<div class="note">
+  <strong>⚠ Gola validation:</strong> Gola handle is only supported for certain item + finish combinations. If you select Gola for an unsupported item, the tool will block the add and show an error. Switch to Standard or choose a different finish.
+</div>
+
+<h2>4.2 Wardrobe</h2>
+<p>Same flow, but the filter controls adapt to the selected category:</p>
+<table>
+  <thead><tr><th>Category type</th><th>Controls shown</th><th>Examples</th></tr></thead>
+  <tbody>
+    <tr><td>Finish-based</td><td>Finish dropdown, Thickness (shows <code>—</code> if unknown)</td><td>Swing Door 110°, Sliding Door, Upper Cabinet</td></tr>
+    <tr><td>Glass-based</td><td>Glass Type + Hinge / Frame Type</td><td>Swing Glass Door, Sliding Glass Door, Upper Cabinet Mirror</td></tr>
+    <tr><td>No-finish</td><td>Search only (no finish selector)</td><td>Aluminium Marble Door Frame, Wardrobe Component</td></tr>
+  </tbody>
+</table>
+
+<h2>4.3 Accessories</h2>
+<p>Select a <strong>Category</strong> (Solid Surface, Lighting, Handles, etc.), search or browse for an item, set qty, and click <strong>+ Add</strong>. No finish selection is needed for accessories.</p>
+
+<h2>4.4 Custom Items</h2>
+<p>Click the <strong>Custom</strong> button on any tab to add an item that isn't in the price database. Fill in the description, finish or material, thickness (optional, free text), unit price (IDR), qty, unit type, and optional notes. Custom items appear with a <span class="badge">CUSTOM</span> badge in the table.</p>
+
+<!-- ═══════════════════════════════════════ CHAPTER 5 ═══════════════════════════════════════ -->
+<h1 class="chapter">5 · Managing the Table</h1>
+<p>Once items are added, you can edit, reorder, or remove them directly in the table.</p>
+<table>
+  <thead><tr><th>Action</th><th>How to do it</th></tr></thead>
+  <tbody>
+    <tr><td>Change finish</td><td>Click the <strong>pencil icon</strong> in the Finish column. A modal shows all available finishes and prices for that item.</td></tr>
+    <tr><td>Edit quantity</td><td>Click the qty field and type, or use the up/down arrows. Decimals to one place are allowed (e.g. 1.5).</td></tr>
+    <tr><td>Add a note</td><td>Click the Notes field on the row and type (e.g. "custom size", "check stock").</td></tr>
+    <tr><td>Duplicate a row</td><td>Click the <strong>copy icon</strong> at the far right of the row.</td></tr>
+    <tr><td>Delete a row</td><td>Click the <strong>× icon</strong> at the far right of the row.</td></tr>
+    <tr><td>Reorder rows</td><td>Drag the <strong>dot-grid handle</strong> on the far left of the row up or down.</td></tr>
+    <tr><td>Select multiple rows</td><td>Tick the checkboxes on the left. Use the header checkbox to select all.</td></tr>
+    <tr><td>Bulk change finish</td><td>Select rows → click <strong>Change Finish</strong> in the blue action bar.</td></tr>
+    <tr><td>Copy to another unit</td><td>Select rows → click <strong>Copy to Unit</strong> in the blue action bar (only shown when 2+ units exist). Choose the target unit from the list.</td></tr>
+    <tr><td>Bulk delete</td><td>Select rows → click <strong>Delete Selected</strong> in the blue action bar.</td></tr>
+  </tbody>
+</table>
+<div class="tip">
+  <strong>Units can also be reordered</strong> by dragging the dot-grid handle next to their name in the sidebar.
+</div>
+
+<!-- ═══════════════════════════════════════ CHAPTER 6 ═══════════════════════════════════════ -->
+<h1>6 · Overview &amp; Totals</h1>
+
+<h2>Overview</h2>
+<p>Click <strong>Overview</strong> in the sidebar at any time to return to the project summary. Here you can:</p>
+<ul>
+  <li>Edit all project information fields</li>
+  <li>See stat cards: total units, total items, revision number, and grand total</li>
+  <li>See the <strong>Units Overview</strong> table — Kitchen / Wardrobe / Accessories subtotals per unit</li>
+  <li>Click any unit name to jump directly to that unit's editing view</li>
+  <li>Save, export to Excel, or save to PDF</li>
+</ul>
+
+<h2>Totals Matrix</h2>
+<p>Click <strong>Totals</strong> in the sidebar for a full cross-breakdown: every unit as a row, every section (Kitchen / Wardrobe / Accessories) as a column, with a grand total row at the bottom. Useful for a quick final review before exporting.</p>
+
+<!-- ═══════════════════════════════════════ CHAPTER 7 ═══════════════════════════════════════ -->
+<h1>7 · Price List Versions</h1>
+<p>The <strong>Price List</strong> dropdown in Project Information shows which version of the SM price list is being used for this project.</p>
+<ul>
+  <li><strong>New projects</strong> always default to the latest version embedded in the tool.</li>
+  <li>When you <strong>load an older project</strong> (saved with a previous price list), an amber <strong>⚠ newer version available</strong> chip appears next to the dropdown.</li>
+  <li><strong>Switching versions</strong> re-prices all non-custom items silently against the selected version's data. You can switch back at any time.</li>
+</ul>
+<div class="note">
+  <strong>When to switch:</strong> Only switch to a newer price list once you're ready to present updated pricing to the client. Switching updates all item prices — compare the new grand total before sending.
+</div>
+
+<!-- ═══════════════════════════════════════ CHAPTER 8 ═══════════════════════════════════════ -->
+<h1>8 · Saving &amp; Loading</h1>
+
+<h2>Saving</h2>
+<p>Click <strong>Save .smbq</strong> in the Overview header. The browser downloads a file named <code>{Project Name} {Price List Version}.smbq</code> (e.g. <code>Pak Budi – Kebayoran v26.06.02.smbq</code>). Each save increments the <strong>Revision</strong> counter in the stat cards.</p>
+
+<h2>Loading</h2>
+<p>Click the <strong>upload icon</strong> in the topbar (or the Load button if visible). Select a <code>.smbq</code> file. The tool restores the full project: all units, items, quantities, notes, and the price list version stored at save time.</p>
+
+<div class="info">
+  <strong>The .smbq file is plain text (JSON)</strong> — safe to email, archive, or back up. Keep each revision as a separate file. SM Jakarta will eventually manage revision history through the CRM system.
+</div>
+
+<!-- ═══════════════════════════════════════ CHAPTER 9 ═══════════════════════════════════════ -->
+<h1>9 · Exporting</h1>
+
+<h2>Export to Excel <span class="badge gold">EXCEL</span></h2>
+<p>Click <strong>Export Excel</strong> in the Overview header. The tool generates an <code>.xlsx</code> file with one sheet per unit plus a <strong>Summary</strong> sheet (project info, unit totals, and the full item list). File name: <code>{Project Name} {Price List Version}.xlsx</code>.</p>
+
+<h2>Save to PDF</h2>
+<p>Click <strong>Save PDF</strong> in the Overview header. The tool builds a print-formatted view and opens your browser's <strong>print dialog</strong>.</p>
+<ol class="steps">
+  <li>In the print dialog, set <strong>Destination</strong> to <em>Save as PDF</em>.</li>
+  <li>Set paper size to <strong>A4</strong>, orientation <strong>Portrait</strong>.</li>
+  <li>Enable <strong>Background graphics</strong> (so the purple headers print correctly).</li>
+  <li>Click <strong>Save</strong>. The default filename will be <code>{Project Name} {Price List Version}</code>.</li>
+</ol>
+
+<!-- ═══════════════════════════════════════ CHAPTER 10 ═══════════════════════════════════════ -->
+<h1 class="chapter">10 · Tips &amp; Tricks</h1>
+
+<div class="section-card" style="border-color:var(--pu-200);background:var(--pu-50)">
+  <h3 style="color:var(--pu-700)">Clone a Unit to Compare Finishes</h3>
+  <p>A fast way to show a client the same room priced in two different finishes side by side:</p>
+  <ol class="steps">
+    <li>Build one unit completely with <strong>Finish A</strong> (e.g. TZ High Gloss).</li>
+    <li>In the sidebar, click the <strong>clone icon</strong> (copy symbol) next to the unit name. An exact duplicate is created.</li>
+    <li>Open the cloned unit and go to the <strong>Kitchen</strong> or <strong>Wardrobe</strong> tab.</li>
+    <li>Tick the <strong>header checkbox</strong> to select all rows.</li>
+    <li>In the blue action bar that appears, click <strong>Change Finish</strong>.</li>
+    <li>Select <strong>Finish B</strong> (e.g. Classic Doors PVC) and click <strong>Apply</strong>.</li>
+  </ol>
+  <p style="margin-top:2mm">Both units now appear in the <strong>Totals Matrix</strong> and in the exported PDF — the client can compare the grand totals for each finish option at a glance.</p>
+  <div class="tip" style="margin-top:2mm">Items where Finish B is not available keep their original finish and are counted as "skipped" in the confirmation toast.</div>
+</div>
+
+<h2 style="margin-top:5mm">Other Useful Tips</h2>
+
+<table>
+  <thead><tr><th>Situation</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Partial quantities</td>
+      <td>Type decimals directly into the qty field (e.g. <code>1.5</code> for 1.5 sets of solid surface). Values are stored to 1 decimal place.</td>
+    </tr>
+    <tr>
+      <td>Per-item instructions</td>
+      <td>Use the <strong>Notes</strong> column for special instructions that should appear on the export (e.g. "custom size", "check availability with SM Jakarta").</td>
+    </tr>
+    <tr>
+      <td>Check what's in the database</td>
+      <td>Click <strong>View Database</strong> in the sidebar before adding items. Browse by section and category, then click any item to see all available finishes and prices.</td>
+    </tr>
+    <tr>
+      <td>Track which version you sent</td>
+      <td>The <strong>Revision</strong> stat card increments with every save. Note the revision number when you send a file to SM Jakarta so you can match it if there are questions.</td>
+    </tr>
+    <tr>
+      <td>Item not in database</td>
+      <td>Use the <strong>Custom</strong> button. Custom items are excluded from price list version switching — their prices stay exactly as you entered them.</td>
+    </tr>
+    <tr>
+      <td>Reorder rooms</td>
+      <td>Drag units up or down in the sidebar using the dot-grid handle. The new order is reflected in the Excel export and PDF.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-footer">
+  <span>SM BOQ Tool — User Manual (EN) · Stella Mobili · PT. Mitra Usaha Lancar Jaya</span>
+  <span>June 2026</span>
+</div>
+
+</body>
+</html>

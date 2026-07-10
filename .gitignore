@@ -1,0 +1,13 @@
+# Local Claude Code settings (machine-specific)
+.claude/settings.local.json
+
+# User working files (BOQ saves)
+*.smbq
+
+# Python
+__pycache__/
+*.pyc
+
+# OS junk
+Thumbs.db
+.DS_Store

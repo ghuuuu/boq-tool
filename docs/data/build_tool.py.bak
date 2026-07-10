@@ -1,0 +1,1544 @@
+"""
+Build StellaMobili_BOM_Tool.html from:
+  - reference HTML (CSS + body structure)
+  - ALL versioned price data JSONs (docs/data/price_lists/)
+  - updated JavaScript
+Run: python docs/data/build_tool.py
+"""
+import json, os, re, glob
+
+REF_HTML = "C:/Projects/Stella Mobili BOM Tool/StellaMobili_BOM_Tool_Ref.html"
+PL_DIR   = "C:/Projects/Stella Mobili BOM Tool/docs/data/price_lists"
+OUT_HTML = "C:/Projects/Stella Mobili BOM Tool/StellaMobili_BOM_Tool.html"
+
+# ── 1. Read reference HTML ────────────────────────────────────────────────
+with open(REF_HTML, encoding="utf-8") as f:
+    ref_lines = f.readlines()
+
+css_and_body = []
+for line in ref_lines:
+    stripped = line.strip()
+    if stripped == '<script>' or stripped.startswith('<script>'):
+        break
+    css_and_body.append(line)
+
+header_html = "".join(css_and_body)
+
+# ── Extra CSS injection ───────────────────────────────────────────────────
+EXTRA_CSS = """
+@media(max-width:700px){
+  .add-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;padding:12px}
+  .ab-cat,.ab-finish,.ab-handle,.ab-thickness{min-width:0}
+  .ab-cat{grid-column:1}.ab-finish{grid-column:2}
+  .ab-handle{grid-column:1}.ab-thickness{grid-column:2}
+  .ab-search{grid-column:1/-1}
+  .ab-price{grid-column:1}.ab-qty{grid-column:2}
+  .ab-btns{grid-column:1/-1;display:flex;gap:6px}
+  .btn,.icon-btn,.icon-x{min-height:38px}
+  .bom-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .bom-table-wrap .bom-table{min-width:680px}
+}
+@media(max-width:540px){
+  .stat-row{grid-template-columns:1fr 1fr !important}
+  .stat.accent{grid-column:1/-1}
+  .meta-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){ .crumb,.rev-pill{display:none !important} }
+@media(max-width:400px){ .meta-grid{grid-template-columns:1fr} }
+.sb-overlay{display:none;position:fixed;inset:0;z-index:88;background:rgba(0,0,0,.35)}
+.notes-print-val{display:none;font-style:italic;color:#888;font-size:10.5px}
+@media(max-width:900px){
+  .input,.select,.input.compact,.notes-input,.sb-unit-name{font-size:16px}
+  .modal.modal-lg .modal-body{overflow-x:auto}
+}
+.sel-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--pu-75);border:1px solid var(--pu-200);border-radius:8px;margin-bottom:8px;flex-wrap:wrap}
+.sel-bar .sel-count{font-size:13px;font-weight:600;color:var(--pu-700);flex:1;min-width:120px}
+.sel-bar.hidden{display:none}
+.col-check{width:36px;padding-left:10px !important;padding-right:4px !important;text-align:center}
+.col-check input[type=checkbox]{width:15px;height:15px;accent-color:var(--pu-600);cursor:pointer;vertical-align:middle}
+tr.row-sel td{background:var(--pu-50)}
+.input.input-search{padding-left:34px}
+.col-drag{width:22px;padding:0 4px !important;text-align:center;cursor:grab}
+.col-drag:active{cursor:grabbing}
+.drag-handle{cursor:grab;color:var(--ink-faint);display:inline-flex;align-items:center;padding:3px;border-radius:4px;flex-shrink:0}
+.drag-handle:hover{color:var(--ink-soft);background:var(--pu-50)}
+.drag-handle:active{cursor:grabbing}
+tr.dragging{opacity:0.35}
+tr.drop-above{box-shadow:inset 0 2px 0 var(--pu-500)}
+tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
+.sb-item.dragging{opacity:0.4}
+.sb-item.drop-above{box-shadow:0 -2px 0 var(--pu-500)}
+.sb-item.drop-below{box-shadow:0 2px 0 var(--pu-500)}
+.pl-newer-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:#fef3c7;color:#92400e;border:1px solid #f59e0b;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+/* Large modal for DB editor */
+.modal.modal-lg{max-width:min(980px,94vw);width:min(980px,94vw)}
+.modal.modal-lg .modal-body{max-height:70vh;overflow-y:auto}
+.db-item-row{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:12px;margin-bottom:4px;cursor:pointer;transition:background .12s,border-color .12s}
+.db-item-row:hover{background:var(--pu-50);border-color:var(--pu-200)}
+.db-detail-table{width:100%;border-collapse:collapse;font-size:12px}
+.db-detail-table th{background:var(--pu-700);color:#fff;padding:6px 10px;text-align:left;font-weight:600;font-size:11px;position:sticky;top:0}
+.db-detail-table td{padding:5px 10px;border-bottom:1px solid var(--line)}
+.db-detail-table tr:last-child td{border-bottom:none}
+.db-detail-table tr:nth-child(even) td{background:var(--pu-50)}
+.db-detail-table td.num{text-align:right;font-family:JetBrains Mono,monospace;color:var(--pu-700);font-weight:600}
+"""
+header_html = header_html.replace('</style>', EXTRA_CSS + '\n</style>')
+
+# ── 2. Load ALL versioned price JSONs ────────────────────────────────────
+def load_pl(tp, ver):
+    with open(f"{PL_DIR}/{tp}_{ver}.json", encoding="utf-8") as f:
+        return json.load(f)["items"]
+
+# Auto-detect all versions present in price_lists/
+_kit_files = sorted(glob.glob(f"{PL_DIR}/kitchen_v*.json"))
+ALL_VERSIONS = sorted(set(
+    m.group(1) for m in (re.search(r'(v\d+\.\d+\.\d+)', f) for f in _kit_files) if m
+))
+if not ALL_VERSIONS:
+    raise FileNotFoundError(f"No kitchen_v*.json found in {PL_DIR}")
+LATEST_VERSION = ALL_VERSIONS[-1]
+print(f"Price list versions: {', '.join(ALL_VERSIONS)}")
+print(f"Latest: {LATEST_VERSION}")
+
+all_price_data = {}
+for ver in ALL_VERSIONS:
+    all_price_data[ver] = {
+        "kitchen":     load_pl("kitchen",     ver),
+        "wardrobe":    load_pl("wardrobe",    ver),
+        "accessories": load_pl("accessories", ver),
+    }
+    kb = sum(len(json.dumps(v, ensure_ascii=False)) for v in all_price_data[ver].values()) / 1024
+    print(f"  {ver}: {kb:.0f} KB")
+
+all_price_data_json = json.dumps(all_price_data, ensure_ascii=False, separators=(',', ':'))
+total_kb = len(all_price_data_json) / 1024
+print(f"ALL_PRICE_DATA total: {total_kb:.0f} KB")
+
+# Replace static date labels with the latest version string
+header_html = re.sub(r'MAR 2026|JUN 2026', LATEST_VERSION, header_html)
+
+# ── 3. JavaScript ─────────────────────────────────────────────────────────
+JS_HEAD = (
+    "\nconst ALL_PRICE_DATA = " + all_price_data_json + ";\n"
+    "const PRICE_LIST_VERSIONS = " + json.dumps(ALL_VERSIONS) + ";\n"
+    "const PRICE_LIST_LATEST = " + json.dumps(LATEST_VERSION) + ";\n"
+)
+
+JS_BODY = r"""
+// ====================================================================
+// STATE
+// ====================================================================
+let units = [], activeUnitId = null, unitCounter = 0;
+let currentView = 'overview', currentSection = 'kitchen';
+let selectedItems = {kit:null,wd:null,acc:null};
+let searchPools = {kit:[],wd:[],acc:[]};
+let _dbSec = 'kitchen', _dbCat = '';
+let revisionNumber = 1;
+let customModalSection = 'kitchen';
+let projectMeta = {name:'',client:'',pic:'',date:'',notes:'',priceListVersion:''};
+let selectedRows = {kitchen:new Set(),wardrobe:new Set(),accessories:new Set()};
+let dragUnit = null, dragRow = {sec:null, id:null};
+let _mousedownEl = null;
+
+function getPD(){ return ALL_PRICE_DATA[projectMeta.priceListVersion] || ALL_PRICE_DATA[PRICE_LIST_LATEST]; }
+function updateRevPill(){ const p=document.getElementById('revPill'); if(p) p.textContent=projectMeta.priceListVersion||PRICE_LIST_LATEST; }
+
+// ====================================================================
+// INIT
+// ====================================================================
+projectMeta.priceListVersion = PRICE_LIST_LATEST;
+addUnit('Kitchen');
+showView('overview');
+updateRevPill();
+try{if(localStorage.getItem('sbCollapsed')==='1'&&window.innerWidth>900)document.querySelector('.shell').classList.add('sidebar-collapsed');}catch(e){}
+document.addEventListener('click', globalClickClose);
+document.addEventListener('mousedown', e => { _mousedownEl = e.target; });
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape'){
+    ['kit','wd','acc'].forEach(p=>hideDropdown(p));
+    if(document.getElementById('modal-mount')?.innerHTML) closeModal();
+  }
+});
+
+// ====================================================================
+// SIDEBAR / NAVIGATION
+// ====================================================================
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const ov=document.getElementById('sb-overlay');
+  const open=sb.classList.toggle('open');
+  if(ov) ov.style.display=open?'block':'none';
+}
+function toggleSidebarCollapse(){
+  if(window.innerWidth<=900){return;}
+  const collapsed=document.querySelector('.shell').classList.toggle('sidebar-collapsed');
+  try{localStorage.setItem('sbCollapsed',collapsed?'1':'0');}catch(e){}
+  hideUnitFlyout(0);hideSbTip();
+}
+let _sbFlyout=null,_sbFlyoutTimer=null,_sbTip=null,_sbTipTimer=null;
+function showUnitFlyout(el,uid){
+  if(!document.querySelector('.shell').classList.contains('sidebar-collapsed'))return;
+  const u=units.find(u=>u.id===uid);if(!u)return;
+  clearTimeout(_sbFlyoutTimer);
+  if(_sbFlyout)_sbFlyout.remove();
+  const rect=el.getBoundingClientRect();
+  const fly=document.createElement('div');
+  fly.className='sb-unit-flyout';
+  fly.style.top=rect.top+'px';
+  fly.style.height=rect.height+'px';
+  fly.innerHTML=`<input class="sb-unit-name" type="text" value="${escAttr(u.name)}" onclick="event.stopPropagation()" onchange="renameUnit('${u.id}',this.value)">
+    <button class="sb-del" onclick="event.stopPropagation();cloneUnit('${u.id}')" title="Clone unit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+    <button class="sb-del" onclick="event.stopPropagation();deleteUnit('${u.id}')" title="Delete unit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+  fly.addEventListener('mouseenter',()=>clearTimeout(_sbFlyoutTimer));
+  fly.addEventListener('mouseleave',()=>hideUnitFlyout(0));
+  document.body.appendChild(fly);
+  _sbFlyout=fly;
+}
+function hideUnitFlyout(delay=0){
+  clearTimeout(_sbFlyoutTimer);
+  if(delay){_sbFlyoutTimer=setTimeout(()=>{if(_sbFlyout){_sbFlyout.remove();_sbFlyout=null;}},delay);}
+  else{if(_sbFlyout){_sbFlyout.remove();_sbFlyout=null;}}
+}
+function showSbTip(el,text){
+  if(!document.querySelector('.shell').classList.contains('sidebar-collapsed'))return;
+  clearTimeout(_sbTipTimer);
+  _sbTipTimer=setTimeout(()=>{
+    hideSbTip();
+    const rect=el.getBoundingClientRect();
+    const tip=document.createElement('div');
+    tip.className='sb-tip';
+    tip.textContent=text;
+    tip.style.top=(rect.top+rect.height/2)+'px';
+    document.body.appendChild(tip);
+    _sbTip=tip;
+  },150);
+}
+function hideSbTip(){
+  clearTimeout(_sbTipTimer);
+  if(_sbTip){_sbTip.remove();_sbTip=null;}
+}
+
+function showView(name, unitId){
+  currentView = name;
+  document.querySelectorAll('[data-nav]').forEach(el => el.classList.toggle('active', el.getAttribute('data-nav')===name));
+  document.querySelectorAll('.sidebar .sb-item[data-unit]').forEach(el => el.classList.toggle('active', el.getAttribute('data-unit')===(unitId||'x')));
+  if(unitId) activeUnitId = unitId;
+  ['overview','unit'].forEach(v => { const e=document.getElementById('view-'+v); if(e) e.classList.toggle('hidden', v!==name); });
+  document.getElementById('crumb-view').textContent = name==='overview'?'Overview':'Unit · '+(units.find(u=>u.id===unitId)?.name||'');
+  document.getElementById('crumb-project').textContent = projectMeta.name||'—';
+  if(name==='overview') renderOverview();
+  else if(name==='unit') renderUnitView(unitId||activeUnitId);
+  if(window.innerWidth<=900){
+    document.getElementById('sidebar').classList.remove('open');
+    const ov=document.getElementById('sb-overlay');
+    if(ov) ov.style.display='none';
+  }
+}
+
+function renderSidebarUnits(){
+  const wrap = document.getElementById('sidebar-units');
+  wrap.innerHTML = units.map(u => {
+    const total = unitTotal(u), cnt = ['kitchen','wardrobe','accessories'].reduce((s,sec)=>s+u.items[sec].length,0);
+    return `<div class="sb-item" draggable="true" onclick="showView('unit','${u.id}')" data-nav="unit" data-unit="${u.id}"
+      onmouseenter="showUnitFlyout(this,'${u.id}')" onmouseleave="hideUnitFlyout(100)"
+      ondragstart="unitDragStart(event,'${u.id}')" ondragover="unitDragOver(event,'${u.id}')"
+      ondrop="unitDrop(event,'${u.id}')" ondragend="unitDragEnd()">
+      <span class="drag-handle" onclick="event.stopPropagation()" title="Drag to reorder">
+        <svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14"><circle cx="2" cy="2" r="1.3"/><circle cx="6" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="6" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="6" cy="12" r="1.3"/></svg>
+      </span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" flex-shrink="0"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <input class="sb-unit-name" type="text" value="${esc(u.name)}" onclick="event.stopPropagation()" onchange="renameUnit('${u.id}',this.value)" title="Click to rename">
+      <span class="sb-count">${cnt}</span>
+      <button class="sb-del icon-x" onclick="event.stopPropagation();cloneUnit('${u.id}')" title="Clone unit" style="margin-right:2px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
+      <button class="sb-del icon-x" onclick="event.stopPropagation();deleteUnit('${u.id}')" title="Delete unit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`;
+  }).join('');
+  document.getElementById('sb-unit-count').textContent = units.length;
+}
+
+// ====================================================================
+// UNITS
+// ====================================================================
+function addUnit(name){
+  unitCounter++;
+  const id = 'u'+unitCounter;
+  units.push({id, name: name||'Unit '+unitCounter, items:{kitchen:[],wardrobe:[],accessories:[]}});
+  if(!activeUnitId) activeUnitId = id;
+  renderSidebarUnits();
+  if(currentView==='overview') renderOverview();
+  if(window.innerWidth<=900){
+    document.getElementById('sidebar').classList.remove('open');
+    const ov=document.getElementById('sb-overlay');
+    if(ov) ov.style.display='none';
+  }
+}
+function deleteUnit(id){
+  if(units.length<=1){toast('Need at least one unit.','warn');return}
+  if(!confirm('Delete this unit and all its items?')) return;
+  units = units.filter(u=>u.id!==id);
+  if(activeUnitId===id) activeUnitId = units[0].id;
+  renderSidebarUnits();
+  showView('overview');
+}
+function cloneUnit(id){
+  const src=units.find(u=>u.id===id); if(!src) return;
+  unitCounter++;
+  const newId='u'+unitCounter;
+  const cloned=JSON.parse(JSON.stringify(src));
+  cloned.id=newId; cloned.name=src.name+' (copy)';
+  ['kitchen','wardrobe','accessories'].forEach(sec=>{
+    cloned.items[sec].forEach(r=>{ r.id=Date.now()+Math.random(); });
+  });
+  const srcIdx=units.findIndex(u=>u.id===id);
+  units.splice(srcIdx+1,0,cloned);
+  renderSidebarUnits();
+  if(currentView==='overview') renderOverview();
+  toast('Cloned: '+cloned.name);
+}
+function renameUnit(id,val){const u=units.find(u=>u.id===id);if(u){u.name=val;renderSidebarUnits();if(currentView!=='unit') renderOverview();}}
+function getUnit(id){return units.find(u=>u.id===(id||activeUnitId))}
+function unitTotal(u){return['kitchen','wardrobe','accessories'].reduce((s,sec)=>s+u.items[sec].reduce((ss,r)=>ss+r.price*r.qty,0),0)}
+function secTotal(u,sec){return u.items[sec].reduce((s,r)=>s+r.price*r.qty,0)}
+
+// ====================================================================
+// OVERVIEW VIEW
+// ====================================================================
+function renderOverview(){
+  const grand = units.reduce((s,u)=>s+unitTotal(u),0);
+  const {name:projName,client,pic,date,notes,priceListVersion} = projectMeta;
+  const isOld = priceListVersion && priceListVersion !== PRICE_LIST_LATEST;
+  const plOpts = PRICE_LIST_VERSIONS.map(v=>`<option${v===priceListVersion?' selected':''}>${v}</option>`).join('');
+  const newerChip = isOld ? `<span class="pl-newer-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${PRICE_LIST_LATEST} available</span>` : '';
+  const e = document.getElementById('view-overview');
+  e.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head">
+        <div class="card-title">Project Information</div>
+        <div class="row" style="gap:8px">
+          <button class="btn btn-sm primary" onclick="saveFile()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save .smbq
+          </button>
+          <button class="btn btn-sm primary-outline" onclick="document.getElementById('loadInput').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Load .smbq
+          </button>
+          <span style="width:1px;height:22px;background:var(--line);margin:0 2px"></span>
+          <button class="btn btn-sm slate" onclick="exportExcel()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 14 12 9 7 14"/><line x1="12" y1="9" x2="12" y2="21"/></svg>
+            Export Excel
+          </button>
+          <button class="btn btn-sm slate" onclick="savePDF()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Save PDF
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="meta-grid">
+          <div class="field"><label>Project Name</label><input class="input compact" type="text" id="projName" placeholder="e.g. Pak Budi – Kebayoran Baru" oninput="onMetaInput()" value="${esc(projName)}"></div>
+          <div class="field"><label>Client</label><input class="input compact" type="text" id="projClient" placeholder="Client name" oninput="onMetaInput()" value="${esc(client)}"></div>
+          <div class="field"><label>PIC</label><input class="input compact" type="text" id="projPIC" placeholder="PIC name" oninput="onMetaInput()" value="${esc(pic)}"></div>
+          <div class="field"><label>Date</label><input class="input compact" type="date" id="projDate" oninput="onMetaInput()" value="${date||new Date().toISOString().split('T')[0]}"></div>
+          <div class="field"><label>Notes to SM Jakarta</label><input class="input compact" type="text" id="projNotes" placeholder="Revision notes, special requests..." oninput="onMetaInput()" value="${esc(notes)}"></div>
+          <div class="field"><label>Price List</label><div style="display:flex;align-items:center;gap:8px"><select class="select compact" id="projPL" onchange="switchPriceList(this.value)">${plOpts}</select>${newerChip}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-label">Total Units</div><div class="stat-value">${units.length}</div><div class="stat-sub">rooms / locations</div></div>
+      <div class="stat"><div class="stat-label">Total Items</div><div class="stat-value">${units.reduce((s,u)=>s+['kitchen','wardrobe','accessories'].reduce((ss,sec)=>ss+u.items[sec].length,0),0)}</div><div class="stat-sub">across all units</div></div>
+      <div class="stat"><div class="stat-label">Revision</div><div class="stat-value mono">${revisionNumber}</div><div class="stat-sub">current version</div></div>
+      <div class="stat accent"><div class="stat-label">Grand Total</div><div class="stat-value"><span class="cur">Rp</span>${Math.round(grand).toLocaleString('id-ID')}</div><div class="stat-sub">Showroom · excl. PPN</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">Units Overview</div>
+        <button class="btn btn-sm primary" onclick="addUnit()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Unit
+        </button>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="matrix-table">
+          <thead><tr><th>Unit / Room</th><th class="num">Kitchen</th><th class="num">Wardrobe</th><th class="num">Accessories</th><th class="num">Unit Total</th></tr></thead>
+          <tbody>${units.map(u=>`<tr>
+            <td><span onclick="showView('unit','${u.id}')" style="color:var(--pu-700);font-weight:600;cursor:pointer">${esc(u.name)}</span></td>
+            <td class="num">${fmt(secTotal(u,'kitchen'))}</td>
+            <td class="num">${fmt(secTotal(u,'wardrobe'))}</td>
+            <td class="num">${fmt(secTotal(u,'accessories'))}</td>
+            <td class="num" style="font-weight:700;color:var(--pu-700)">${fmt(unitTotal(u))}</td>
+          </tr>`).join('')}</tbody>
+          <tfoot><tr class="grand"><td>Grand Total</td><td></td><td></td><td></td><td>${fmt(grand)}</td></tr></tfoot>
+        </table>
+      </div>
+    </div>`;
+}
+
+function onMetaInput(){
+  syncProjectMetaFromDOM();
+  document.getElementById('crumb-project').textContent = projectMeta.name||'—';
+}
+function syncProjectMetaFromDOM(){
+  const fields = {name:'projName',client:'projClient',pic:'projPIC',date:'projDate',notes:'projNotes'};
+  for(const [k,id] of Object.entries(fields)){
+    const inp = document.getElementById(id);
+    if(inp) projectMeta[k] = inp.value.trim();
+  }
+}
+
+// ====================================================================
+// TOTALS MATRIX VIEW
+// ====================================================================
+function renderTotals(){
+  const e = document.getElementById('view-totals');
+  const grand = units.reduce((s,u)=>s+unitTotal(u),0);
+  const kT=units.reduce((s,u)=>s+secTotal(u,'kitchen'),0);
+  const wT=units.reduce((s,u)=>s+secTotal(u,'wardrobe'),0);
+  const aT=units.reduce((s,u)=>s+secTotal(u,'accessories'),0);
+  e.innerHTML = `
+    <div class="page-head"><h1>Totals Matrix</h1></div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-label">Kitchen Total</div><div class="stat-value"><span class="cur">Rp</span>${Math.round(kT).toLocaleString('id-ID')}</div></div>
+      <div class="stat"><div class="stat-label">Wardrobe Total</div><div class="stat-value"><span class="cur">Rp</span>${Math.round(wT).toLocaleString('id-ID')}</div></div>
+      <div class="stat"><div class="stat-label">Accessories Total</div><div class="stat-value"><span class="cur">Rp</span>${Math.round(aT).toLocaleString('id-ID')}</div></div>
+      <div class="stat accent"><div class="stat-label">Grand Total</div><div class="stat-value"><span class="cur">Rp</span>${Math.round(grand).toLocaleString('id-ID')}</div><div class="stat-sub">excl. PPN</div></div>
+    </div>
+    <div class="card"><div class="card-body" style="padding:0">
+      <table class="matrix-table">
+        <thead><tr><th>Unit / Room</th><th class="num">Kitchen</th><th class="num">Wardrobe</th><th class="num">Accessories</th><th class="num">Total</th></tr></thead>
+        <tbody>${units.map(u=>`<tr>
+          <td><span onclick="showView('unit','${u.id}')" style="color:var(--pu-700);font-weight:600;cursor:pointer">${esc(u.name)}</span></td>
+          <td class="num">${fmt(secTotal(u,'kitchen'))}</td>
+          <td class="num">${fmt(secTotal(u,'wardrobe'))}</td>
+          <td class="num">${fmt(secTotal(u,'accessories'))}</td>
+          <td class="num" style="font-weight:700;color:var(--pu-700)">${fmt(unitTotal(u))}</td>
+        </tr>`).join('')}</tbody>
+        <tfoot>
+          <tr class="sub"><td>Subtotals</td><td class="num">${fmt(kT)}</td><td class="num">${fmt(wT)}</td><td class="num">${fmt(aT)}</td><td></td></tr>
+          <tr class="grand"><td>Grand Total · All Units</td><td></td><td></td><td></td><td>${fmt(grand)}</td></tr>
+        </tfoot>
+      </table>
+    </div></div>`;
+}
+
+// ====================================================================
+// UNIT VIEW
+// ====================================================================
+function renderUnitView(unitId){
+  const unit = getUnit(unitId); if(!unit) return;
+  activeUnitId = unitId;
+  document.querySelectorAll('.sb-item[data-unit]').forEach(e=>e.classList.toggle('active',e.getAttribute('data-unit')===unitId));
+  const e = document.getElementById('view-unit');
+  const kit=secTotal(unit,'kitchen'), wd=secTotal(unit,'wardrobe'), acc=secTotal(unit,'accessories');
+  e.innerHTML = `
+    <div class="page-head">
+      <div><h1>${esc(unit.name)}</h1><div class="sub">Showroom price · excl. PPN</div></div>
+      <div class="head-actions">
+        <button class="btn btn-sm danger" onclick="if(confirm('Clear all items in this unit?')){getUnit('${unitId}').items={kitchen:[],wardrobe:[],accessories:[]};renderUnitView('${unitId}')}">Clear Unit</button>
+      </div>
+    </div>
+    <div class="stat-row" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat"><div class="stat-label">Kitchen</div><div class="stat-value"><span class="cur">Rp</span><span id="sv-kitchen">${Math.round(kit).toLocaleString('id-ID')}</span></div><div class="stat-sub" id="ss-kitchen">${unit.items.kitchen.length} items</div></div>
+      <div class="stat"><div class="stat-label">Wardrobe</div><div class="stat-value"><span class="cur">Rp</span><span id="sv-wardrobe">${Math.round(wd).toLocaleString('id-ID')}</span></div><div class="stat-sub" id="ss-wardrobe">${unit.items.wardrobe.length} items</div></div>
+      <div class="stat"><div class="stat-label">Accessories</div><div class="stat-value"><span class="cur">Rp</span><span id="sv-accessories">${Math.round(acc).toLocaleString('id-ID')}</span></div><div class="stat-sub" id="ss-accessories">${unit.items.accessories.length} items</div></div>
+      <div class="stat accent"><div class="stat-label">Unit Total</div><div class="stat-value"><span class="cur">Rp</span><span id="sv-unit-total">${Math.round(kit+wd+acc).toLocaleString('id-ID')}</span></div><div class="stat-sub">all sections</div></div>
+    </div>
+    <div class="tabs" id="unit-tabs">
+      <div class="tab active" onclick="switchTab('kitchen',this)">Kitchen <span class="tab-count" id="tc-kitchen">${unit.items.kitchen.length}</span></div>
+      <div class="tab" onclick="switchTab('wardrobe',this)">Wardrobe <span class="tab-count" id="tc-wardrobe">${unit.items.wardrobe.length}</span></div>
+      <div class="tab" onclick="switchTab('accessories',this)">Accessories <span class="tab-count" id="tc-accessories">${unit.items.accessories.length}</span></div>
+    </div>
+    <div id="tab-content"></div>`;
+  switchTab('kitchen', e.querySelector('.tab'));
+}
+
+let currentTab = 'kitchen';
+function switchTab(sec, btn){
+  currentTab = sec;
+  document.querySelectorAll('#unit-tabs .tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderTabContent(sec);
+}
+function renderTabContent(sec){
+  const unit = getUnit(); if(!unit) return;
+  const wrap = document.getElementById('tab-content'); if(!wrap) return;
+  wrap.innerHTML = buildAddBar(sec) + buildTableCard(unit, sec);
+  initSearchInput(sec);
+  updateUnitStats();
+}
+function updateUnitStats(){
+  const unit=getUnit(); if(!unit) return;
+  const kit=secTotal(unit,'kitchen'), wd=secTotal(unit,'wardrobe'), acc=secTotal(unit,'accessories');
+  const v={'sv-kitchen':kit,'sv-wardrobe':wd,'sv-accessories':acc,'sv-unit-total':kit+wd+acc};
+  const s={'ss-kitchen':unit.items.kitchen.length,'ss-wardrobe':unit.items.wardrobe.length,'ss-accessories':unit.items.accessories.length};
+  for(const [id,n] of Object.entries(v)){const e=document.getElementById(id);if(e)e.textContent=Math.round(n).toLocaleString('id-ID');}
+  for(const [id,n] of Object.entries(s)){const e=document.getElementById(id);if(e)e.textContent=n+' item'+(n===1?'':'s');}
+}
+
+// ====================================================================
+// CATEGORY CONSTANTS
+// ====================================================================
+const KIT_CATS = ['Base Unit','Wall Unit','Tall Unit','Artdeco Base Unit','Artdeco Wall Unit','Artdeco Tall Unit','Glass Doors','Ornament Artdeco'];
+const NO_HANDLE_CATS = new Set(['Glass Doors','Ornament Artdeco','Artdeco Base Unit','Artdeco Wall Unit','Artdeco Tall Unit']);
+
+const WD_CATS = ['Wardrobe Swing Door 110','Wardrobe Swing Door 170','Wardrobe Sliding Door','Swing Glass Door','Sliding Glass Door','Upper Cabinet','Upper Cabinet Mirror','Base Cabinet BLUM','Base Cabinet STD','Aluminium Marble Door Frame','Wardrobe Component'];
+const WD_GLASS_CATS  = new Set(['Swing Glass Door','Sliding Glass Door','Upper Cabinet Mirror']);
+const WD_NOFIN_CATS  = new Set(['Aluminium Marble Door Frame','Wardrobe Component']);
+
+const ACC_CATS = ['Solid Surface','Lighting','Wardrobe Accessories','Kitchen Accessories','Mirror','Handles'];
+
+// ====================================================================
+// ADD BAR
+// ====================================================================
+function buildAddBar(sec){
+  if(sec==='kitchen'){
+    const catOpts = KIT_CATS.map(c=>`<option>${esc(c)}</option>`).join('');
+    return `
+    <div class="add-bar" id="add-bar-kitchen">
+      <div class="field ab-cat"><label>Category</label>
+        <select class="select compact" id="kit-cat" onchange="onKitCatChange()" style="min-width:140px">${catOpts}</select></div>
+      <div class="field ab-finish"><label>Finish</label><select class="select compact" id="kit-finish" onchange="onKitFinishChange()" style="min-width:200px"></select></div>
+      <div class="field ab-handle" id="kit-handle-field"><label>Handle</label>
+        <select class="select compact" id="kit-variant" style="min-width:100px">
+          <option value="standard">Standard</option><option value="gola">Gola</option>
+        </select></div>
+      <div class="field ab-thickness"><label>Thickness</label><input class="input compact readonly" id="kit-thickness" style="width:72px" placeholder="—" readonly></div>
+      <div class="field ab-search" style="flex:2;min-width:220px"><label>Search / Browse Item</label>
+        <div class="search-picker search-icon-wrap">
+          <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input compact input-search" type="text" id="kit-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('kit')" onfocus="onSearchFocus('kit')" style="width:100%">
+          <div class="search-results hidden" id="kit-results"></div>
+        </div>
+      </div>
+      <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="kit-preview" style="width:130px;min-height:34px;display:flex;align-items:center">—</div></div>
+      <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="kit-qty" value="1" min="1" step="any" style="width:70px" onkeydown="if(event.key==='Enter')addRow('kitchen')"></div>
+      <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
+        <button class="btn primary" onclick="addRow('kitchen')">+ Add</button>
+        <button class="btn" onclick="openCustomModal('kitchen')" title="Add custom item">Custom</button>
+      </div>
+    </div>`;
+  }
+
+  if(sec==='wardrobe'){
+    const catOpts = WD_CATS.map(c=>`<option>${esc(c)}</option>`).join('');
+    return `
+    <div class="add-bar" id="add-bar-wardrobe">
+      <div class="field ab-cat"><label>Category</label>
+        <select class="select compact" id="wd-cat" onchange="onWdCatChange()" style="min-width:160px">${catOpts}</select></div>
+      <div class="field ab-finish" id="wd-finish-field"><label>Finish</label>
+        <select class="select compact" id="wd-finish" onchange="onWdFinishChange()" style="min-width:200px"></select></div>
+      <div class="field ab-finish" id="wd-glass-field" style="display:none"><label>Glass Type</label>
+        <select class="select compact" id="wd-glass" onchange="onWdGlassChange()" style="min-width:160px"></select></div>
+      <div class="field ab-handle" id="wd-glass2-field" style="display:none"><label id="wd-glass2-label">Hinge Type</label>
+        <select class="select compact" id="wd-glass2" onchange="clearSearch('wd')" style="min-width:160px"></select></div>
+      <div class="field ab-thickness" id="wd-thickness-field"><label>Thickness</label>
+        <input class="input compact readonly" id="wd-thickness" style="width:72px" placeholder="—" readonly></div>
+      <div class="field ab-search" style="flex:2;min-width:220px"><label>Search / Browse Item</label>
+        <div class="search-picker search-icon-wrap">
+          <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input compact input-search" type="text" id="wd-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('wd')" onfocus="onSearchFocus('wd')" style="width:100%">
+          <div class="search-results hidden" id="wd-results"></div>
+        </div>
+      </div>
+      <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="wd-preview" style="width:130px;min-height:34px;display:flex;align-items:center">—</div></div>
+      <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="wd-qty" value="1" min="1" step="any" style="width:70px" onkeydown="if(event.key==='Enter')addRow('wardrobe')"></div>
+      <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
+        <button class="btn primary" onclick="addRow('wardrobe')">+ Add</button>
+        <button class="btn" onclick="openCustomModal('wardrobe')">Custom</button>
+      </div>
+    </div>`;
+  }
+
+  // Accessories
+  const accCatOpts = ACC_CATS.map(c=>`<option>${esc(c)}</option>`).join('');
+  return `
+  <div class="add-bar" id="add-bar-accessories">
+    <div class="field ab-cat"><label>Category</label>
+      <select class="select compact" id="acc-cat" onchange="onAccCatChange()" style="min-width:160px">${accCatOpts}</select></div>
+    <div class="field ab-search" style="flex:2;min-width:220px"><label>Search / Browse Item</label>
+      <div class="search-picker search-icon-wrap">
+        <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="input compact input-search" type="text" id="acc-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('acc')" onfocus="onSearchFocus('acc')" style="width:100%">
+        <div class="search-results hidden" id="acc-results"></div>
+      </div>
+    </div>
+    <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="acc-preview" style="width:130px;min-height:34px;display:flex;align-items:center">—</div></div>
+    <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="acc-qty" value="1" min="1" step="any" style="width:70px" onkeydown="if(event.key==='Enter')addRow('accessories')"></div>
+    <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
+      <button class="btn primary" onclick="addRow('accessories')">+ Add</button>
+      <button class="btn" onclick="openCustomModal('accessories')">Custom</button>
+    </div>
+  </div>`;
+}
+
+function initSearchInput(sec){
+  if(sec==='kitchen'){ initKitFinishes(); updateHandleVisibility(); onKitFinishChange(); }
+  else if(sec==='wardrobe'){ onWdCatChange(); }
+  else if(sec==='accessories'){ onAccCatChange(); }
+}
+
+// ====================================================================
+// KITCHEN FINISHES
+// ====================================================================
+function detectThickness(f){
+  const m = String(f).match(/(\d+)\s*mm/i);
+  return m ? m[1]+'mm' : '';
+}
+function initKitFinishes(){
+  const cat = el('kit-cat')?.value; if(!cat) return;
+  const items = getPD().kitchen[cat]||[];
+  const fs = new Set();
+  items.forEach(it => Object.keys(it.prices).forEach(k => {
+    const finish = k.split('__')[0];
+    if(finish && finish !== '(No Finish)') fs.add(finish);
+  }));
+  const hasNoFinish = items.some(it => Object.keys(it.prices).some(k => k.startsWith('(No Finish)')));
+  if(hasNoFinish && fs.size === 0) fs.add('(No Finish)');
+  const sel = el('kit-finish'); if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = [...fs].sort().map(f=>`<option${f===cur?' selected':''}>${esc(f)}</option>`).join('');
+}
+function updateHandleVisibility(){
+  const cat = el('kit-cat')?.value||'';
+  const hf = el('kit-handle-field');
+  if(hf) hf.style.display = NO_HANDLE_CATS.has(cat) ? 'none' : '';
+}
+function onKitCatChange(){ initKitFinishes(); updateHandleVisibility(); onKitFinishChange(); clearSearch('kit'); }
+function onKitFinishChange(){
+  const f = el('kit-finish')?.value||'';
+  if(el('kit-thickness')) el('kit-thickness').value = detectThickness(f);
+  clearSearch('kit');
+}
+
+// ====================================================================
+// WARDROBE FINISHES
+// ====================================================================
+function onWdCatChange(){
+  const cat = el('wd-cat')?.value||'';
+  const isGlass  = WD_GLASS_CATS.has(cat);
+  const isNoFin  = WD_NOFIN_CATS.has(cat);
+  const isFinish = !isGlass && !isNoFin;
+  el('wd-finish-field').style.display   = isFinish ? '' : 'none';
+  el('wd-glass-field').style.display    = isGlass  ? '' : 'none';
+  el('wd-glass2-field').style.display   = isGlass  ? '' : 'none';
+  el('wd-thickness-field').style.display = isNoFin  ? 'none' : '';
+  if(isFinish) initWdFinishes();
+  if(isGlass)  initWdGlass();
+  clearSearch('wd');
+}
+function initWdFinishes(){
+  const cat = el('wd-cat')?.value; if(!cat) return;
+  const items = getPD().wardrobe[cat]||[];
+  const fs = new Set();
+  items.forEach(it => Object.keys(it.prices).forEach(k => {
+    const f = k.split('__')[0];
+    if(f && f !== '(No Finish)') fs.add(f);
+  }));
+  const sel = el('wd-finish'); if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = [...fs].sort().map(f=>`<option${f===cur?' selected':''}>${esc(f)}</option>`).join('');
+  onWdFinishChange();
+}
+function onWdFinishChange(){
+  const cat = el('wd-cat')?.value||'';
+  const f   = el('wd-finish')?.value||'';
+  if(el('wd-thickness')) el('wd-thickness').value = detectWdThickness(cat, f);
+  clearSearch('wd');
+}
+function detectWdThickness(cat, finish){
+  const items = getPD().wardrobe[cat]||[];
+  const key = finish + '__standard';
+  for(const it of items){
+    if(it.thicknesses && it.thicknesses[key]) return it.thicknesses[key];
+  }
+  return detectThickness(finish);
+}
+function initWdGlass(){
+  const cat = el('wd-cat')?.value; if(!cat) return;
+  const items = getPD().wardrobe[cat]||[];
+  const glassSet = new Set();
+  items.forEach(it => Object.keys(it.prices).forEach(k => {
+    const parts = k.split(' | '); if(parts.length >= 2) glassSet.add(parts[0]);
+  }));
+  const sel = el('wd-glass'); if(sel) sel.innerHTML = [...glassSet].sort().map(g=>`<option>${esc(g)}</option>`).join('');
+  const lbl = el('wd-glass2-label');
+  if(lbl) lbl.textContent = cat === 'Sliding Glass Door' ? 'Frame Type' : 'Hinge Type';
+  onWdGlassChange();
+}
+function onWdGlassChange(){
+  const cat   = el('wd-cat')?.value;
+  const glass = el('wd-glass')?.value;
+  const items = getPD().wardrobe[cat]||[];
+  const t2Set = new Set();
+  items.forEach(it => Object.keys(it.prices).forEach(k => {
+    const parts = k.split(' | ');
+    if(parts[0] === glass && parts.length >= 2) t2Set.add(parts[1].replace('__standard',''));
+  }));
+  const sel2 = el('wd-glass2'); if(sel2) sel2.innerHTML = [...t2Set].sort().map(t=>`<option>${esc(t)}</option>`).join('');
+  clearSearch('wd');
+}
+
+// ====================================================================
+// ACCESSORIES CATEGORY
+// ====================================================================
+function onAccCatChange(){ clearSearch('acc'); }
+
+// ====================================================================
+// SEARCH
+// ====================================================================
+function getPool(p){
+  if(p==='kit'){
+    const c=el('kit-cat')?.value, f=el('kit-finish')?.value, v=el('kit-variant')?.value||'standard';
+    return (getPD().kitchen[c]||[]).filter(it=>{
+      const keys=Object.keys(it.prices);
+      if(keys.every(k=>k.startsWith('(No Finish)'))) return true;
+      if(v==='gola') return (f+'__gola') in it.prices;
+      return (f+'__standard') in it.prices;
+    });
+  }
+  if(p==='wd'){
+    const c=el('wd-cat')?.value||'';
+    if(!c) return [];
+    const items=getPD().wardrobe[c]||[];
+    if(WD_NOFIN_CATS.has(c)) return items;
+    if(WD_GLASS_CATS.has(c)){
+      const glass=el('wd-glass')?.value, t2=el('wd-glass2')?.value;
+      if(!glass) return items.slice(0,60);
+      const priceKey=`${glass} | ${t2}__standard`;
+      return items.filter(it=>priceKey in it.prices);
+    }
+    const f=el('wd-finish')?.value||'';
+    if(!f) return items.slice(0,60);
+    return items.filter(it=>(f+'__standard') in it.prices);
+  }
+  if(p==='acc'){
+    const c=el('acc-cat')?.value||'';
+    return getPD().accessories[c]||[];
+  }
+  return [];
+}
+
+function onSearchFocus(p){ if(!(el(p+'-search')?.value)) showDropdown(p, getPool(p).slice(0,60)); }
+function onSearch(p){
+  const q=(el(p+'-search')?.value||'').toLowerCase();
+  const pool=getPool(p);
+  const tokens=q?q.split(/\s+/).filter(Boolean):[];
+  showDropdown(p, tokens.length ? pool.filter(it=>{const d=it.desc.toLowerCase();return tokens.every(t=>d.includes(t));}).slice(0,50) : pool.slice(0,60));
+}
+
+function showDropdown(p, items){
+  const resEl=el(p+'-results'); if(!resEl) return;
+  searchPools[p]=items;
+  if(!items.length){ resEl.innerHTML=`<div class="search-empty">No items found</div>`; positionDropdown(p); resEl.classList.remove('hidden'); return; }
+  resEl.innerHTML = items.map((it,i)=>{
+    let price='', unit='set', meta='';
+    if(p==='kit'){
+      const f=el('kit-finish')?.value, v=el('kit-variant')?.value||'standard';
+      const isNoFinish=Object.keys(it.prices).every(k=>k.startsWith('(No Finish)'));
+      const pr=isNoFinish?(it.prices['(No Finish)__standard']||0):(it.prices[f+'__'+v]||it.prices[f+'__standard']||0);
+      price=pr?fmtNum(pr):'—'; unit=it.unit||'set';
+      const dims=(it.w&&it.h&&it.d)?`${it.w}×${it.h}×${it.d}`:'';
+      meta=[it.subcat,dims].filter(Boolean).join(' · ');
+    } else if(p==='wd'){
+      const c=el('wd-cat')?.value||'';
+      let priceKey;
+      if(WD_NOFIN_CATS.has(c)) priceKey='(No Finish)__standard';
+      else if(WD_GLASS_CATS.has(c)){ const g=el('wd-glass')?.value, t2=el('wd-glass2')?.value; priceKey=`${g} | ${t2}__standard`; }
+      else priceKey=(el('wd-finish')?.value||'')+'__standard';
+      const pr=it.prices[priceKey]||0;
+      price=pr?fmtNum(pr):'—'; unit=it.unit||'set';
+      const dims=(it.w&&it.h&&it.d)?`${it.w}×${it.h}×${it.d}`:(it.depth?`D${it.depth}`:'');
+      meta=[it.subcat,dims].filter(Boolean).join(' · ');
+    } else if(p==='acc'){
+      const pr=it.prices['(No Finish)__standard']||0;
+      price=pr?fmtNum(pr):'—'; unit=it.unit||'pcs';
+      const extra=it.code?`#${it.code}`:(it.thickness_mm?`${it.thickness_mm}mm`:'');
+      meta=[it.subcat,extra].filter(Boolean).join(' · ');
+    }
+    const notes = it.notes||'';
+    return `<div class="search-row" data-idx="${i}" data-p="${p}">
+      <div class="row-main">
+        <div class="row-name">${esc(it.desc)}</div>
+        ${meta?`<div class="row-meta">${esc(meta)}</div>`:''}
+        ${notes?`<div class="row-meta" style="color:var(--pu-500);font-style:italic">${esc(notes)}</div>`:''}
+      </div>
+      <div class="row-price"><div class="price">Rp ${price}</div><div class="unit">${esc(unit)}</div></div>
+    </div>`;
+  }).join('');
+  resEl.querySelectorAll('.search-row[data-idx]').forEach(r=>r.addEventListener('mousedown',function(e){e.preventDefault();selectItem(this.getAttribute('data-p'),+this.getAttribute('data-idx'));}));
+  positionDropdown(p); resEl.classList.remove('hidden');
+}
+
+function positionDropdown(p){
+  const inp=el(p+'-search'), res=el(p+'-results'); if(!inp||!res) return;
+  const rect=inp.getBoundingClientRect();
+  res.style.top=(rect.bottom+window.scrollY+4)+'px';
+  res.style.left=(rect.left+window.scrollX)+'px';
+  res.style.width=Math.max(rect.width,320)+'px';
+}
+function hideDropdown(p){ const r=el(p+'-results'); if(r) r.classList.add('hidden'); }
+
+function selectItem(p, idx){
+  const it=searchPools[p][idx]; if(!it) return;
+  selectedItems[p]=it;
+  if(el(p+'-search')) el(p+'-search').value=it.desc;
+  hideDropdown(p);
+  let price=0;
+  if(p==='kit'){
+    const f=el('kit-finish')?.value, v=el('kit-variant')?.value||'standard';
+    const isNoFinish=Object.keys(it.prices).every(k=>k.startsWith('(No Finish)'));
+    price=isNoFinish?(it.prices['(No Finish)__standard']||0):(it.prices[f+'__'+v]||it.prices[f+'__standard']||0);
+  } else if(p==='wd'){
+    const c=el('wd-cat')?.value||'';
+    if(WD_NOFIN_CATS.has(c)) price=it.prices['(No Finish)__standard']||0;
+    else if(WD_GLASS_CATS.has(c)){ const g=el('wd-glass')?.value, t2=el('wd-glass2')?.value; price=it.prices[`${g} | ${t2}__standard`]||0; }
+    else { const f=el('wd-finish')?.value||''; price=it.prices[f+'__standard']||0; }
+  } else if(p==='acc'){
+    price=it.prices['(No Finish)__standard']||0;
+  }
+  const prev=el(p+'-preview'); if(prev) prev.textContent=price?('Rp '+fmtNum(price)):'—';
+}
+
+function clearSearch(p){
+  const inp=el(p+'-search'); if(inp) inp.value='';
+  selectedItems[p]=null;
+  const prev=el(p+'-preview'); if(prev) prev.textContent='—';
+  hideDropdown(p);
+}
+function globalClickClose(e){
+  ['kit','wd','acc'].forEach(p=>{
+    const inp=el(p+'-search'), res=el(p+'-results');
+    if(inp&&res&&!inp.contains(e.target)&&!res.contains(e.target)) hideDropdown(p);
+  });
+}
+
+// ====================================================================
+// ADD ROW
+// ====================================================================
+function addRow(sec){
+  const unit=getUnit(); if(!unit) return;
+  const pm={kitchen:'kit',wardrobe:'wd',accessories:'acc'};
+  const p=pm[sec]; const it=selectedItems[p];
+  if(!it){toast('Please select an item first','warn');return;}
+  const qty=Math.round(parseFloat(el(p+'-qty')?.value)*10)/10||1;
+  let price=0, finish='', variant='', category='', thickness='', subcat='', unit_str='set', w=null, h=null, d=null;
+
+  if(sec==='kitchen'){
+    category=el('kit-cat').value;
+    const f=el('kit-finish').value;
+    variant=NO_HANDLE_CATS.has(category)?'':(el('kit-variant').value||'standard');
+    const kitTKey=f+'__'+(variant||'standard');
+    thickness=(it.thicknesses&&it.thicknesses[kitTKey])?it.thicknesses[kitTKey]:detectThickness(f);
+    subcat=it.subcat||''; w=it.w||null; h=it.h||null; d=it.d||null; unit_str=it.unit||'set';
+    const isNoFinish=Object.keys(it.prices).every(k=>k.startsWith('(No Finish)'));
+    if(isNoFinish){ finish='(No Finish)'; price=it.prices['(No Finish)__standard']||0; variant=''; }
+    else{
+      finish=f;
+      const check=validateGola(it,finish,variant||'standard');
+      if(!check.ok){toast(check.reason,'error',5000);return;}
+      price=it.prices[finish+'__'+(variant||'standard')]||it.prices[finish+'__standard']||0;
+    }
+  } else if(sec==='wardrobe'){
+    category=el('wd-cat').value;
+    subcat=it.subcat||''; w=it.w||null; h=it.h||null; d=it.d||null; unit_str=it.unit||'set';
+    if(WD_NOFIN_CATS.has(category)){
+      finish='(No Finish)'; variant=''; thickness=it.thickness||'';
+      price=it.prices['(No Finish)__standard']||0;
+    } else if(WD_GLASS_CATS.has(category)){
+      const glass=el('wd-glass').value, t2=el('wd-glass2').value;
+      finish=glass+' | '+t2; variant=''; thickness='';
+      price=it.prices[finish+'__standard']||0;
+    } else {
+      const f=el('wd-finish').value; finish=f; variant='';
+      const fKey=f+'__standard';
+      thickness=(it.thicknesses&&it.thicknesses[fKey])?it.thicknesses[fKey]:detectThickness(f);
+      price=it.prices[fKey]||0;
+    }
+  } else if(sec==='accessories'){
+    category=el('acc-cat').value;
+    subcat=it.subcat||''; finish='(No Finish)'; variant=''; thickness=''; unit_str=it.unit||'pcs';
+    price=it.prices['(No Finish)__standard']||0;
+  }
+
+  unit.items[sec].push({
+    id:Date.now()+Math.random(), category, subcat, desc:it.desc,
+    finish, variant, thickness, unit:unit_str, w, h, d, qty, price, notes:'', custom:false, altGroup:null
+  });
+  renderTabContent(sec); updateTabCounts(); renderSidebarUnits();
+  toast('Item added');
+  if(el(p+'-search')) el(p+'-search').value='';
+  if(el(p+'-qty')) el(p+'-qty').value=1;
+  if(el(p+'-preview')) el(p+'-preview').textContent='—';
+  selectedItems[p]=null;
+  el(p+'-search')?.focus();
+}
+
+function validateGola(item, finish, variant){
+  if(variant!=='gola') return{ok:true};
+  if(item.prices&&!(finish+'__gola' in item.prices)) return{ok:false,reason:`"${item.desc}" with finish "${finish}" does not support Gola handle.`};
+  return{ok:true};
+}
+function updateTabCounts(){
+  const unit=getUnit(); if(!unit) return;
+  ['kitchen','wardrobe','accessories'].forEach(s=>{const e=document.getElementById('tc-'+s);if(e)e.textContent=unit.items[s].length;});
+}
+
+// ====================================================================
+// TABLE RENDERING
+// ====================================================================
+function buildTableCard(unit, sec){
+  const rows=unit.items[sec];
+  if(!rows.length) return `<div class="card"><div class="empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    <div>No items yet. Use the form above to search and add items.</div></div></div>`;
+  const sub=rows.reduce((s,r)=>s+r.price*r.qty,0);
+  const selSet=selectedRows[sec], selCount=selSet.size;
+  const allSelected=selCount===rows.length&&rows.length>0;
+  const tbody=rows.map((r,i)=>{
+    const fd=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
+    const tbadge=r.thickness&&r.finish!=='(No Finish)'?`<span class="thickness-badge">${esc(r.thickness)}</span>`:'';
+    const dims=(r.w&&r.h&&r.d)?`${r.w}×${r.h}×${r.d}`:(r.d?`D${r.d}`:'');
+    const dimsBadge=dims?`<span class="thickness-badge">${dims}</span>`:'';
+    const subcatBadge=r.subcat?`<span class="tag gray" style="font-size:9.5px">${esc(r.subcat)}</span>`:'';
+    const isSel=selSet.has(String(r.id));
+    return `<tr data-id="${r.id}" class="${isSel?'row-sel':''}" draggable="true"
+      ondragstart="rowDragStart(event,'${sec}','${r.id}')" ondragover="rowDragOver(event,'${sec}','${r.id}')"
+      ondrop="rowDrop(event,'${sec}','${r.id}')" ondragend="rowDragEnd('${sec}')">
+      <td class="col-drag"><svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14" style="color:var(--ink-faint)"><circle cx="2" cy="2" r="1.3"/><circle cx="6" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="6" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="6" cy="12" r="1.3"/></svg></td>
+      <td class="col-check"><input type="checkbox"${isSel?' checked':''} onchange="toggleRowSelect('${sec}','${r.id}',this.checked)"></td>
+      <td class="col-no">${i+1}</td>
+      <td class="col-cat"><span class="tag gray">${esc(r.category)}</span>${r.custom?'<span class="tag custom">CUSTOM</span>':''}</td>
+      <td class="col-finish">
+        <div class="editable-finish" onclick="editFinish(this,'${sec}','${r.id}')" title="Click to change finish">
+          <div><span class="finish-val">${esc(fd)}</span>${tbadge}</div>
+          <svg class="edit-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+      </td>
+      <td><div class="item-name">${esc(r.desc)}</div><div class="item-sub">${subcatBadge}${dimsBadge}</div></td>
+      <td class="col-price mono">${fmt(r.price)}</td>
+      <td class="col-qty"><input class="input compact qty show-spin" type="number" value="${r.qty}" min="1" step="any" onchange="updateQty('${sec}','${r.id}',this.value)" style="width:70px"></td>
+      <td class="col-total mono" style="font-weight:700;color:var(--pu-700)">${fmt(r.price*r.qty)}</td>
+      <td><input class="notes-input" type="text" placeholder="Notes…" value="${escAttr(r.notes||'')}" onchange="updateNotes('${sec}','${r.id}',this.value)">${r.notes?`<span class="notes-print-val">${esc(r.notes)}</span>`:''}</td>
+      <td class="col-actions"><div class="row" style="gap:4px;justify-content:flex-end">
+        <button class="btn btn-xs" onclick="duplicateRow('${sec}','${r.id}')" title="Duplicate row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        <button class="icon-x" onclick="removeRow('${sec}','${r.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  const selBar=`<div class="sel-bar${selCount?'':' hidden'}" id="sel-bar-${sec}">
+    <span class="sel-count">${selCount} item${selCount===1?'':'s'} selected</span>
+    <button class="btn btn-sm primary" onclick="changeFinishSelected('${sec}')">Change Finish</button>
+    ${units.length>1?`<button class="btn btn-sm" onclick="showCopyToUnit('${sec}')">Copy to Unit</button>`:''}
+    <button class="btn btn-sm danger" onclick="deleteSelected('${sec}')">Delete Selected</button>
+    <button class="btn btn-sm ghost" onclick="clearSelection('${sec}')">Clear</button>
+  </div>`;
+  return `<div class="card">
+    <div class="card-body" style="padding:10px 16px 0">${selBar}</div>
+    <div class="card-body bom-table-wrap" style="padding:0">
+    <table class="bom-table">
+      <thead><tr>
+        <th class="col-drag"></th>
+        <th class="col-check"><input type="checkbox" id="sel-all-${sec}"${allSelected?' checked':''} onchange="toggleAllRows('${sec}',this.checked)"></th>
+        <th class="col-no">#</th><th class="col-cat">Category</th><th class="col-finish">Finish</th><th>Description</th><th class="col-price">Unit Price</th><th class="col-qty">Qty</th><th class="col-total">Total</th><th>Notes</th><th class="col-actions"></th>
+      </tr></thead>
+      <tbody>${tbody}</tbody>
+      <tfoot><tr><td></td><td></td><td colspan="6">Subtotal · ${sec.charAt(0).toUpperCase()+sec.slice(1)}</td><td>${fmt(sub)}</td><td></td><td></td></tr></tfoot>
+    </table>
+    </div></div>`;
+}
+
+// ====================================================================
+// EDIT FINISH (modal)
+// ====================================================================
+function editFinish(cell, sec, id){
+  const unit=getUnit(); if(!unit) return;
+  const row=unit.items[sec].find(r=>r.id==id); if(!row) return;
+  if(row.finish==='(No Finish)'){toast('This item has no finish variants.','warn');return;}
+  let opts=[];
+  if(sec==='kitchen'){
+    const catItems=getPD().kitchen[row.category]||[];
+    const descItem=catItems.find(it=>it.desc===row.desc);
+    if(descItem) Object.keys(descItem.prices).forEach(k=>{
+      const i=k.lastIndexOf('__'); const f=k.slice(0,i); const v=k.slice(i+2);
+      if(!opts.find(o=>o.key===k)) opts.push({key:k, label:f+(v&&v!=='standard'?' / '+v:''), price:descItem.prices[k]});
+    });
+  } else if(sec==='wardrobe'){
+    const catItems=getPD().wardrobe[row.category]||[];
+    const descItem=catItems.find(it=>it.desc===row.desc);
+    if(descItem) Object.keys(descItem.prices).forEach(k=>{
+      const finKey=k.replace('__standard','');
+      if(!opts.find(o=>o.key===finKey)) opts.push({key:finKey, label:finKey, price:descItem.prices[k]});
+    });
+  }
+  if(!opts.length){toast('No alternative finishes available for this item.','warn');return;}
+  const curKey = sec==='kitchen'?(row.finish+'__'+(row.variant||'standard')):row.finish;
+  showModal(`<div class="modal-head"><h2>Change Finish</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--ink-faint);margin-bottom:10px">${esc(row.desc)}</p>
+    <div class="field"><label>Finish / Handle</label>
+      <select class="select" id="ef-sel">
+        ${opts.map(o=>`<option value="${escAttr(o.key)}"${o.key===curKey?' selected':''}>${esc(o.label)} — Rp ${fmtNum(o.price)}</option>`).join('')}
+      </select>
+    </div>
+  </div>
+  <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="commitFinish('${sec}','${id}')">Apply</button></div>`);
+}
+
+function commitFinish(sec,id){
+  const unit=getUnit(); if(!unit) return;
+  const row=unit.items[sec].find(r=>r.id==id); if(!row) return;
+  const val=el('ef-sel')?.value; if(!val) return;
+  if(sec==='kitchen'){
+    const i=val.lastIndexOf('__'); const f=val.slice(0,i); const v=val.slice(i+2);
+    const catItems=getPD().kitchen[row.category]||[];
+    const descItem=catItems.find(it=>it.desc===row.desc);
+    const check=validateGola({prices:descItem?descItem.prices:{}},f,v);
+    if(!check.ok){toast(check.reason,'error',5000);return;}
+    row.finish=f; row.variant=v; row.thickness=detectThickness(f);
+    if(descItem) row.price=descItem.prices[val]||row.price;
+  } else if(sec==='wardrobe'){
+    const catItems=getPD().wardrobe[row.category]||[];
+    const descItem=catItems.find(it=>it.desc===row.desc);
+    row.finish=val; row.variant='';
+    if(descItem){
+      row.price=descItem.prices[val+'__standard']||row.price;
+      if(descItem.thicknesses&&descItem.thicknesses[val+'__standard']) row.thickness=descItem.thicknesses[val+'__standard'];
+      else row.thickness=WD_GLASS_CATS.has(row.category)?'':detectThickness(val);
+    }
+  }
+  closeModal(); renderTabContent(sec);
+}
+
+// ====================================================================
+// ROW OPERATIONS
+// ====================================================================
+function updateQty(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.qty=Math.round(parseFloat(val)*10)/10||1;renderTabContent(sec);}}
+function updateNotes(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r)r.notes=val;}
+function removeRow(sec,id){const unit=getUnit();if(!unit)return;unit.items[sec]=unit.items[sec].filter(r=>r.id!=id);selectedRows[sec].delete(String(id));renderTabContent(sec);updateTabCounts();renderSidebarUnits();}
+function duplicateRow(sec,id){
+  const unit=getUnit();if(!unit)return;
+  const row=unit.items[sec].find(r=>r.id==id);if(!row)return;
+  const n=JSON.parse(JSON.stringify(row));n.id=Date.now()+Math.random();n.altGroup=null;
+  const idx=unit.items[sec].indexOf(row);unit.items[sec].splice(idx+1,0,n);
+  renderTabContent(sec);updateTabCounts();renderSidebarUnits();toast('Row duplicated');
+}
+function toggleRowSelect(sec,id,checked){
+  if(checked) selectedRows[sec].add(String(id)); else selectedRows[sec].delete(String(id));
+  updateSelectionUI(sec);
+}
+function toggleAllRows(sec,checked){
+  const unit=getUnit();if(!unit)return;
+  if(checked) unit.items[sec].forEach(r=>selectedRows[sec].add(String(r.id)));
+  else selectedRows[sec].clear();
+  updateSelectionUI(sec);
+}
+function updateSelectionUI(sec){
+  const unit=getUnit();if(!unit)return;
+  const count=selectedRows[sec].size;
+  const bar=document.getElementById('sel-bar-'+sec);
+  if(bar){ bar.classList.toggle('hidden',count===0); const ct=bar.querySelector('.sel-count'); if(ct) ct.textContent=count+' item'+(count===1?'':'s')+' selected'; }
+  unit.items[sec].forEach(r=>{
+    const tr=document.querySelector(`tr[data-id="${r.id}"]`);
+    if(tr){ const sel=selectedRows[sec].has(String(r.id)); tr.classList.toggle('row-sel',sel); const cb=tr.querySelector('input[type=checkbox]');if(cb)cb.checked=sel; }
+  });
+  const all=document.getElementById('sel-all-'+sec);
+  if(all){ all.checked=count>0&&count===unit.items[sec].length; all.indeterminate=count>0&&count<unit.items[sec].length; }
+}
+function clearSelection(sec){ selectedRows[sec].clear(); updateSelectionUI(sec); }
+function deleteSelected(sec){
+  const unit=getUnit();if(!unit)return;
+  const ids=selectedRows[sec];if(!ids.size)return;
+  if(!confirm(`Delete ${ids.size} selected item${ids.size===1?'':'s'}?`))return;
+  unit.items[sec]=unit.items[sec].filter(r=>!ids.has(String(r.id)));
+  selectedRows[sec].clear();
+  renderTabContent(sec);updateTabCounts();renderSidebarUnits();
+  toast(ids.size+' item'+(ids.size===1?'':'s')+' deleted');
+}
+function showCopyToUnit(sec){
+  const ids=selectedRows[sec];if(!ids.size){toast('No items selected','warn');return;}
+  const unit=getUnit();
+  const others=units.filter(u=>u.id!==unit.id);
+  if(!others.length){toast('No other units available','warn');return;}
+  const opts=others.map(u=>`<div class="db-item-row" onclick="copyToUnit('${sec}','${u.id}');closeModal()">${esc(u.name)}</div>`).join('');
+  showModal(`<div class="modal-head"><h2>Copy to Unit</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body"><p style="font-size:13px;color:var(--ink-faint);margin:0 0 10px">Copy ${ids.size} selected item${ids.size===1?'':'s'} to:</p>${opts}</div>
+  <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Cancel</button></div>`);
+}
+function copyToUnit(sec,targetId){
+  const src=getUnit();const tgt=getUnit(targetId);if(!src||!tgt)return;
+  const ids=selectedRows[sec];
+  const toCopy=src.items[sec].filter(r=>ids.has(String(r.id)));
+  toCopy.forEach(r=>tgt.items[sec].push({...r,id:Date.now()+Math.random(),altGroup:null}));
+  toast(`Copied ${toCopy.length} item${toCopy.length===1?'':'s'} to "${tgt.name}"`);
+  renderSidebarUnits();if(currentView==='overview')renderOverview();
+}
+function changeFinishSelected(sec){
+  if(!selectedRows[sec].size){toast('No items selected','warn');return;}
+  const unit=getUnit();if(!unit)return;
+  // Only finish-based items (exclude custom, no-finish, and glass wardrobe items)
+  const eligible=unit.items[sec].filter(r=>
+    selectedRows[sec].has(String(r.id)) && !r.custom && r.finish!=='(No Finish)' &&
+    !(sec==='wardrobe'&&WD_GLASS_CATS.has(r.category)) &&
+    !(sec==='wardrobe'&&WD_NOFIN_CATS.has(r.category))
+  );
+  if(!eligible.length){toast('No eligible items (custom, glass, and no-finish items are skipped)','warn');return;}
+  const finishSet=new Set();
+  eligible.forEach(r=>{
+    const dataItems=(sec==='accessories'?[]:((getPD()[sec==='kitchen'?'kitchen':'wardrobe']||{})[r.category]||[]));
+    dataItems.forEach(it=>Object.keys(it.prices).forEach(k=>{
+      const f=k.split('__')[0];if(f&&f!=='(No Finish)')finishSet.add(f);
+    }));
+  });
+  const finishes=[...finishSet].sort();
+  if(!finishes.length){toast('No common finishes available.','warn');return;}
+  const showHandle=sec==='kitchen';
+  showModal(`<div class="modal-head"><h2>Change Finish · ${eligible.length} Item${eligible.length===1?'':'s'}</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body">
+    <div class="field"><label>New Finish</label><select class="select" id="bfc-finish">${finishes.map(f=>`<option>${esc(f)}</option>`).join('')}</select></div>
+    ${showHandle?`<div class="field" id="bfc-handle-field"><label>Handle</label><select class="select" id="bfc-variant"><option value="standard">Standard</option><option value="gola">Gola</option></select></div>`:''}
+    <p style="font-size:12px;color:var(--ink-faint);margin-top:4px">Items where the selected finish is unavailable will keep their current finish.</p>
+  </div>
+  <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="applyFinishChange('${sec}')">Apply</button></div>`);
+}
+function applyFinishChange(sec){
+  const unit=getUnit();if(!unit)return;
+  const newFinish=el('bfc-finish')?.value;
+  const newVariant=el('bfc-variant')?.value||'standard';
+  if(!newFinish){toast('Select a finish','warn');return;}
+  let updated=0,skipped=0;
+  unit.items[sec].forEach(r=>{
+    if(!selectedRows[sec].has(String(r.id)))return;
+    if(r.custom||r.finish==='(No Finish)'){skipped++;return;}
+    if(sec==='wardrobe'&&(WD_GLASS_CATS.has(r.category)||WD_NOFIN_CATS.has(r.category))){skipped++;return;}
+    const dataPool=sec==='kitchen'?getPD().kitchen:getPD().wardrobe;
+    const catItems=(dataPool[r.category]||[]);
+    const descItem=catItems.find(it=>it.desc===r.desc);
+    if(!descItem){skipped++;return;}
+    if(sec==='kitchen'){
+      const variant=NO_HANDLE_CATS.has(r.category)?'standard':(newVariant||'standard');
+      const key=newFinish+'__'+variant, stdKey=newFinish+'__standard';
+      if(key in descItem.prices||stdKey in descItem.prices){
+        r.finish=newFinish;r.variant=NO_HANDLE_CATS.has(r.category)?'':variant;
+        r.thickness=detectThickness(newFinish);
+        r.price=descItem.prices[key]||descItem.prices[stdKey]||r.price; updated++;
+      } else skipped++;
+    } else {
+      const key=newFinish+'__standard';
+      if(key in descItem.prices){
+        r.finish=newFinish; r.variant='';
+        if(descItem.thicknesses&&descItem.thicknesses[key]) r.thickness=descItem.thicknesses[key];
+        else r.thickness=detectThickness(newFinish);
+        r.price=descItem.prices[key]||r.price; updated++;
+      } else skipped++;
+    }
+  });
+  closeModal(); selectedRows[sec].clear();
+  renderTabContent(sec); renderSidebarUnits();
+  toast(`Updated ${updated} item${updated===1?'':'s'}${skipped?`, ${skipped} skipped`:''}`, updated?'success':'warn');
+}
+
+// ====================================================================
+// DRAG — UNITS (sidebar)
+// ====================================================================
+function unitDragStart(e,id){
+  if(!_mousedownEl?.closest('.drag-handle')){e.preventDefault();return;} _mousedownEl=null;
+  dragUnit=id; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',id);
+  setTimeout(()=>{const el=document.querySelector(`.sb-item[data-unit="${id}"]`);if(el)el.classList.add('dragging');},0);
+}
+function unitDragOver(e,id){
+  e.preventDefault(); e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('drop-above','drop-below'));
+  if(id===dragUnit)return;
+  const el=document.querySelector(`.sb-item[data-unit="${id}"]`);
+  if(el){const r=el.getBoundingClientRect();el.classList.add(e.clientY<r.top+r.height/2?'drop-above':'drop-below');}
+}
+function unitDrop(e,targetId){
+  e.preventDefault();
+  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('drop-above','drop-below'));
+  if(!dragUnit||dragUnit===targetId)return;
+  const srcIdx=units.findIndex(u=>u.id===dragUnit);
+  const tgtIdx=units.findIndex(u=>u.id===targetId);
+  if(srcIdx<0||tgtIdx<0)return;
+  const tgtEl=document.querySelector(`.sb-item[data-unit="${targetId}"]`);
+  const after=tgtEl&&e.clientY>tgtEl.getBoundingClientRect().top+tgtEl.getBoundingClientRect().height/2;
+  const [moved]=units.splice(srcIdx,1);
+  const newTgt=units.findIndex(u=>u.id===targetId);
+  units.splice(after?newTgt+1:newTgt,0,moved);
+  dragUnit=null; renderSidebarUnits();
+  if(currentView==='overview') renderOverview();
+}
+function unitDragEnd(){dragUnit=null;document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('dragging','drop-above','drop-below'));}
+
+// ====================================================================
+// DRAG — TABLE ROWS
+// ====================================================================
+function rowDragStart(e,sec,id){
+  if(!_mousedownEl?.closest('.col-drag')){e.preventDefault();return;} _mousedownEl=null;
+  dragRow={sec,id:String(id)}; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',id);
+  setTimeout(()=>{const tr=document.querySelector(`tr[data-id="${id}"]`);if(tr)tr.classList.add('dragging');},0);
+}
+function rowDragOver(e,sec,id){
+  e.preventDefault(); e.dataTransfer.dropEffect='move';
+  if(sec!==dragRow.sec)return;
+  document.querySelectorAll('tr[data-id]').forEach(r=>r.classList.remove('drop-above','drop-below'));
+  if(String(id)===dragRow.id)return;
+  const tr=document.querySelector(`tr[data-id="${id}"]`);
+  if(tr){const r=tr.getBoundingClientRect();tr.classList.add(e.clientY<r.top+r.height/2?'drop-above':'drop-below');}
+}
+function rowDrop(e,sec,targetId){
+  e.preventDefault();
+  document.querySelectorAll('tr[data-id]').forEach(r=>r.classList.remove('drop-above','drop-below'));
+  if(!dragRow.id||dragRow.sec!==sec||dragRow.id===String(targetId))return;
+  const unit=getUnit();if(!unit)return;
+  const items=unit.items[sec];
+  const srcIdx=items.findIndex(r=>String(r.id)===dragRow.id);
+  const tgtIdx=items.findIndex(r=>String(r.id)===String(targetId));
+  if(srcIdx<0||tgtIdx<0)return;
+  const tgtTr=document.querySelector(`tr[data-id="${targetId}"]`);
+  const after=tgtTr&&e.clientY>tgtTr.getBoundingClientRect().top+tgtTr.getBoundingClientRect().height/2;
+  const [moved]=items.splice(srcIdx,1);
+  const newTgt=items.findIndex(r=>String(r.id)===String(targetId));
+  items.splice(after?newTgt+1:newTgt,0,moved);
+  dragRow={sec:null,id:null}; renderTabContent(sec); renderSidebarUnits();
+}
+function rowDragEnd(sec){dragRow={sec:null,id:null};document.querySelectorAll('tr[data-id]').forEach(r=>r.classList.remove('dragging','drop-above','drop-below'));}
+
+// ====================================================================
+// CUSTOM ITEM
+// ====================================================================
+function openCustomModal(sec){
+  customModalSection=sec;
+  showModal(`<div class="modal-head"><h2>Add Custom Item</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body">
+    <div class="field"><label>Description</label><input class="input" type="text" id="cm-desc" placeholder="Item description"></div>
+    <div class="field"><label>Finish / Material</label><input class="input" type="text" id="cm-finish" placeholder="e.g. Custom, Solid Teak…"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field"><label>Thickness</label><input class="input" type="text" id="cm-thickness" placeholder="e.g. 18mm, 25mm (optional)"></div>
+      <div class="field"><label>Unit</label><input class="input" type="text" id="cm-unit" value="set"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field"><label>Unit Price (IDR)</label><input class="input" type="number" id="cm-price" placeholder="0" min="0"></div>
+      <div class="field"><label>Qty</label><input class="input" type="number" id="cm-qty" value="1" min="1" step="any" onkeydown="if(event.key==='Enter')confirmCustom()"></div>
+    </div>
+    <div class="field"><label>Notes</label><input class="input" type="text" id="cm-notes" placeholder="Optional"></div>
+  </div>
+  <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="confirmCustom()">Add Item</button></div>`);
+}
+function confirmCustom(){
+  const unit=getUnit();if(!unit)return;
+  const desc=(el('cm-desc')?.value||'').trim();if(!desc){toast('Description required','warn');return;}
+  unit.items[customModalSection].push({
+    id:Date.now()+Math.random(), category:'Custom', subcat:'', desc,
+    finish:(el('cm-finish')?.value||'').trim(), variant:'', thickness:(el('cm-thickness')?.value||'').trim(),
+    unit:el('cm-unit')?.value||'set', w:null, h:null, d:null,
+    qty:Math.round(parseFloat(el('cm-qty')?.value)*10)/10||1, price:parseFloat(el('cm-price')?.value)||0,
+    notes:(el('cm-notes')?.value||'').trim(), custom:true, altGroup:null
+  });
+  closeModal();renderTabContent(customModalSection);updateTabCounts();renderSidebarUnits();toast('Custom item added');
+}
+
+// ====================================================================
+// SAVE / LOAD
+// ====================================================================
+function getState(){
+  syncProjectMetaFromDOM();
+  return{version:2, revisionNumber, project:projectMeta, units, unitCounter, savedAt:new Date().toISOString()};
+}
+function saveFile(){
+  revisionNumber++;
+  syncProjectMetaFromDOM();
+  const s=getState();
+  const proj=(projectMeta.name||'BOQ').trim();
+  const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));
+  a.download=`${proj} ${plv}.smbq`;
+  a.click(); toast('Saved · rev '+revisionNumber);
+}
+function loadFile(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const s=JSON.parse(e.target.result);
+      if(s.project){
+        projectMeta=Object.assign({name:'',client:'',pic:'',date:'',notes:'',priceListVersion:''},s.project);
+        if(!projectMeta.priceListVersion) projectMeta.priceListVersion=PRICE_LIST_LATEST;
+      }
+      units=s.units||[];unitCounter=s.unitCounter||units.length;activeUnitId=units[0]?.id||null;
+      revisionNumber=s.revisionNumber||1;
+      updateRevPill();
+      renderSidebarUnits();showView('overview');toast('Loaded: '+file.name);
+    }catch(err){toast('Failed to load: '+err.message,'error');}
+  };
+  reader.readAsText(file);input.value='';
+}
+
+// ====================================================================
+// SWITCH PRICE LIST
+// ====================================================================
+function switchPriceList(v){
+  if(!ALL_PRICE_DATA[v]){toast('Price list version not found','error');return;}
+  const pd=ALL_PRICE_DATA[v];
+  let updated=0, notFound=0;
+  units.forEach(unit=>{
+    ['kitchen','wardrobe','accessories'].forEach(sec=>{
+      unit.items[sec].forEach(r=>{
+        if(r.custom) return;
+        const dataPool=sec==='accessories'?pd.accessories:(sec==='kitchen'?pd.kitchen:pd.wardrobe);
+        const catItems=(dataPool[r.category])||[];
+        const descItem=catItems.find(it=>it.desc===r.desc);
+        if(!descItem){notFound++;return;}
+        let key;
+        if(sec==='accessories') key='(No Finish)__standard';
+        else if(sec==='kitchen') key=r.finish+'__'+(r.variant||'standard');
+        else key=r.finish+'__standard';
+        const newPrice=descItem.prices[key]||(sec!=='accessories'?descItem.prices[r.finish+'__standard']:null);
+        if(newPrice){r.price=newPrice;updated++;} else notFound++;
+      });
+    });
+  });
+  projectMeta.priceListVersion=v;
+  updateRevPill();
+  renderOverview();
+  if(currentView==='unit') renderUnitView(activeUnitId);
+  const label=v===PRICE_LIST_LATEST?v:`${v} (not latest)`;
+  toast(`Switched to ${label}: ${updated} item${updated===1?'':'s'} re-priced${notFound?` · ${notFound} not found`:''}`, updated?'success':'warn', 4000);
+}
+
+// ====================================================================
+// EXCEL EXPORT
+// ====================================================================
+function exportExcel(){
+  if(typeof XLSX==='undefined'){toast('XLSX not loaded','error');return;}
+  syncProjectMetaFromDOM();
+  const proj=projectMeta.name||'BOQ', wb=XLSX.utils.book_new();
+  const hdr=['#','Unit','Category','Subcat','Finish','Handle','Dims (W×H×D)','Description','Unit Price (IDR)','Qty','Total (IDR)','Notes'];
+  const allRows=[]; let rn=1;
+  units.forEach(unit=>{
+    const sr=[hdr]; let n=1;
+    ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].forEach(r=>{
+      const dims=(r.w&&r.h&&r.d)?`${r.w}×${r.h}×${r.d}`:'';
+      const row=[n++,unit.name,r.category,r.subcat||'',r.finish+(r.thickness&&r.finish!=='(No Finish)'?' · '+r.thickness:''),r.variant||'',dims,r.desc,r.price,r.qty,r.price*r.qty,r.notes||''];
+      sr.push(row); allRows.push([rn++,unit.name,...row.slice(1)]);
+    }));
+    sr.push([]); sr.push(['','','','','','','','','','UNIT TOTAL →',unitTotal(unit),'']);
+    const ws=XLSX.utils.aoa_to_sheet(sr);
+    ws['!cols']=[{wch:4},{wch:18},{wch:14},{wch:22},{wch:26},{wch:10},{wch:14},{wch:42},{wch:16},{wch:6},{wch:16},{wch:28}];
+    XLSX.utils.book_append_sheet(wb,ws,(unit.name.replace(/[\\/*?[\]]/g,'').substring(0,31)||'Unit'));
+  });
+  const sum=[['PROJECT BOQ — STELLA MOBILI'],['Project',projectMeta.name,'Client',projectMeta.client,'PIC',projectMeta.pic,'Date',projectMeta.date],['Notes',projectMeta.notes],['Rev','v'+revisionNumber],['Price List',projectMeta.priceListVersion||PRICE_LIST_LATEST],[],['UNIT TOTALS'],['Unit','Kitchen','Wardrobe','Accessories','Total']];
+  units.forEach(u=>{const k=secTotal(u,'kitchen'),w=secTotal(u,'wardrobe'),a=secTotal(u,'accessories');sum.push([u.name,k,w,a,k+w+a]);});
+  sum.push([],[,'','','','GRAND TOTAL',units.reduce((s,u)=>s+unitTotal(u),0)],[],['FULL ITEM LIST'],hdr,...allRows);
+  const ws2=XLSX.utils.aoa_to_sheet(sum);ws2['!cols']=[{wch:4},{wch:18},{wch:14},{wch:22},{wch:26},{wch:10},{wch:14},{wch:42},{wch:16},{wch:6},{wch:16},{wch:28}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Summary');
+  wb.SheetNames=['Summary',...wb.SheetNames.filter(n=>n!=='Summary')];
+  const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
+  XLSX.writeFile(wb,`${proj} ${plv}.xlsx`);
+  toast('Excel exported');
+}
+
+// ====================================================================
+// PDF
+// ====================================================================
+function savePDF(){
+  syncProjectMetaFromDOM();
+  const proj=projectMeta.name||'—';
+  const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
+  document.title=`${proj} ${plv}`;
+  document.getElementById('ph-proj').textContent=proj;
+  document.getElementById('ph-meta').textContent=`BOQ v${revisionNumber} · ${projectMeta.date||''} · Showroom Price · Price List ${plv}`;
+  const wrap=document.getElementById('print-all-units');
+  const grand=units.reduce((s,u)=>s+unitTotal(u),0);
+  wrap.innerHTML=`
+    <div style="margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+        ${units.map(u=>`<div style="border:1px solid #ddd;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#6c7080;font-weight:700;margin-bottom:4px">${esc(u.name)}</div><div style="font-size:16px;font-weight:700;font-family:JetBrains Mono,monospace;color:#4c1d95">Rp ${Math.round(unitTotal(u)).toLocaleString('id-ID')}</div></div>`).join('')}
+        <div style="border:1px solid #4c1d95;border-radius:8px;padding:10px;background:#f5f3ff"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#6c7080;font-weight:700;margin-bottom:4px">Grand Total</div><div style="font-size:16px;font-weight:700;font-family:JetBrains Mono,monospace;color:#4c1d95">Rp ${Math.round(grand).toLocaleString('id-ID')}</div></div>
+      </div>
+    </div>
+    ${units.map(u=>{
+      const hasContent=['kitchen','wardrobe','accessories'].some(s=>u.items[s].length>0);if(!hasContent)return'';
+      return `<div class="print-unit-block">
+        <div style="background:#4c1d95;color:white;padding:10px 14px;border-radius:8px 8px 0 0;display:flex;justify-content:space-between;font-weight:700">
+          <span>${esc(u.name)}</span><span style="font-family:JetBrains Mono,monospace">${fmt(unitTotal(u))}</span>
+        </div>
+        ${['kitchen','wardrobe','accessories'].map(sec=>{
+          if(!u.items[sec].length)return'';
+          const sub=u.items[sec].reduce((s,r)=>s+r.price*r.qty,0);
+          return `<div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:#6c7080;padding:8px 14px;border-bottom:1px solid #eee;background:#faf8ff">${sec}</div>
+          <table class="bom-table" style="border-radius:0;border:none;border-bottom:1px solid #eee">
+            <thead><tr><th style="padding-left:14px">#</th><th>Category</th><th>Finish</th><th>Description</th><th>Unit Price</th><th>Qty</th><th>Total</th><th>Notes</th></tr></thead>
+            <tbody>${u.items[sec].map((r,i)=>{
+              const fd=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
+              const dims=(r.w&&r.h&&r.d)?`${r.w}×${r.h}×${r.d}`:'';
+              return `<tr><td style="padding-left:14px">${i+1}</td><td>${esc(r.category)}</td><td style="font-size:11px;color:#6c7080">${esc(fd)}${r.thickness&&r.finish!=='(No Finish)'?` · ${r.thickness}`:''}</td><td><strong>${esc(r.desc)}</strong>${dims?`<br><span style="font-size:9px;color:#6c7080">${dims}</span>`:''}</td><td style="text-align:right;font-family:monospace">${fmt(r.price)}</td><td style="text-align:center">${r.qty}</td><td style="text-align:right;font-family:monospace;font-weight:700;color:#4c1d95">${fmt(r.price*r.qty)}</td><td style="font-size:11px;color:#6c7080">${esc(r.notes||'')}</td></tr>`;
+            }).join('')}</tbody>
+            <tfoot><tr><td colspan="6" style="padding-left:14px">Subtotal · ${sec}</td><td>${fmt(sub)}</td><td></td></tr></tfoot>
+          </table>`;
+        }).join('')}
+      </div>`;
+    }).join('')}
+    <div style="background:#4c1d95;color:white;border-radius:8px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+      <span style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:.8">Grand Total · All Units · Showroom Price · Excl. PPN</span>
+      <span style="font-size:20px;font-family:JetBrains Mono,monospace;font-weight:800">${fmt(grand)}</span>
+    </div>`;
+  ['view-overview','view-unit'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('hidden')});
+  setTimeout(()=>{window.print();setTimeout(()=>{wrap.innerHTML='';['view-overview','view-unit'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('hidden')});},800);},300);
+}
+
+// ====================================================================
+// DATABASE BROWSER
+// ====================================================================
+let _dbVer = '';
+
+function _dbPD(ver){ return ALL_PRICE_DATA[ver||_dbVer||PRICE_LIST_LATEST]; }
+function _dbPrevVer(ver){ const i=PRICE_LIST_VERSIONS.indexOf(ver||_dbVer); return i>0?PRICE_LIST_VERSIONS[i-1]:null; }
+
+function openDBEditor(){
+  if(!_dbVer) _dbVer=PRICE_LIST_LATEST;
+  const pd=_dbPD();
+  const cats=Object.keys(pd[_dbSec]);
+  if(!_dbCat||!cats.includes(_dbCat)) _dbCat=cats[0];
+  const items=(pd[_dbSec][_dbCat])||[];
+  const secOpts=['kitchen','wardrobe','accessories'].map(s=>`<option${s===_dbSec?' selected':''}>${s}</option>`).join('');
+  const catOpts=cats.map(c=>`<option${c===_dbCat?' selected':''}>${esc(c)}</option>`).join('');
+  const verOpts=PRICE_LIST_VERSIONS.map(v=>`<option${v===_dbVer?' selected':''}>${v}</option>`).join('');
+  const prevVer=_dbPrevVer();
+  const hasDiff=!!prevVer;
+  showModal(`<div class="modal-head"><h2>Database Browser</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body" style="gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <select class="select" style="flex:1;min-width:120px" onchange="_dbSec=this.value;_dbCat='';openDBEditor()">${secOpts}</select>
+      <select class="select" style="flex:2;min-width:160px" onchange="_dbCat=this.value;openDBEditor()">${catOpts}</select>
+      <select class="select" style="min-width:110px" onchange="_dbVer=this.value;_dbCat='';openDBEditor()">${verOpts}</select>
+    </div>
+    <input class="input compact" id="db-search" type="text" placeholder="Filter items…" oninput="filterDBItems()" style="margin-bottom:4px">
+    <p style="font-size:11px;color:var(--ink-faint)">${items.length} items in <strong>${esc(_dbCat)}</strong>${hasDiff?` · <span style="color:var(--pu-600)">vs ${prevVer}</span>`:''}  · click any item for details</p>
+    <div id="db-items-list">
+      ${items.map((it,i)=>{
+        let diffHtml='';
+        if(hasDiff){
+          const prevItems=(_dbPD(prevVer)[_dbSec][_dbCat])||[];
+          const prevIt=prevItems.find(p=>p.desc===it.desc);
+          if(prevIt){
+            const keys=Object.keys(it.prices);
+            const changes=keys.map(k=>{const np=it.prices[k],op=prevIt.prices[k];return op&&np&&np!==op?np-op:0;}).filter(Boolean);
+            if(changes.length){
+              const avg=changes.reduce((a,b)=>a+b,0)/changes.length;
+              const pct=Math.round(avg/Object.values(prevIt.prices)[0]*100);
+              diffHtml=`<span style="margin-left:6px;font-size:10px;font-weight:700;color:${avg>0?'#dc2626':'#16a34a'}">${avg>0?'▲':'▼'}${Math.abs(pct)}%</span>`;
+            }
+          } else {
+            diffHtml=`<span style="margin-left:6px;font-size:10px;color:var(--pu-600);font-weight:600">NEW</span>`;
+          }
+        }
+        return `<div class="db-item-row" onclick="openDBItem(${i})">
+          <div style="font-weight:600;margin-bottom:2px">${esc(it.desc)}${diffHtml}</div>
+          <div style="font-size:10.5px;color:var(--ink-faint)">${[it.subcat,it.w&&it.h&&it.d?`${it.w}×${it.h}×${it.d}`:it.depth?`D${it.depth}`:'',Object.keys(it.prices).length+' variants',it.notes?`<em>${esc(it.notes)}</em>`:''].filter(Boolean).join(' · ')}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+  <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Close</button></div>`, 'modal-lg');
+}
+function filterDBItems(){
+  const q=(el('db-search')?.value||'').toLowerCase();
+  document.querySelectorAll('#db-items-list .db-item-row').forEach(row=>{
+    row.style.display=q&&!row.textContent.toLowerCase().includes(q)?'none':'';
+  });
+}
+
+function openDBItem(idx){
+  const pd=_dbPD();
+  const items=(pd[_dbSec][_dbCat])||[];
+  const it=items[idx]; if(!it) return;
+  const prevVer=_dbPrevVer();
+  const prevItems=prevVer?(_dbPD(prevVer)[_dbSec][_dbCat]||[]):[];
+  const prevIt=prevItems.find(p=>p.desc===it.desc);
+  const dimStr=[it.subcat,it.w&&it.h&&it.d?`${it.w}×${it.h}×${it.d}mm`:it.depth?`Depth ${it.depth}mm`:'',it.unit?`unit: ${it.unit}`:''].filter(Boolean).join(' · ');
+  const priceRows=Object.entries(it.prices).map(([k,p])=>{
+    const stdKey=k.replace('__standard','').replace('__gola','');
+    const variant=k.endsWith('__gola')?'Gola':k.endsWith('__standard')?'Standard':'';
+    const finishLabel=k.includes('__')?stdKey:k;
+    const thickVal=it.thicknesses?.[k]||'';
+    let diffCell='—';
+    if(prevIt&&prevIt.prices[k]){
+      const op=prevIt.prices[k], diff=p-op, pct=(diff/op*100).toFixed(1);
+      diffCell=diff===0?`<span style="color:var(--ink-faint)">—</span>`:`<span style="font-weight:700;color:${diff>0?'#dc2626':'#16a34a'}">${diff>0?'▲':'▼'}${fmt(Math.abs(diff))} (${Math.abs(pct)}%)</span>`;
+    } else if(!prevIt) {
+      diffCell=prevVer?`<span style="font-size:10px;color:var(--pu-600)">NEW</span>`:'—';
+    }
+    return `<tr><td>${esc(finishLabel)}</td><td style="text-align:center">${variant?esc(variant):''}</td><td style="text-align:center">${thickVal?esc(thickVal):''}</td><td class="num">${fmt(p)}</td><td style="text-align:right;font-size:11px;white-space:nowrap">${diffCell}</td></tr>`;
+  }).join('');
+  const diffColHeader=prevVer?`<th style="text-align:right">vs ${prevVer}</th>`:'';
+  showModal(`<div class="modal-head">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="btn btn-sm ghost" onclick="openDBEditor()">← Back</button>
+      <h2 style="margin:0">${esc(it.desc)}</h2>
+    </div>
+    <button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div class="modal-body">
+    <div style="font-size:12px;color:var(--ink-faint);margin-bottom:10px">${dimStr}${it.notes?`<br><em style="color:var(--pu-500)">${esc(it.notes)}</em>`:''}</div>
+    <table class="db-detail-table">
+      <thead><tr><th>Finish</th><th style="text-align:center">Handle / Type</th><th style="text-align:center">Thickness</th><th style="text-align:right">Price (${_dbVer})</th>${diffColHeader}</tr></thead>
+      <tbody>${priceRows}</tbody>
+    </table>
+  </div>
+  <div class="modal-foot">
+    <span style="font-size:12px;color:var(--ink-faint)">${Object.keys(it.prices).length} variants</span>
+    <button class="btn ghost" onclick="closeModal()">Close</button>
+  </div>`, 'modal-lg');
+}
+
+// ====================================================================
+// MODAL
+// ====================================================================
+function showModal(html, cls){
+  const mount=document.getElementById('modal-mount');
+  mount.innerHTML=`<div class="modal-backdrop" onclick="if(event.target===this)closeModal()"><div class="modal${cls?' '+cls:''}">${html}</div></div>`;
+}
+function closeModal(){document.getElementById('modal-mount').innerHTML=''}
+
+// ====================================================================
+// TOAST
+// ====================================================================
+function toast(msg,type='success',dur=2500){
+  const stack=document.getElementById('toast-stack');
+  const t=document.createElement('div'); t.className='toast '+(type||'success');
+  const icons={success:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`,warn:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,error:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`};
+  t.innerHTML=(icons[type]||icons.success)+`<span>${msg}</span>`;
+  stack.appendChild(t); setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(10px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},dur);
+}
+
+// ====================================================================
+// HELPERS
+// ====================================================================
+function el(id){return document.getElementById(id)}
+function fmt(n){return'Rp '+Math.round(n).toLocaleString('id-ID')}
+function fmtShort(n){if(n>=1e9)return'Rp '+(n/1e9).toFixed(1)+'B';if(n>=1e6)return'Rp '+(n/1e6).toFixed(1)+'M';return'Rp '+Math.round(n).toLocaleString('id-ID')}
+function fmtNum(n){return Math.round(n).toLocaleString('id-ID')}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function escAttr(s){return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+"""
+
+JS = JS_HEAD + JS_BODY
+
+# ── 4. Assemble and write HTML ────────────────────────────────────────────
+output = header_html + "<script>" + JS + "\n</script>\n</body>\n</html>"
+
+with open(OUT_HTML, "w", encoding="utf-8") as f:
+    f.write(output)
+
+size_kb = os.path.getsize(OUT_HTML) / 1024
+print(f"Written: {OUT_HTML}")
+print(f"Size: {size_kb:.0f} KB")
