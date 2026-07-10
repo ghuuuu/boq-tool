@@ -238,6 +238,9 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .add-bar .field label{color:var(--pu-700)}
 .add-bar .input,.add-bar .select{border-color:var(--pu-100);background:#fff}
 .add-bar .input:focus,.add-bar .select:focus{border-color:var(--pu-500)}
+.add-bar .select,.add-bar .input,.add-bar .handle-btn,.add-bar .btn{min-height:38px;box-sizing:border-box}
+.add-bar .ab-btns .btn:not(.primary){border-color:var(--pu-300);color:var(--pu-700)}
+.add-bar .ab-btns .btn:not(.primary):hover{border-color:var(--pu-400);background:var(--pu-50);color:var(--pu-700)}
 
 /* ===== Search dropdown ===== */
 .search-picker{position:relative}
@@ -490,7 +493,7 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
     </div>
     <div class="brand-name">
       <strong>Stella Mobili BOQ</strong>
-      <span>MulyaOne · Costing System</span>
+      <span>Costing System</span>
     </div>
   </div>
   <div class="crumb">
@@ -1055,7 +1058,7 @@ function buildAddBar(sec){
           <div class="search-results hidden" id="kit-results"></div>
         </div>
       </div>
-      <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="kit-preview" style="width:130px;min-height:34px;display:flex;align-items:center">—</div></div>
+      <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="kit-preview" style="width:130px;min-height:38px;display:flex;align-items:center">—</div></div>
       <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="kit-qty" value="1" min="1" step="any" style="width:70px" onkeydown="if(event.key==='Enter')addRow('kitchen')"></div>
       <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
         <button class="btn primary" onclick="addRow('kitchen')">+ Add</button>
@@ -1085,7 +1088,7 @@ function buildAddBar(sec){
           <div class="search-results hidden" id="wd-results"></div>
         </div>
       </div>
-      <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="wd-preview" style="width:130px;min-height:34px;display:flex;align-items:center">—</div></div>
+      <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="wd-preview" style="width:130px;min-height:38px;display:flex;align-items:center">—</div></div>
       <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="wd-qty" value="1" min="1" step="any" style="width:70px" onkeydown="if(event.key==='Enter')addRow('wardrobe')"></div>
       <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
         <button class="btn primary" onclick="addRow('wardrobe')">+ Add</button>
@@ -1107,7 +1110,7 @@ function buildAddBar(sec){
         <div class="search-results hidden" id="acc-results"></div>
       </div>
     </div>
-    <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="acc-preview" style="width:130px;min-height:34px;display:flex;align-items:center">—</div></div>
+    <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="acc-preview" style="width:130px;min-height:38px;display:flex;align-items:center">—</div></div>
     <div class="field ab-qty"><label>Qty</label><input class="input compact qty show-spin" type="number" id="acc-qty" value="1" min="1" step="any" style="width:70px" onkeydown="if(event.key==='Enter')addRow('accessories')"></div>
     <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
       <button class="btn primary" onclick="addRow('accessories')">+ Add</button>
