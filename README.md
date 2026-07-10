@@ -1,7 +1,7 @@
 # Stella Mobili BOQ Tool
 
 Internal **Bill of Quantities** input tool for **Stella Mobili** — one of the brands managed by
-PT. Mitra Usaha Lancar Jaya (**Mulya**). Built and maintained by MulyaOne internal tooling.
+PT. Mitra Usaha Lancar Jaya (**Mulya**).
 
 It's a single, self-contained HTML file that opens in any browser — no server, no install.
 A PIC (Person In Charge) uses it to build a room-by-room BOQ for a client project, then export
