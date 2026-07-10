@@ -39,22 +39,27 @@ reopen later).
 ## Project layout
 
 ```
-StellaMobili_BOM_Tool.html        # BUILD OUTPUT — the tool you actually open (generated, ~3.3 MB)
-StellaMobili_BOM_Tool_Ref.html    # TEMPLATE / source of truth — edit THIS (all CSS + HTML + app JS)
-CLAUDE.md                         # Full developer/architecture guide
-docs/
-  SM_BOQ_Manual_EN.html           # User manual (English)
-  SM_BOQ_Manual_ID.html           # User manual (Indonesian)
-  data/
-    build_tool.py                 # Build: inject price data into the template -> built HTML
-    check_html.py                 # Sanity-check the built HTML
-    extract_price_data.py         # Extract price lists from the source Excels
-    price_lists/                  # Price data (one JSON per section per version) + index.json
-    Price List Ref/               # Source price-list Excels (read-only reference)
+StellaMobili_BOM_Tool.html          # BUILD OUTPUT — the tool you actually open (generated, ~3.3 MB)
+README.md                           # This file
+CLAUDE.md                           # Full developer/architecture guide
+src/                                # Source + build scripts
+  StellaMobili_BOM_Tool_Ref.html    # TEMPLATE / source of truth — edit THIS (all CSS + HTML + app JS)
+  build_tool.py                     # Build: inject price data into the template -> built HTML
+  extract_price_data.py             # Extract price lists from the source Excels
+  check_html.py                     # Sanity-check the built HTML
+price-data/                         # All price data
+  Price List Ref/                   # Source price-list Excels (read-only reference)
+  price_lists/                      # Extracted price data (one JSON per section per version) + index.json
+docs/                               # Human documentation
+  SM_BOQ_Manual_EN.html             # User manual (English)
+  SM_BOQ_Manual_ID.html             # User manual (Indonesian)
+  UPDATING_PRICE_LIST.md            # How to update the price list
+  design/boq-system.md              # CRM integration design doc
+archive/                            # Old backups & superseded scripts (not used by the build)
 ```
 
 > **Do not hand-edit `StellaMobili_BOM_Tool.html`** — it is generated. Edit the template
-> (`StellaMobili_BOM_Tool_Ref.html`) and rebuild.
+> (`src/StellaMobili_BOM_Tool_Ref.html`) and rebuild.
 
 ---
 
@@ -64,17 +69,17 @@ The build injects the price data into the template and writes the standalone too
 
 ```bash
 # 1. (only if prices changed) re-extract price lists from the source Excels
-python docs/data/extract_price_data.py
+python src/extract_price_data.py
 
 # 2. build the tool
-python docs/data/build_tool.py
+python src/build_tool.py
 
 # 3. sanity-check the output
-python docs/data/check_html.py
+python src/check_html.py
 ```
 
-- **Change UI or logic** → edit `StellaMobili_BOM_Tool_Ref.html`, then run step 2.
-- **Change prices** → edit `docs/data/price_lists/*_v*.json` (and `index.json`), then run step 2.
+- **Change UI or logic** → edit `src/StellaMobili_BOM_Tool_Ref.html`, then run step 2.
+- **Change prices** → edit `price-data/price_lists/*_v*.json` (and `index.json`), then run step 2.
 - **Add a new price-list version** → drop `kitchen_vX.json` / `wardrobe_vX.json` /
   `accessories_vX.json` into `price_lists/`; the build auto-detects it and the newest
   version becomes the default.
