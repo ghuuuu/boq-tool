@@ -1,22 +1,22 @@
 """
 Build StellaMobili_BOM_Tool.html by injecting the versioned price-list data
-(docs/data/price_lists/) into the app template (StellaMobili_BOM_Tool_Ref.html).
+(price-data/price_lists/) into the app template (src/StellaMobili_BOM_Tool_Ref.html).
 
 The TEMPLATE is the editable source of truth: it holds all the CSS, body markup, and
 the full app JavaScript, with a single marker  /*__PRICE_DATA_INJECTION__*/  where the
 price data goes. This script's ONLY job is to load every price_lists/*_v*.json, build
 the ALL_PRICE_DATA / PRICE_LIST_VERSIONS / PRICE_LIST_LATEST constants, and drop them in.
 
-To change the tool's UI/logic  -> edit StellaMobili_BOM_Tool_Ref.html, then rebuild.
-To update prices               -> edit/add docs/data/price_lists/*_v*.json, then rebuild.
+To change the tool's UI/logic  -> edit src/StellaMobili_BOM_Tool_Ref.html, then rebuild.
+To update prices               -> edit/add price-data/price_lists/*_v*.json, then rebuild.
 
-Run: python docs/data/build_tool.py
+Run: python src/build_tool.py
 """
 import json, re, os, glob
 
 ROOT     = "C:/Projects/Stella Mobili BOM Tool"
-TEMPLATE = f"{ROOT}/StellaMobili_BOM_Tool_Ref.html"
-PL_DIR   = f"{ROOT}/docs/data/price_lists"
+TEMPLATE = f"{ROOT}/src/StellaMobili_BOM_Tool_Ref.html"
+PL_DIR   = f"{ROOT}/price-data/price_lists"
 OUT_HTML = f"{ROOT}/StellaMobili_BOM_Tool.html"
 MARKER   = "/*__PRICE_DATA_INJECTION__*/"
 

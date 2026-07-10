@@ -323,8 +323,9 @@
     </div>
     <div style="text-align:right">
       <strong>Language:</strong> English (EN)<br>
-      <strong>Tool version:</strong> Price List v26.06.02<br>
-      <strong>Document:</strong> June 2026
+      <strong>Tool version:</strong> v1.0.0<br>
+      <strong>Price list:</strong> v26.06.02<br>
+      <strong>Document:</strong> July 2026
     </div>
   </div>
 </div>
@@ -364,7 +365,7 @@
 <div class="interface-grid">
   <div class="zone">
     <div class="zone-name">Topbar</div>
-    <p>Brand mark, project breadcrumb, price list version pill (top right), and load/save action buttons.</p>
+    <p>Brand mark, project breadcrumb, the alternative/version chip, the <strong>tool version</strong> and <strong>price list version</strong> pills (top right), and load/save/export action buttons.</p>
   </div>
   <div class="zone">
     <div class="zone-name">Sidebar</div>
@@ -401,8 +402,8 @@
   <li>Select a <strong>Category</strong> (Base Unit, Wall Unit, Tall Unit, etc.).</li>
   <li>Select a <strong>Finish</strong> from the dropdown. The <strong>Thickness</strong> badge fills in automatically when known, or shows <code>—</code> if no thickness data exists for that finish.</li>
   <li>Select <strong>Handle</strong>: <code>Standard</code> or <code>Gola</code>.</li>
-  <li>Click the <strong>Search / Browse</strong> field and start typing, or click to see all items for the current category and finish. Click an item to select it — the price preview updates on the right.</li>
-  <li>Set <strong>Qty</strong> (whole numbers or decimals to one place, e.g. <code>1.5</code>). Press <strong>Enter</strong> to add instantly, or click <strong>+ Add</strong>.</li>
+  <li>Click the <strong>Search / Browse</strong> field and start typing, or click to see all items for the current category and finish. You can search by <strong>description, category, size, or note</strong> — matching text is highlighted. Click an item to select it, or press <strong>Enter</strong> to pick the top match. The price preview updates on the right.</li>
+  <li>Set <strong>Qty</strong> (whole numbers or decimals to one place, e.g. <code>1.5</code>). Press <strong>Enter</strong> — in either the search field or the qty field — to add the item instantly, or click <strong>+ Add</strong>. After adding, the search clears and refocuses so you can type the next item straight away.</li>
 </ol>
 <div class="note">
   <strong>⚠ Gola validation:</strong> Gola handle is only supported for certain item + finish combinations. If you select Gola for an unsupported item, the tool will block the add and show an error. Switch to Standard or choose a different finish.
@@ -434,6 +435,7 @@
     <tr><td>Change finish</td><td>Click the <strong>pencil icon</strong> in the Finish column. A modal shows all available finishes and prices for that item.</td></tr>
     <tr><td>Edit quantity</td><td>Click the qty field and type, or use the up/down arrows. Decimals to one place are allowed (e.g. 1.5).</td></tr>
     <tr><td>Add a note</td><td>Click the Notes field on the row and type (e.g. "custom size", "check stock").</td></tr>
+    <tr><td>Mark as buffer / insurance stock</td><td>Click the <strong>shield icon</strong> near the right of the row. Buffer items are still counted in all totals but flagged with a blue <span class="badge">BUFFER</span> tag, so they can be excluded from the Sales Order later.</td></tr>
     <tr><td>Duplicate a row</td><td>Click the <strong>copy icon</strong> at the far right of the row.</td></tr>
     <tr><td>Delete a row</td><td>Click the <strong>× icon</strong> at the far right of the row.</td></tr>
     <tr><td>Reorder rows</td><td>Drag the <strong>dot-grid handle</strong> on the far left of the row up or down.</td></tr>
@@ -454,7 +456,8 @@
 <p>Click <strong>Overview</strong> in the sidebar at any time to return to the project summary. Here you can:</p>
 <ul>
   <li>Edit all project information fields</li>
-  <li>See stat cards: total units, total items, revision number, and grand total</li>
+  <li>See stat cards: total units, total items, the alternative &amp; version you're working on, and grand total</li>
+  <li>Use the <strong>Revisions &amp; Alternatives</strong> panel to save quotable versions and offer the client side-by-side alternatives (see Chapter 8)</li>
   <li>See the <strong>Units Overview</strong> table — Kitchen / Wardrobe / Accessories subtotals per unit</li>
   <li>Click any unit name to jump directly to that unit's editing view</li>
   <li>Save, export to Excel, or save to PDF</li>
@@ -479,14 +482,22 @@
 <h1>8 · Saving &amp; Loading</h1>
 
 <h2>Saving</h2>
-<p>Click <strong>Save .smbq</strong> in the Overview header. The browser downloads a file named <code>{Project Name} {Price List Version}.smbq</code> (e.g. <code>Pak Budi – Kebayoran v26.06.02.smbq</code>). Each save increments the <strong>Revision</strong> counter in the stat cards.</p>
+<p>Click <strong>Save .smbq</strong> in the Overview header. The browser downloads a file named <code>{Project Name} {Price List Version}.smbq</code> (e.g. <code>Pak Budi – Kebayoran v26.06.02.smbq</code>). This saves the <strong>whole project</strong> to one file on your computer — every unit, item, and all your saved versions &amp; alternatives.</p>
 
 <h2>Loading</h2>
 <p>Click the <strong>upload icon</strong> in the topbar (or the Load button if visible). Select a <code>.smbq</code> file. The tool restores the full project: all units, items, quantities, notes, and the price list version stored at save time.</p>
 
 <div class="info">
-  <strong>The .smbq file is plain text (JSON)</strong> — safe to email, archive, or back up. Keep each revision as a separate file. SM Jakarta will eventually manage revision history through the CRM system.
+  <strong>The .smbq file is plain text (JSON)</strong> — safe to email, archive, or back up. SM Jakarta will eventually manage revision history through the CRM system.
 </div>
+
+<h2>Revisions &amp; Alternatives</h2>
+<p>The <strong>Revisions &amp; Alternatives</strong> panel (in Overview) is how you save quotable snapshots of your work — this is separate from saving a <code>.smbq</code> file to disk.</p>
+<ul>
+  <li><strong>Save as v1, v2, …</strong> — commit the current calculation as a numbered version. While a version is still a <strong>Draft</strong>, saving updates it in place; once you mark it <strong>Ready for quotation</strong>, the next save creates the next version and marks older ones <strong>Superseded</strong>.</li>
+  <li><strong>Alternatives (Alt A, Alt B, …)</strong> — offer the client different schemes side by side (e.g. two finish or layout options). Each alternative keeps its own version history.</li>
+  <li>The topbar chip shows which <strong>Alt · version</strong> you're currently editing. All of it travels inside the <code>.smbq</code> file.</li>
+</ul>
 
 <!-- ═══════════════════════════════════════ CHAPTER 9 ═══════════════════════════════════════ -->
 <h1>9 · Exporting</h1>
@@ -540,7 +551,7 @@
     </tr>
     <tr>
       <td>Track which version you sent</td>
-      <td>The <strong>Revision</strong> stat card increments with every save. Note the revision number when you send a file to SM Jakarta so you can match it if there are questions.</td>
+      <td>The topbar shows the <strong>Alt · version</strong> you're on. Mark a version <strong>Ready for quotation</strong> before sending to SM Jakarta, and note the Alt/version label so you can match it if there are questions.</td>
     </tr>
     <tr>
       <td>Item not in database</td>
@@ -555,7 +566,7 @@
 
 <div class="page-footer">
   <span>SM BOQ Tool — User Manual (EN) · Stella Mobili · PT. Mitra Usaha Lancar Jaya</span>
-  <span>June 2026</span>
+  <span>July 2026</span>
 </div>
 
 </body>

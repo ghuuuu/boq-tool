@@ -1,5 +1,5 @@
 import json
-with open('C:/Projects/Stella Mobili BOM Tool/docs/data/sm_price_data.json') as f:
+with open('C:/Projects/Stella Mobili BOM Tool/archive/sm_price_data.json') as f:
     d = json.load(f)
 for cat, items in d['kitchen'].items():
     if items:

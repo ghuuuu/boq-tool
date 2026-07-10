@@ -323,8 +323,9 @@
     </div>
     <div style="text-align:right">
       <strong>Bahasa:</strong> Indonesia (ID)<br>
-      <strong>Versi alat:</strong> Price List v26.06.02<br>
-      <strong>Dokumen:</strong> Juni 2026
+      <strong>Versi alat:</strong> v1.0.0<br>
+      <strong>Price list:</strong> v26.06.02<br>
+      <strong>Dokumen:</strong> Juli 2026
     </div>
   </div>
 </div>
@@ -364,7 +365,7 @@
 <div class="interface-grid">
   <div class="zone">
     <div class="zone-name">Topbar</div>
-    <p>Logo merek, breadcrumb proyek, pill versi price list (kanan atas), dan tombol aksi load/save.</p>
+    <p>Logo merek, breadcrumb proyek, chip alternatif/versi, pill <strong>versi alat</strong> dan <strong>versi price list</strong> (kanan atas), serta tombol aksi load/save/export.</p>
   </div>
   <div class="zone">
     <div class="zone-name">Sidebar</div>
@@ -401,8 +402,8 @@
   <li>Pilih <strong>Category</strong> (Base Unit, Wall Unit, Tall Unit, dll.).</li>
   <li>Pilih <strong>Finish</strong> dari dropdown. Badge <strong>Thickness</strong> (ketebalan) akan terisi otomatis jika data tersedia, atau menampilkan <code>—</code> jika tidak ada data ketebalan untuk finish tersebut.</li>
   <li>Pilih <strong>Handle</strong>: <code>Standard</code> atau <code>Gola</code>.</li>
-  <li>Klik kolom <strong>Search / Browse</strong> dan mulai mengetik, atau klik untuk melihat semua item sesuai kategori dan finish yang dipilih. Klik item untuk memilihnya — preview harga akan muncul di kanan.</li>
-  <li>Atur <strong>Qty</strong> (bilangan bulat atau desimal satu tempat, mis. <code>1.5</code>). Tekan <strong>Enter</strong> untuk langsung menambahkan, atau klik <strong>+ Add</strong>.</li>
+  <li>Klik kolom <strong>Search / Browse</strong> dan mulai mengetik, atau klik untuk melihat semua item sesuai kategori dan finish yang dipilih. Anda dapat mencari berdasarkan <strong>deskripsi, kategori, ukuran, atau catatan</strong> — teks yang cocok akan disorot. Klik item untuk memilihnya, atau tekan <strong>Enter</strong> untuk memilih hasil teratas. Preview harga akan muncul di kanan.</li>
+  <li>Atur <strong>Qty</strong> (bilangan bulat atau desimal satu tempat, mis. <code>1.5</code>). Tekan <strong>Enter</strong> — baik di kolom pencarian maupun kolom qty — untuk langsung menambahkan item, atau klik <strong>+ Add</strong>. Setelah ditambahkan, kolom pencarian otomatis kosong dan fokus kembali agar Anda bisa langsung mengetik item berikutnya.</li>
 </ol>
 <div class="note">
   <strong>⚠ Validasi Gola:</strong> Handle Gola hanya tersedia untuk kombinasi item + finish tertentu. Jika Gola dipilih untuk item yang tidak mendukung, alat akan memblokir penambahan dan menampilkan pesan error. Ganti ke Standard atau pilih finish yang berbeda.
@@ -434,6 +435,7 @@
     <tr><td>Ganti finish</td><td>Klik <strong>ikon pensil</strong> di kolom Finish. Modal akan menampilkan semua finish dan harga yang tersedia untuk item tersebut.</td></tr>
     <tr><td>Edit jumlah (qty)</td><td>Klik kolom qty dan ketik, atau gunakan tombol panah atas/bawah. Desimal satu tempat diperbolehkan (mis. 1.5).</td></tr>
     <tr><td>Tambah catatan</td><td>Klik kolom Notes pada baris tersebut dan ketik (mis. "ukuran custom", "cek stok").</td></tr>
+    <tr><td>Tandai sebagai buffer / stok cadangan</td><td>Klik <strong>ikon perisai</strong> di sebelah kanan baris. Item buffer tetap dihitung dalam semua total namun ditandai dengan label biru <span class="badge">BUFFER</span>, sehingga dapat dikecualikan dari Sales Order nanti.</td></tr>
     <tr><td>Duplikasi baris</td><td>Klik <strong>ikon copy</strong> di ujung kanan baris.</td></tr>
     <tr><td>Hapus baris</td><td>Klik <strong>ikon ×</strong> di ujung kanan baris.</td></tr>
     <tr><td>Urutkan ulang baris</td><td>Seret <strong>handle titik-titik</strong> di ujung kiri baris ke atas atau ke bawah.</td></tr>
@@ -454,7 +456,8 @@
 <p>Klik <strong>Overview</strong> di sidebar kapan saja untuk kembali ke ringkasan proyek. Di sini Anda dapat:</p>
 <ul>
   <li>Mengedit semua kolom informasi proyek</li>
-  <li>Melihat kartu statistik: total unit, total item, nomor revisi, dan grand total</li>
+  <li>Melihat kartu statistik: total unit, total item, alternatif &amp; versi yang sedang dikerjakan, dan grand total</li>
+  <li>Menggunakan panel <strong>Revisions &amp; Alternatives</strong> untuk menyimpan versi yang dapat dikutip dan menawarkan alternatif berdampingan kepada klien (lihat Bab 8)</li>
   <li>Melihat tabel <strong>Units Overview</strong> — subtotal Kitchen / Wardrobe / Accessories per unit</li>
   <li>Klik nama unit mana pun untuk langsung ke tampilan pengeditannya</li>
   <li>Menyimpan, mengekspor ke Excel, atau menyimpan ke PDF</li>
@@ -479,14 +482,22 @@
 <h1>8 · Menyimpan &amp; Memuat</h1>
 
 <h2>Menyimpan</h2>
-<p>Klik <strong>Save .smbq</strong> di header Overview. Browser akan mengunduh file bernama <code>{Nama Proyek} {Versi Price List}.smbq</code> (mis. <code>Pak Budi – Kebayoran v26.06.02.smbq</code>). Setiap penyimpanan menambah angka pada kartu statistik <strong>Revision</strong>.</p>
+<p>Klik <strong>Save .smbq</strong> di header Overview. Browser akan mengunduh file bernama <code>{Nama Proyek} {Versi Price List}.smbq</code> (mis. <code>Pak Budi – Kebayoran v26.06.02.smbq</code>). Ini menyimpan <strong>seluruh proyek</strong> ke satu file di komputer Anda — setiap unit, item, dan semua versi &amp; alternatif tersimpan Anda.</p>
 
 <h2>Memuat</h2>
 <p>Klik <strong>ikon upload</strong> di topbar. Pilih file <code>.smbq</code>. Alat akan memulihkan seluruh proyek: semua unit, item, jumlah, catatan, dan versi price list yang tersimpan saat file dibuat.</p>
 
 <div class="info">
-  <strong>File .smbq adalah teks biasa (JSON)</strong> — aman untuk dikirim via email, diarsipkan, atau dicadangkan. Simpan setiap revisi sebagai file terpisah. SM Jakarta nantinya akan mengelola riwayat revisi melalui sistem CRM.
+  <strong>File .smbq adalah teks biasa (JSON)</strong> — aman untuk dikirim via email, diarsipkan, atau dicadangkan. SM Jakarta nantinya akan mengelola riwayat revisi melalui sistem CRM.
 </div>
+
+<h2>Revisions &amp; Alternatives</h2>
+<p>Panel <strong>Revisions &amp; Alternatives</strong> (di Overview) adalah cara menyimpan snapshot pekerjaan yang dapat dikutip — terpisah dari menyimpan file <code>.smbq</code> ke disk.</p>
+<ul>
+  <li><strong>Save as v1, v2, …</strong> — simpan perhitungan saat ini sebagai versi bernomor. Selama versi masih <strong>Draft</strong>, menyimpan akan memperbaruinya di tempat; setelah ditandai <strong>Ready for quotation</strong>, penyimpanan berikutnya membuat versi baru dan menandai versi lama sebagai <strong>Superseded</strong>.</li>
+  <li><strong>Alternatif (Alt A, Alt B, …)</strong> — tawarkan skema berbeda kepada klien secara berdampingan (mis. dua opsi finish atau layout). Setiap alternatif memiliki riwayat versinya sendiri.</li>
+  <li>Chip di topbar menampilkan <strong>Alt · versi</strong> yang sedang Anda edit. Semuanya tersimpan di dalam file <code>.smbq</code>.</li>
+</ul>
 
 <!-- ═══════════════════════════════════════ BAB 9 ═══════════════════════════════════════ -->
 <h1>9 · Ekspor</h1>
@@ -540,7 +551,7 @@
     </tr>
     <tr>
       <td>Lacak versi yang dikirim</td>
-      <td>Kartu statistik <strong>Revision</strong> bertambah setiap kali menyimpan. Catat nomor revisi saat mengirim file ke SM Jakarta agar mudah diidentifikasi jika ada pertanyaan.</td>
+      <td>Topbar menampilkan <strong>Alt · versi</strong> yang sedang aktif. Tandai versi sebagai <strong>Ready for quotation</strong> sebelum mengirim ke SM Jakarta, dan catat label Alt/versi agar mudah diidentifikasi jika ada pertanyaan.</td>
     </tr>
     <tr>
       <td>Item tidak ada di database</td>
@@ -555,7 +566,7 @@
 
 <div class="page-footer">
   <span>SM BOQ Tool — Panduan Pengguna (ID) · Stella Mobili · PT. Mitra Usaha Lancar Jaya</span>
-  <span>Juni 2026</span>
+  <span>Juli 2026</span>
 </div>
 
 </body>

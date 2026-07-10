@@ -29,20 +29,20 @@ double-click. **It is a BUILD ARTIFACT — do not hand-edit it; edit the templat
 
 ```
 StellaMobili_BOM_Tool.html        # BUILD OUTPUT (generated) — never edit directly
-StellaMobili_BOM_Tool_Ref.html    # TEMPLATE / source of truth — edit THIS (CSS + body + all app JS)
-docs/data/price_lists/            # Price data, one JSON per section per version:
+src/StellaMobili_BOM_Tool_Ref.html    # TEMPLATE / source of truth — edit THIS (CSS + body + all app JS)
+price-data/price_lists/            # Price data, one JSON per section per version:
     kitchen_v26.06.02.json          kitchen_<ver>.json
     wardrobe_v26.06.02.json         wardrobe_<ver>.json
     accessories_v26.06.02.json      accessories_<ver>.json
     index.json                      { latest, versions[] } registry
-docs/data/build_tool.py           # Build: inject price_lists into the template
-docs/data/check_html.py           # Sanity-check the built HTML (topbar/shell/sidebar/script present)
-docs/data/extract_price_data.py   # (source) Excel -> price_lists JSON extraction
-docs/data/Price List Ref/*.xlsx   # Source price-list Excels (read-only reference)
+src/build_tool.py           # Build: inject price_lists into the template
+src/check_html.py           # Sanity-check the built HTML (topbar/shell/sidebar/script present)
+src/extract_price_data.py   # (source) Excel -> price_lists JSON extraction
+price-data/Price List Ref/*.xlsx   # Source price-list Excels (read-only reference)
 ```
 
 ### How the build works
-`build_tool.py` reads the template `StellaMobili_BOM_Tool_Ref.html`, auto-detects every
+`build_tool.py` reads the template `src/StellaMobili_BOM_Tool_Ref.html`, auto-detects every
 version from `price_lists/kitchen_v*.json`, loads all three sections per version, and
 replaces the single marker `/*__PRICE_DATA_INJECTION__*/` (at the top of the app's
 `<script>`) with:
@@ -56,11 +56,11 @@ built file needs no server. (The template alone won't run standalone — the mar
 placeholder, not real data. Always run the tool from the built output.)
 
 ### To make changes
-- **UI / logic** → edit `StellaMobili_BOM_Tool_Ref.html`, then `python docs/data/build_tool.py`.
-- **Prices** → edit/add `docs/data/price_lists/*_v*.json` (and `index.json`), then rebuild.
+- **UI / logic** → edit `src/StellaMobili_BOM_Tool_Ref.html`, then `python src/build_tool.py`.
+- **Prices** → edit/add `price-data/price_lists/*_v*.json` (and `index.json`), then rebuild.
 - Adding a new version: drop `kitchen_vX.json` / `wardrobe_vX.json` / `accessories_vX.json`
   into `price_lists/`; the build auto-detects it and the newest becomes `PRICE_LIST_LATEST`.
-- After building, run `python docs/data/check_html.py` to sanity-check the output.
+- After building, run `python src/check_html.py` to sanity-check the output.
 
 > `build_tool.py.bak` is the previous (pre-refactor) build script, which kept the entire
 > app JS inline as a Python string. Superseded by the template approach; kept as a backup.
@@ -379,9 +379,9 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 
 ## Re-extracting Data from Excel
 
-The canonical extractor is `docs/data/extract_price_data.py` — it reads the Excels in
-`docs/data/Price List Ref/` and writes the per-section JSONs into `docs/data/price_lists/`.
-After extracting, run `python docs/data/build_tool.py` to rebuild the tool. The reference
+The canonical extractor is `src/extract_price_data.py` — it reads the Excels in
+`price-data/Price List Ref/` and writes the per-section JSONs into `price-data/price_lists/`.
+After extracting, run `python src/build_tool.py` to rebuild the tool. The reference
 logic below documents the Excel layout the extractor relies on:
 
 ```python
@@ -419,7 +419,7 @@ def get_kitchen_items(sheet):
 # Accessories: flat {desc, unit, price}
 ```
 
-After regenerating the `price_lists/*.json`, rebuild with `python docs/data/build_tool.py`
+After regenerating the `price_lists/*.json`, rebuild with `python src/build_tool.py`
 — it injects the data into the template. Do **not** hand-edit the giant `ALL_PRICE_DATA`
 blob in the built HTML; it is generated.
 

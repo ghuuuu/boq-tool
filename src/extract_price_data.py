@@ -9,8 +9,8 @@ import openpyxl, json, os, sys, re, glob
 from datetime import date
 
 BASE        = "C:/Projects/Stella Mobili BOM Tool"
-PL_DIR      = f"{BASE}/docs/data/Price List Ref"
-OUT_DIR     = f"{BASE}/docs/data/price_lists"
+PL_DIR      = f"{BASE}/price-data/Price List Ref"
+OUT_DIR     = f"{BASE}/price-data/price_lists"
 
 if len(sys.argv) > 1:
     VERSION = sys.argv[1]
