@@ -1061,7 +1061,7 @@ function buildAddBar(sec){
       <div class="field ab-search" style="flex:2;min-width:220px"><label>Search / Browse Item</label>
         <div class="search-picker search-icon-wrap">
           <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="input compact input-search" type="text" id="kit-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('kit')" onfocus="onSearchFocus('kit')" style="width:100%">
+          <input class="input compact input-search" type="text" id="kit-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('kit')" onfocus="onSearchFocus('kit')" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter('kit','kitchen');}" style="width:100%">
           <div class="search-results hidden" id="kit-results"></div>
         </div>
       </div>
@@ -1091,7 +1091,7 @@ function buildAddBar(sec){
       <div class="field ab-search" style="flex:2;min-width:220px"><label>Search / Browse Item</label>
         <div class="search-picker search-icon-wrap">
           <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="input compact input-search" type="text" id="wd-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('wd')" onfocus="onSearchFocus('wd')" style="width:100%">
+          <input class="input compact input-search" type="text" id="wd-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('wd')" onfocus="onSearchFocus('wd')" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter('wd','wardrobe');}" style="width:100%">
           <div class="search-results hidden" id="wd-results"></div>
         </div>
       </div>
@@ -1113,7 +1113,7 @@ function buildAddBar(sec){
     <div class="field ab-search" style="flex:2;min-width:220px"><label>Search / Browse Item</label>
       <div class="search-picker search-icon-wrap">
         <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="input compact input-search" type="text" id="acc-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('acc')" onfocus="onSearchFocus('acc')" style="width:100%">
+        <input class="input compact input-search" type="text" id="acc-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('acc')" onfocus="onSearchFocus('acc')" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter('acc','accessories');}" style="width:100%">
         <div class="search-results hidden" id="acc-results"></div>
       </div>
     </div>
@@ -1327,6 +1327,20 @@ function hlEsc(text, tokens){
     if(pat) e=e.replace(new RegExp('('+pat+')','gi'),'<mark class="s-hl">$1</mark>');
   }
   return e;
+}
+
+// Enter in the search field adds the item (like Enter in the qty field). If the
+// dropdown is open with results, confirm the top match first; otherwise add the
+// already-selected item (addRow warns if nothing is selected).
+function searchEnter(p, sec){
+  const res=el(p+'-results');
+  const open=res && !res.classList.contains('hidden');
+  if(open){
+    const pool=searchPools[p]||[];
+    if(!pool.length) return;      // "No items found" — nothing to add
+    selectItem(p, 0);             // confirm the top result
+  }
+  addRow(sec);
 }
 
 function showDropdown(p, items){
