@@ -208,9 +208,9 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .input:focus,.select:focus{outline:none;border-color:var(--pu-500);box-shadow:0 0 0 3px rgba(138,90,59,.16)}
 .input.compact{padding:6px 9px;font-size:13px}
 .input.qty{width:96px;text-align:center;padding-right:6px;font-family:'IBM Plex Mono',monospace}
-.input.show-spin{appearance:auto;-moz-appearance:auto}
-.input.show-spin::-webkit-outer-spin-button,.input.show-spin::-webkit-inner-spin-button{-webkit-appearance:inner-spin-button;opacity:1;width:24px;cursor:pointer;margin-left:6px}
 .input[type=number]{-moz-appearance:textfield;appearance:textfield}
+.input.show-spin[type=number]{appearance:auto;-moz-appearance:auto}
+.input.show-spin::-webkit-outer-spin-button,.input.show-spin::-webkit-inner-spin-button{-webkit-appearance:inner-spin-button;opacity:1;width:24px;cursor:pointer;margin-left:6px}
 .input.readonly{background:var(--panel);color:var(--ink-soft);cursor:default}
 .input-search{padding-left:32px}
 .search-icon-wrap{position:relative}
