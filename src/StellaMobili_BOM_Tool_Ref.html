@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script>/*__EXCELJS_INJECTION__*/</script>
+<script>/*__PDFMAKE_INJECTION__*/</script>
 <style>
 /* ============================================================
    SM BOQ — Warm brass/cream palette · Hanken Grotesk · MulyaOne UI system
@@ -418,27 +419,7 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
 .export-opt .eo-icon{width:38px;height:38px;border-radius:8px;display:grid;place-items:center;flex-shrink:0}
 .export-opt .eo-text{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ink)}
 .export-opt .eo-text span{font-size:11.5px;color:var(--ink-faint);line-height:1.45}
-@media print{
-  @page{size:A4 portrait;margin:14mm 13mm}
-  html,body{background:#fff!important;font-size:10.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  .topbar,.sidebar,.menu-btn,.head-actions,.tabs,.add-bar,.cat-pills,.no-print,.modal-backdrop,.toast-stack,.col-actions,.col-drag,.col-check,.notes-input,.btn,.icon-x{display:none!important}
-  .notes-print-val{display:inline!important;font-style:italic;color:#555}
-  .shell{display:block!important}
-  .main{padding:0!important;margin:0!important;overflow:visible!important}
-  .card{box-shadow:none;border:1px solid #ddd;page-break-inside:auto;break-inside:auto}
-  .stat-row,.meta-grid{display:grid!important;gap:8px}
-  .stat{padding:8px 10px}
-  .stat .stat-value{font-size:15px}
-  #view-totals,#view-unit,#view-overview{display:none!important}
-  #print-all-units{display:block!important}
-  .matrix-table thead th{background:#4c1d95!important;color:#fff!important}
-  .matrix-table tfoot tr.grand td{background:#3b0764!important;color:#fff!important}
-  .matrix-table tfoot tr.sub td{background:#f5f3ff!important}
-  .print-header{display:flex!important;justify-content:space-between;align-items:flex-end;padding-bottom:12px;margin-bottom:16px;border-bottom:2px solid #4c1d95}
-}
-.print-header{display:none}
-#print-all-units{display:none}
+
 
 @media(max-width:700px){
   .add-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;padding:12px}
@@ -573,19 +554,6 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
   <!-- ===== MAIN ===== -->
   <main class="main" id="main-area">
 
-    <!-- Print header (PDF only) -->
-    <div class="print-header" id="print-header">
-      <div>
-        <div style="font-size:22px;font-weight:900;letter-spacing:2px;color:#4c1d95">MULYA</div>
-        <div style="font-size:10px;color:#6c7080;margin-top:2px">PT. Mitra Usaha Lancar Jaya · Jl. Tegalsari 37 · More Value · More Possibilities</div>
-        <div style="font-size:14px;font-weight:700;color:#c8a96e;margin-top:6px" id="ph-proj">—</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:14px;font-weight:700;color:#4c1d95">Stella Mobili</div>
-        <div style="font-size:10px;color:#6c7080" id="ph-meta">BOQ · Showroom Price · v26.06.02</div>
-      </div>
-    </div>
-
     <!-- VIEW: Overview -->
     <section id="view-overview"></section>
     <!-- VIEW: Totals Matrix -->
@@ -593,7 +561,6 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
     <!-- VIEW: Unit detail -->
     <section id="view-unit" class="hidden"></section>
     <!-- Print all units -->
-    <section id="print-all-units"></section>
 
   </main>
 </div>
@@ -910,8 +877,8 @@ function renderOverview(){
         <div class="meta-grid">
           <div class="field"><label>Project Name <span class="req">*</span></label><input class="input compact" type="text" id="projName" placeholder="e.g. Pak Budi – Kebayoran Baru" oninput="onMetaInput()" value="${esc(projName)}"></div>
           <div class="field"><label>Client <span class="req">*</span></label><input class="input compact" type="text" id="projClient" placeholder="Client name" oninput="onMetaInput()" value="${esc(client)}"></div>
-          <div class="field"><label>PIC</label><input class="input compact" type="text" id="projPIC" placeholder="PIC name" oninput="onMetaInput()" value="${esc(pic)}"></div>
-          <div class="field"><label>Date</label><input class="input compact" type="date" id="projDate" oninput="onMetaInput()" value="${date||new Date().toISOString().split('T')[0]}"></div>
+          <div class="field"><label>PIC <span class="req">*</span></label><input class="input compact" type="text" id="projPIC" placeholder="PIC name" oninput="onMetaInput()" value="${esc(pic)}"></div>
+          <div class="field"><label>Date <span class="req">*</span></label><div style="display:flex;gap:6px;align-items:center"><input class="input compact" type="date" id="projDate" oninput="onMetaInput()" value="${date||new Date().toISOString().split('T')[0]}" style="flex:1"><button class="btn btn-sm ghost" type="button" onclick="el('projDate').value=new Date().toISOString().slice(0,10);onMetaInput()" title="Set date to today">Today</button></div></div>
           <div class="field"><label>Notes to SM Jakarta</label><input class="input compact" type="text" id="projNotes" placeholder="Revision notes, special requests..." oninput="onMetaInput()" value="${esc(notes)}"></div>
           <div class="field"><label>Price List</label><div style="display:flex;align-items:center;gap:8px"><select class="select compact" id="projPL" onchange="switchPriceList(this.value)">${plOpts}</select>${newerChip}</div></div>
         </div>
@@ -1967,6 +1934,7 @@ function renderCommitModal(keepInputs){
             <div style="font-size:11.5px;color:var(--ink-faint);margin-top:2px">${esc(countsLabel)}</div></div>
           <div class="mono" style="font-weight:700;font-size:15px;color:var(--accent)">${fmt(grandNow())}</div>
         </div>
+        ${units.some(u=>unitBufferTotal(u)>0)?'':`<div style="display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border:1px solid #E8CE9A;background:#FCF4E4;border-radius:8px"><svg viewBox="0 0 24 24" fill="none" stroke="#8A6519" stroke-width="2" width="15" height="15" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span style="font-size:12px;color:#8A6519;line-height:1.5"><strong>No buffer items in this BOQ.</strong> Consider marking insurance stock (the shield button on item rows) before saving this version.</span></div>`}
         <div style="font-size:12.5px;color:var(--ink-faint);line-height:1.6">${esc(headline)}</div>
         ${isAlt?`<div class="field"><label>Alternative name</label>
           <input class="input compact" id="cmt-name" placeholder="e.g. Dekton benchtop, Budget scheme…" value="${escAttr(prevName)}" style="border-color:${nameBorder}">
@@ -2226,15 +2194,17 @@ function exportRowsFor(unit, sec, incBuf){ return unit.items[sec].filter(r=>incB
 // Project Name + Client are mandatory before any export (they drive the document + filename).
 function requireProjectFields(){
   syncProjectMetaFromDOM();
-  const missName=!(projectMeta.name||'').trim(), missClient=!(projectMeta.client||'').trim();
-  if(!missName&&!missClient) return true;
-  toast('Required before export: '+[missName?'Project Name':null,missClient?'Client':null].filter(Boolean).join(' & '),'warn',3500);
+  const fields=[['projName','Project Name',(projectMeta.name||'').trim()],
+                ['projClient','Client',(projectMeta.client||'').trim()],
+                ['projPIC','PIC',(projectMeta.pic||'').trim()],
+                ['projDate','Date',(projectMeta.date||'').trim()]];
+  const missing=fields.filter(f=>!f[2]);
+  if(!missing.length) return true;
+  toast('Required before export: '+missing.map(f=>f[1]).join(', '),'warn',3500);
   if(currentView!=='overview') showView('overview');
   setTimeout(()=>{
-    [['projName',missName],['projClient',missClient]].forEach(([id,miss])=>{
-      const e=el(id); if(e&&miss){e.classList.add('field-error'); setTimeout(()=>e.classList.remove('field-error'),3000);}
-    });
-    const first=el(missName?'projName':'projClient'); if(first) first.focus();
+    missing.forEach(([id])=>{const e=el(id); if(e){e.classList.add('field-error'); setTimeout(()=>e.classList.remove('field-error'),3000);}});
+    const first=el(missing[0][0]); if(first) first.focus();
   },80);
   return false;
 }
@@ -2343,6 +2313,7 @@ async function exportExcel(incBuf=true){
 
   // ---- Summary sheet (first) ----
   const sw=wb.addWorksheet('Summary');
+  sw.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.35,right:0.35,top:0.5,bottom:0.5,header:0.2,footer:0.2}};
   sw.columns=[{width:4},{width:20},{width:26},{width:38},{width:30},{width:16},{width:14},{width:5},{width:6},{width:15},{width:24}].concat(incBuf?[{width:8}]:[]);
   const st=sw.addRow(['','PROJECT BOQ — STELLA MOBILI']); sw.mergeCells(st.number,2,st.number,7); st.getCell(2).font={bold:true,size:15,color:{argb:PU}};
   const sm=sw.addRow(['',modeLabel]); sw.mergeCells(sm.number,2,sm.number,7); sm.getCell(2).font={italic:true,size:10,color:{argb:GRAY}};
@@ -2408,6 +2379,7 @@ async function exportExcel(incBuf=true){
     ws.addRow([]);
     styleHeaderRow(ws.addRow(hdr));
     ws.views=[{state:'frozen',ySplit:4}];
+    ws.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.35,right:0.35,top:0.5,bottom:0.5,header:0.2,footer:0.2},printTitlesRow:'4:4'};
     let n=1,lastSec='';
     rows.forEach(({r,sec})=>{
       if(sec!==lastSec){addSecRow(ws,sec,NCOLS);lastSec=sec;}
@@ -2431,66 +2403,99 @@ async function exportExcel(incBuf=true){
 }
 
 // ====================================================================
-// PDF — compact A4 portrait
+// PDF — pdfmake (inlined at build): direct .pdf download, A4 portrait
 // ====================================================================
-function savePDF(incBuf=true){
-  if(!requireProjectFields()) return;
-  const proj=projectMeta.name||'—';
+function buildPdfDoc(incBuf){
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
-  document.title=exportFileBase(incBuf);
-  document.getElementById('ph-proj').textContent=proj;
-  document.getElementById('ph-meta').textContent=`BOQ · ${incBuf?'Quotation (incl. buffer)':'Sales Order (excl. buffer)'} · Alt ${activeAltKey}${activeVerNum?' · v'+activeVerNum:' · draft'} · ${projectMeta.date||''} · Showroom Price · ${plv}`;
+  const PU='#4c1d95', GOLD='#c8a96e', GRAY='#6c7080', BUFC='#3e648c', BUFBG='#e9eff6', LAV='#ede9fe', SECBG='#f6f4fb';
   const uTotal=u=>['kitchen','wardrobe','accessories'].reduce((s2,sec)=>s2+exportRowsFor(u,sec,incBuf).reduce((ss,r)=>ss+r.price*r.qty,0),0);
   const grand=units.reduce((s2,u)=>s2+uTotal(u),0);
   const grandBuf=incBuf?units.reduce((s2,u)=>s2+unitBufferTotal(u),0):0;
-  const PU='#4c1d95', BUF='#3e648c', BUFBG='#e9eff6';
-  const cellL='padding:3px 6px;border-bottom:1px solid #eee;vertical-align:top';
-  const cellR=cellL+';text-align:right;font-family:var(--font-num);white-space:nowrap';
-  const wrap=document.getElementById('print-all-units');
-  wrap.innerHTML=`
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
-      ${units.filter(u=>uTotal(u)>0).map(u=>`<div style="border:1px solid #ddd;border-radius:6px;padding:5px 10px;font-size:9px"><span style="text-transform:uppercase;letter-spacing:.05em;color:#6c7080;font-weight:700">${esc(u.name)}</span><span style="font-weight:700;font-family:var(--font-num);color:${PU};margin-left:8px;font-size:10.5px">${fmt(uTotal(u))}</span></div>`).join('')}
-    </div>
-    ${units.map(u=>{
-      const rows=[]; ['kitchen','wardrobe','accessories'].forEach(sec=>exportRowsFor(u,sec,incBuf).forEach(r=>rows.push({r,sec})));
-      if(!rows.length) return '';
-      let lastSec='', n=0;
-      const body=rows.map(({r,sec})=>{
-        let h='';
-        if(sec!==lastSec){ h=`<tr style="page-break-inside:avoid"><td colspan="8" style="padding:4px 8px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6c7080;background:#f6f4fb;border-bottom:1px solid #eee">${sec}</td></tr>`; lastSec=sec; n=0; }
-        n++;
-        const isBuf=incBuf&&r.buffer===true;
-        const fd=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
-        const dims=fmtDims(r);
-        return h+`<tr style="page-break-inside:avoid${isBuf?';background:'+BUFBG:''}">
-          <td style="${cellL};padding-left:8px;color:#6c7080">${n}</td>
-          <td style="${cellL}"><strong>${esc(r.desc)}</strong>${isBuf?` <span style="font-size:7px;font-weight:800;letter-spacing:.05em;padding:1px 4px;border-radius:3px;border:1px solid ${BUF};color:${BUF};vertical-align:middle">BUFFER</span>`:''}${dims?`<div style="font-size:8px;color:#6c7080">${dims}</div>`:''}</td>
-          <td style="${cellL};color:#444">${esc(r.category)}${r.subcat?`<div style="font-size:8px;color:#6c7080">${esc(r.subcat)}</div>`:''}</td>
-          <td style="${cellL};color:#444">${esc(fd)}${r.thickness?` · ${esc(r.thickness)}`:''}</td>
-          <td style="${cellR}">${fmt(r.price)}</td>
-          <td style="${cellL};text-align:center">${r.qty}</td>
-          <td style="${cellR};font-weight:700;color:${PU}">${fmt(r.price*r.qty)}</td>
-          <td style="${cellL};font-size:8.5px;color:#6c7080;font-style:italic">${esc(r.notes||'')}</td>
-        </tr>`;
-      }).join('');
-      const ub=incBuf?unitBufferTotal(u):0;
-      return `<div style="margin-bottom:14px">
-        <div style="background:${PU};color:#fff;padding:6px 10px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;font-weight:700;font-size:11px;page-break-inside:avoid;page-break-after:avoid">
-          <span>${esc(u.name)}</span><span style="font-family:var(--font-num)">${fmt(uTotal(u))}${ub>0?` <span style="font-weight:600;font-size:8.5px;opacity:.85">(excl. buffer ${fmt(uTotal(u)-ub)})</span>`:''}</span>
-        </div>
-        <table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:9.5px;border:1px solid #eee;border-top:none">
-          <colgroup><col style="width:4%"><col style="width:28%"><col style="width:15%"><col style="width:17%"><col style="width:11%"><col style="width:5%"><col style="width:12%"><col style="width:8%"></colgroup>
-          <thead><tr style="page-break-inside:avoid">${['#','Description','Category','Finish','Unit Price','Qty','Total','Notes'].map((hh,i)=>`<th style="background:#ede9fe;color:${PU};font-size:8px;text-transform:uppercase;letter-spacing:.04em;padding:4px 6px;text-align:${i===4||i===6?'right':(i===5?'center':'left')}${i===0?';padding-left:8px':''}">${hh}</th>`).join('')}</tr></thead>
-          <tbody>${body}</tbody>
-        </table>
-      </div>`;
-    }).join('')}
-    <div style="background:${PU};color:#fff;border-radius:6px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;page-break-inside:avoid">
-      <span style="font-size:9px;text-transform:uppercase;letter-spacing:1px;opacity:.85">Grand Total · All Units · Showroom Price · Excl. PPN${incBuf&&grandBuf>0?' · incl. buffer':''}</span>
-      <span style="text-align:right"><span style="font-size:16px;font-family:var(--font-num);font-weight:800">${fmt(grand)}</span>${incBuf&&grandBuf>0?`<span style="display:block;font-size:8.5px;opacity:.85">excl. buffer ${fmt(grand-grandBuf)} · buffer ${fmt(grandBuf)}</span>`:''}</span>
-    </div>`;
-  ['view-overview','view-unit'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('hidden')});
-  setTimeout(()=>{window.print();setTimeout(()=>{wrap.innerHTML='';document.title='SM BOQ Tool';['view-overview','view-unit'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('hidden')});},800);},300);
+  const verLabel='Alt '+activeAltKey+(activeVerNum?' · v'+activeVerNum:' · draft');
+  const content=[];
+  // MULYA letterhead (branding rules: Mulya primary, Stella Mobili sub-brand)
+  content.push({columns:[
+    {width:'*',stack:[
+      {text:'MULYA',color:PU,bold:true,fontSize:20,characterSpacing:2},
+      {text:'PT. Mitra Usaha Lancar Jaya · Jl. Tegalsari 37 · More Value · More Possibilities',color:GRAY,fontSize:7,margin:[0,2,0,0]},
+    ]},
+    {width:'auto',stack:[
+      {text:'Stella Mobili',color:GOLD,bold:true,fontSize:12,alignment:'right'},
+      {text:'Bill of Quantities · '+(incBuf?'Quotation (incl. buffer)':'Sales Order (excl. buffer)'),color:GRAY,fontSize:7.5,alignment:'right',margin:[0,3,0,0]},
+    ]}
+  ]});
+  content.push({canvas:[{type:'line',x1:0,y1:0,x2:523,y2:0,lineWidth:1.5,lineColor:PU}],margin:[0,6,0,10]});
+  // project details
+  const metaCell=(l,v)=>({stack:[{text:l.toUpperCase(),fontSize:6.5,color:GRAY,bold:true,characterSpacing:0.6},{text:String(v||'—'),fontSize:9,margin:[0,2,0,0]}]});
+  content.push({columns:[
+    Object.assign({width:'*'},metaCell('Project',projectMeta.name)),
+    Object.assign({width:'*'},metaCell('Client',projectMeta.client)),
+    Object.assign({width:'auto'},metaCell('PIC',projectMeta.pic)),
+    Object.assign({width:'auto'},metaCell('Date',projectMeta.date)),
+    Object.assign({width:'auto'},metaCell('Version',verLabel)),
+    Object.assign({width:'auto'},metaCell('Price List',plv)),
+  ],columnGap:16,margin:[0,0,0,projectMeta.notes?4:12]});
+  if(projectMeta.notes) content.push({text:[{text:'Notes:  ',bold:true,fontSize:8,color:GRAY},{text:projectMeta.notes,fontSize:8,italics:true,color:GRAY}],margin:[0,0,0,12]});
+  // units
+  const W=[13,'*',68,86,56,24,62,50];
+  units.forEach(u=>{
+    const rows=[]; ['kitchen','wardrobe','accessories'].forEach(sec=>exportRowsFor(u,sec,incBuf).forEach(r=>rows.push({r,sec})));
+    if(!rows.length) return;
+    const ub=incBuf?unitBufferTotal(u):0;
+    content.push({table:{widths:['*','auto'],body:[[
+      {text:u.name,color:'#ffffff',bold:true,fontSize:10,fillColor:PU,margin:[8,4,0,4]},
+      {text:fmt(uTotal(u))+(ub>0?'   (excl. buffer '+fmt(uTotal(u)-ub)+')':''),color:'#ffffff',bold:true,fontSize:9,alignment:'right',fillColor:PU,margin:[0,5,8,4]}
+    ]]},layout:'noBorders'});
+    const body=[['#','Description','Category','Finish','Unit Price','Qty','Total','Notes'].map((h,i)=>({text:h.toUpperCase(),fontSize:6.5,bold:true,color:PU,fillColor:LAV,alignment:i===4||i===6?'right':(i===5?'center':'left'),margin:[i===0?3:0,2,0,2]}))];
+    let lastSec='', n=0;
+    rows.forEach(({r,sec})=>{
+      if(sec!==lastSec){
+        const secCell={text:sec.toUpperCase(),colSpan:8,fontSize:6.5,bold:true,color:GRAY,fillColor:SECBG,characterSpacing:0.5,margin:[3,1,0,1]};
+        body.push([secCell,{},{},{},{},{},{},{}]); lastSec=sec; n=0;
+      }
+      n++;
+      const isBuf=incBuf&&r.buffer===true, fill=isBuf?BUFBG:null;
+      const fd=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
+      const dims=fmtDims(r);
+      const descStack=[{text:[{text:r.desc,bold:true}].concat(isBuf?[{text:'   BUFFER',color:BUFC,bold:true,fontSize:6}]:[])}];
+      if(dims) descStack.push({text:dims,fontSize:6.5,color:GRAY,margin:[0,1,0,0]});
+      const catStack=[{text:r.category}]; if(r.subcat) catStack.push({text:r.subcat,fontSize:6.5,color:GRAY});
+      body.push([
+        {text:String(n),color:GRAY,fillColor:fill,margin:[3,1,0,1]},
+        {stack:descStack,fillColor:fill,margin:[0,1,0,1]},
+        {stack:catStack,fillColor:fill,margin:[0,1,0,1]},
+        {text:fd+(r.thickness?' · '+r.thickness:''),color:'#444444',fillColor:fill,margin:[0,1,0,1]},
+        {text:fmt(r.price),alignment:'right',fillColor:fill,margin:[0,1,0,1]},
+        {text:String(r.qty),alignment:'center',fillColor:fill,margin:[0,1,0,1]},
+        {text:fmt(r.price*r.qty),alignment:'right',bold:true,color:PU,fillColor:fill,margin:[0,1,0,1]},
+        {text:r.notes||'',italics:true,fontSize:6.5,color:GRAY,fillColor:fill,margin:[0,1,0,1]},
+      ]);
+    });
+    content.push({table:{headerRows:1,widths:W,body,dontBreakRows:true},layout:{hLineWidth:()=>0.5,hLineColor:()=>'#e8e8e8',vLineWidth:()=>0,paddingLeft:()=>2,paddingRight:()=>2,paddingTop:()=>1.5,paddingBottom:()=>1.5},margin:[0,0,0,12]});
+  });
+  // grand total
+  content.push({table:{widths:['*','auto'],body:[[
+    {text:'GRAND TOTAL · ALL UNITS · SHOWROOM PRICE · EXCL. PPN'+(incBuf&&grandBuf>0?' · INCL. BUFFER':''),color:LAV,fontSize:7,characterSpacing:0.8,fillColor:PU,margin:[8,7,0,7]},
+    {stack:[{text:fmt(grand),color:'#ffffff',bold:true,fontSize:13,alignment:'right'}].concat(incBuf&&grandBuf>0?[{text:'excl. buffer '+fmt(grand-grandBuf)+' · buffer '+fmt(grandBuf),color:LAV,fontSize:6.5,alignment:'right',margin:[0,1,0,0]}]:[]),fillColor:PU,margin:[0,5,8,5]}
+  ]]},layout:'noBorders',margin:[0,2,0,0]});
+  return {
+    pageSize:'A4', pageOrientation:'portrait', pageMargins:[36,36,36,44],
+    content,
+    defaultStyle:{fontSize:7.5},
+    footer:(cur,total)=>({columns:[
+      {text:(projectMeta.name||'')+' · '+verLabel+' · '+plv,fontSize:6.5,color:GRAY,margin:[36,12,0,0]},
+      {text:cur+' / '+total,alignment:'right',fontSize:6.5,color:GRAY,margin:[0,12,36,0]}
+    ]}),
+    info:{title:(projectMeta.name||'BOQ')+' — BOQ', author:'Stella Mobili BOQ Tool'},
+  };
+}
+function savePDF(incBuf=true){
+  if(typeof pdfMake==='undefined'){toast('pdfMake not loaded — run the build','error');return;}
+  if(!requireProjectFields()) return;
+  try{
+    pdfMake.createPdf(buildPdfDoc(incBuf)).download(exportFileBase(incBuf)+'.pdf');
+    toast(`PDF downloaded (${incBuf?'with buffer':'without buffer'})`);
+  }catch(err){ toast('PDF export failed: '+err.message,'error',5000); }
 }
 
 // ====================================================================

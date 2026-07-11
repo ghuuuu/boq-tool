@@ -81,6 +81,20 @@ with open(EXCELJS_PATH, encoding="utf-8") as f:
 output = output.replace(EXCELJS_MARKER, exceljs_src)
 print(f"ExcelJS inlined: {len(exceljs_src)/1024:.0f} KB (offline Excel export)")
 
+# ── 3c. Inline pdfmake (+ Roboto fonts) for direct offline PDF download ────
+PDFMAKE_MARKER = "/*__PDFMAKE_INJECTION__*/"
+if output.count(PDFMAKE_MARKER) != 1:
+    raise RuntimeError(
+        f"Expected exactly 1 pdfmake marker {PDFMAKE_MARKER!r} in {TEMPLATE}, "
+        f"found {output.count(PDFMAKE_MARKER)}"
+    )
+pdfmake_src = ""
+for fn in ("pdfmake.min.js", "vfs_fonts.js"):
+    with open(f"{ROOT}/src/vendor/{fn}", encoding="utf-8") as f:
+        pdfmake_src += f.read() + "\n"
+output = output.replace(PDFMAKE_MARKER, pdfmake_src)
+print(f"pdfmake inlined: {len(pdfmake_src)/1024:.0f} KB (offline PDF download)")
+
 with open(OUT_HTML, "w", encoding="utf-8") as f:
     f.write(output)
 
