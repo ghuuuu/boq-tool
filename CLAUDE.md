@@ -81,7 +81,7 @@ The entire app is **one HTML file**. Structure inside the file:
   <style> — all CSS
 </head>
 <body>
-  Topbar (brand, breadcrumb, dirty flag, alt/ver chip, save/load/export icons)
+  Topbar (brand, breadcrumb, save-status chip, tool-version chip, pricelist chip)
   Shell (sidebar + main)
     Sidebar: navigation + unit list
     Main: view-overview / view-totals / view-unit / print-all-units
@@ -353,7 +353,7 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 | `setKitVariant(v)` | Handle toggle: sets the hidden `#kit-variant` value + active button styling (Standard/Gola). All pricing code still reads `#kit-variant.value` |
 | `refreshKitHandle()` / `kitGolaAvailable()` | Enable/disable the Gola button per category+finish; reverts to Standard if Gola unavailable. Called from `onKitFinishChange` |
 | `markDirty()` / `updateDirtyIndicator()` | Sets the `dirty` flag on any mutation + shows the topbar "Unsaved edits" pulse. Cleared by `confirmCommit` / `loadVersion` / `loadFile` |
-| `updateAltVerChip()` | Refreshes the topbar "Alt X · v{n}" chip |
+| `updateSaveStatus()` | Topbar save-status chip: Unsaved edits → Saving… → Autosaved HH:MM → Saved (updateDirtyIndicator/updateAltVerChip are legacy aliases) |
 | `renderRevisionsPanel()` | Returns HTML for the Revisions & Alternatives card (injected into `renderOverview`) |
 | `openCommitModal()` / `openNewAltModal()` / `renderCommitModal()` | Build/show the Save-version / Save-as-alternative modal (`_commit` holds transient mode/ready) |
 | `confirmCommit()` | Commits the working calc into `alts[]` (draft-in-place vs new version vs new alternative) |
