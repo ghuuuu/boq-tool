@@ -427,17 +427,11 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
   .shell{display:block!important}
   .main{padding:0!important;margin:0!important;overflow:visible!important}
   .card{box-shadow:none;border:1px solid #ddd;page-break-inside:auto;break-inside:auto}
-  .bom-table{font-size:10px;page-break-inside:auto}
-  .bom-table tr{page-break-inside:avoid}
-  .bom-table thead th{background:#ede9fe!important;color:#4c1d95!important;font-size:9px}
-  .bom-table tfoot td{background:#ede9fe!important}
   .stat-row,.meta-grid{display:grid!important;gap:8px}
   .stat{padding:8px 10px}
   .stat .stat-value{font-size:15px}
   #view-totals,#view-unit,#view-overview{display:none!important}
   #print-all-units{display:block!important}
-  .print-unit-block{page-break-before:always;break-before:page;margin:0!important;border:none!important}
-  .print-unit-block:first-child{page-break-before:auto;break-before:auto}
   .matrix-table thead th{background:#4c1d95!important;color:#fff!important}
   .matrix-table tfoot tr.grand td{background:#3b0764!important;color:#fff!important}
   .matrix-table tfoot tr.sub td{background:#f5f3ff!important}
@@ -653,6 +647,39 @@ document.addEventListener('keydown', e => {
     if(document.getElementById('modal-mount')?.innerHTML) closeModal();
   }
 });
+
+// ---- Unsaved-work protection: autosave to localStorage + warn before closing ----
+const AUTOSAVE_KEY='smboq_autosave';
+function autosaveNow(){
+  try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(Object.assign(getState(),{autosavedAt:new Date().toISOString()}))); }catch(e){}
+}
+setInterval(()=>{ if(dirty) autosaveNow(); }, 30000);
+window.addEventListener('beforeunload', e=>{
+  if(dirty){ autosaveNow(); e.preventDefault(); e.returnValue=''; }
+});
+let _autosaveState=null;
+function restoreAutosave(){ closeModal(); if(_autosaveState){ applyLoadedState(_autosaveState); dirty=true; updateDirtyIndicator(); toast('Autosaved work restored'); _autosaveState=null; } }
+function discardAutosave(){ closeModal(); _autosaveState=null; try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){} toast('Autosave discarded','warn'); }
+(function offerAutosaveRestore(){
+  let st=null;
+  try{ st=JSON.parse(localStorage.getItem(AUTOSAVE_KEY)||'null'); }catch(e){}
+  if(!st) return;
+  const hasContent=(st.units||[]).some(u=>u.items&&['kitchen','wardrobe','accessories'].some(sec=>(u.items[sec]||[]).length))||((st.project||{}).name||'').trim();
+  if(!hasContent){ try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){} return; }
+  _autosaveState=st;
+  const when=st.autosavedAt?new Date(st.autosavedAt).toLocaleString():'earlier';
+  const n=(st.units||[]).reduce((t,u)=>t+(u.items?['kitchen','wardrobe','accessories'].reduce((tt,sec)=>tt+(u.items[sec]||[]).length,0):0),0);
+  showModal(`<div class="modal-head"><h2>Recover unsaved work?</h2></div>
+    <div class="modal-body"><p style="font-size:13px;color:var(--ink-soft);margin:0">
+      Unsaved work from <strong>${esc(when)}</strong> was auto-saved
+      (${(st.units||[]).length} unit${(st.units||[]).length===1?'':'s'}, ${n} item${n===1?'':'s'}${(st.project||{}).name?`, project \u201c${esc(st.project.name)}\u201d`:''}).
+      Restore it, or discard and start fresh?
+    </p></div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="discardAutosave()">Discard</button>
+      <button class="btn primary" onclick="restoreAutosave()">Restore</button>
+    </div>`);
+})();
 
 // ====================================================================
 // SIDEBAR / NAVIGATION
@@ -1071,7 +1098,7 @@ function buildAddBar(sec){
         </div>
       </div>
       <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="kit-preview" style="width:130px;min-height:38px;display:flex;align-items:center">—</div></div>
-      <div class="field ab-qty"><label>Qty</label><span class="qtybox"><input class="input compact qty" type="number" id="kit-qty" value="1" min="1" step="any" onkeydown="if(event.key==='Enter')addRow('kitchen')">${QSTEPS}</span></div>
+      <div class="field ab-qty"><label>Qty</label><span class="qtybox"><input class="input compact qty" type="number" id="kit-qty" value="1" min="0.1" step="any" onkeydown="if(event.key==='Enter')addRow('kitchen')">${QSTEPS}</span></div>
       <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
         <button class="btn primary" onclick="addRow('kitchen')">+ Add</button>
         <button class="btn" onclick="openCustomModal('kitchen')" title="Add custom item">Custom</button>
@@ -1101,7 +1128,7 @@ function buildAddBar(sec){
         </div>
       </div>
       <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="wd-preview" style="width:130px;min-height:38px;display:flex;align-items:center">—</div></div>
-      <div class="field ab-qty"><label>Qty</label><span class="qtybox"><input class="input compact qty" type="number" id="wd-qty" value="1" min="1" step="any" onkeydown="if(event.key==='Enter')addRow('wardrobe')">${QSTEPS}</span></div>
+      <div class="field ab-qty"><label>Qty</label><span class="qtybox"><input class="input compact qty" type="number" id="wd-qty" value="1" min="0.1" step="any" onkeydown="if(event.key==='Enter')addRow('wardrobe')">${QSTEPS}</span></div>
       <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
         <button class="btn primary" onclick="addRow('wardrobe')">+ Add</button>
         <button class="btn" onclick="openCustomModal('wardrobe')">Custom</button>
@@ -1123,7 +1150,7 @@ function buildAddBar(sec){
       </div>
     </div>
     <div class="field ab-price"><label>Price</label><div class="input compact readonly mono" id="acc-preview" style="width:130px;min-height:38px;display:flex;align-items:center">—</div></div>
-    <div class="field ab-qty"><label>Qty</label><span class="qtybox"><input class="input compact qty" type="number" id="acc-qty" value="1" min="1" step="any" onkeydown="if(event.key==='Enter')addRow('accessories')">${QSTEPS}</span></div>
+    <div class="field ab-qty"><label>Qty</label><span class="qtybox"><input class="input compact qty" type="number" id="acc-qty" value="1" min="0.1" step="any" onkeydown="if(event.key==='Enter')addRow('accessories')">${QSTEPS}</span></div>
     <div class="ab-btns" style="align-self:flex-end;display:flex;gap:6px">
       <button class="btn primary" onclick="addRow('accessories')">+ Add</button>
       <button class="btn" onclick="openCustomModal('accessories')">Custom</button>
@@ -1450,7 +1477,7 @@ function addRow(sec){
   const pm={kitchen:'kit',wardrobe:'wd',accessories:'acc'};
   const p=pm[sec]; const it=selectedItems[p];
   if(!it){toast('Please select an item first','warn');return;}
-  const qty=Math.round(parseFloat(el(p+'-qty')?.value)*10)/10||1;
+  const qty=Math.max(0.1, Math.round(parseFloat(el(p+'-qty')?.value)*10)/10||1);
   let price=0, finish='', variant='', category='', thickness='', subcat='', unit_str='set', w=null, h=null, d=null;
 
   if(sec==='kitchen'){
@@ -1551,7 +1578,7 @@ function buildTableCard(unit, sec){
       </td>
       <td><div class="item-name">${esc(r.desc)}</div><div class="item-sub">${subcatBadge}${dimsBadge}</div></td>
       <td class="col-price mono">${fmt(r.price)}</td>
-      <td class="col-qty"><span class="qtybox"><input class="input compact qty" type="number" value="${r.qty}" min="1" step="any" onchange="updateQty('${sec}','${r.id}',this.value)">${QSTEPS}</span></td>
+      <td class="col-qty"><span class="qtybox"><input class="input compact qty" type="number" value="${r.qty}" min="0.1" step="any" onchange="updateQty('${sec}','${r.id}',this.value)">${QSTEPS}</span></td>
       <td class="col-total mono" style="font-weight:700;color:var(--pu-700)">${fmt(r.price*r.qty)}</td>
       <td><input class="notes-input" type="text" placeholder="Notes…" value="${escAttr(r.notes||'')}" onchange="updateNotes('${sec}','${r.id}',this.value)">${r.notes?`<span class="notes-print-val">${esc(r.notes)}</span>`:''}</td>
       <td class="col-actions"><span class="row-actions">
@@ -1655,7 +1682,7 @@ function commitFinish(sec,id){
 // ====================================================================
 // ROW OPERATIONS
 // ====================================================================
-function updateQty(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.qty=Math.round(parseFloat(val)*10)/10||1;markDirty();refreshTable(sec);}}
+function updateQty(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.qty=Math.max(0.1, Math.round(parseFloat(val)*10)/10||1);markDirty();refreshTable(sec);}}
 function updateNotes(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.notes=val;markDirty();}}
 function toggleRowBuffer(sec,id){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(!r)return;r.buffer=r.buffer===true?false:true;markDirty();refreshTable(sec);toast(r.buffer?'Marked as buffer':'Buffer removed');}
 function removeRow(sec,id){const unit=getUnit();if(!unit)return;unit.items[sec]=unit.items[sec].filter(r=>r.id!=id);selectedRows[sec].delete(String(id));markDirty();refreshTable(sec);updateTabCounts();renderSidebarUnits();}
@@ -1868,7 +1895,7 @@ function openCustomModal(sec){
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="field"><label>Unit Price (IDR)</label><input class="input" type="number" id="cm-price" placeholder="0" min="0"></div>
-      <div class="field"><label>Qty</label><span class="qtybox"><input class="input compact qty" type="number" id="cm-qty" value="1" min="1" step="any" onkeydown="if(event.key==='Enter')confirmCustom()">${QSTEPS}</span></div>
+      <div class="field"><label>Qty</label><span class="qtybox"><input class="input compact qty" type="number" id="cm-qty" value="1" min="0.1" step="any" onkeydown="if(event.key==='Enter')confirmCustom()">${QSTEPS}</span></div>
     </div>
     <div class="field"><label>Notes</label><input class="input" type="text" id="cm-notes" placeholder="Optional"></div>
   </div>
@@ -2123,28 +2150,34 @@ function saveFile(){
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));
-  a.download=`${proj} ${plv}.smbq`;
+  a.download=fileBaseCore()+'.smbq';
   a.click(); toast('Saved '+a.download);
+  try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){}
 }
+// Restore a full saved state (used by loadFile and the autosave recovery).
+function applyLoadedState(st){
+  if(st.project){
+    projectMeta=Object.assign({name:'',client:'',pic:'',date:'',notes:'',priceListVersion:''},st.project);
+    if(!projectMeta.priceListVersion) projectMeta.priceListVersion=PRICE_LIST_LATEST;
+  }
+  units=st.units||[];unitCounter=st.unitCounter||units.length;activeUnitId=units[0]?.id||null;
+  revisionNumber=st.revisionNumber||1;
+  // Restore alternatives/versions (backward-compatible with older .smbq files)
+  alts=(Array.isArray(st.alts)&&st.alts.length)?st.alts:[{key:'A', name:'Initial scheme', versions:[]}];
+  activeAltKey=st.activeAltKey||alts[0].key;
+  activeVerNum=(st.activeVerNum!==undefined)?st.activeVerNum:null;
+  dirty=false;
+  updateRevPill(); updateDirtyIndicator(); updateAltVerChip();
+  renderSidebarUnits();showView('overview');
+}
+
 function loadFile(input){
   const file=input.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      const s=JSON.parse(e.target.result);
-      if(s.project){
-        projectMeta=Object.assign({name:'',client:'',pic:'',date:'',notes:'',priceListVersion:''},s.project);
-        if(!projectMeta.priceListVersion) projectMeta.priceListVersion=PRICE_LIST_LATEST;
-      }
-      units=s.units||[];unitCounter=s.unitCounter||units.length;activeUnitId=units[0]?.id||null;
-      revisionNumber=s.revisionNumber||1;
-      // Restore alternatives/versions (backward-compatible with older .smbq files)
-      alts=(Array.isArray(s.alts)&&s.alts.length)?s.alts:[{key:'A', name:'Initial scheme', versions:[]}];
-      activeAltKey=s.activeAltKey||alts[0].key;
-      activeVerNum=(s.activeVerNum!==undefined)?s.activeVerNum:null;
-      dirty=false;
-      updateRevPill(); updateDirtyIndicator(); updateAltVerChip();
-      renderSidebarUnits();showView('overview');toast('Loaded: '+file.name);
+      applyLoadedState(JSON.parse(e.target.result));
+      toast('Loaded: '+file.name);
     }catch(err){toast('Failed to load: '+err.message,'error');}
   };
   reader.readAsText(file);input.value='';
@@ -2206,12 +2239,14 @@ function requireProjectFields(){
   return false;
 }
 // Export filename: project name, date, quotation version, mode — Windows-safe.
-function exportFileBase(incBuf){
+function fileBaseCore(){
   const date=projectMeta.date||new Date().toISOString().slice(0,10);
   const ver='Alt-'+activeAltKey+(activeVerNum?'-v'+activeVerNum:'');
   const name=(projectMeta.name||'BOQ').trim().replace(/\s*[–—]\s*/g,'_').replace(/\s+-\s+/g,'_');
-  return (name+'_'+date+'_'+ver+'_'+(incBuf?'BOQ(Buffer)':'BOQ')).replace(/[\\/:*?"<>|]/g,'-');
+  return (name+'_'+date+'_'+ver).replace(/[\\/:*?"<>|]/g,'-');
 }
+function exportFileBase(incBuf){ return fileBaseCore()+'_'+(incBuf?'BOQ(Buffer)':'BOQ'); }
+
 
 function openExportModal(kind){
   if(!requireProjectFields()) return;
@@ -2243,6 +2278,7 @@ function openExportModal(kind){
 async function exportExcel(incBuf=true){
   if(typeof ExcelJS==='undefined'){toast('ExcelJS not loaded — run the build','error');return;}
   if(!requireProjectFields()) return;
+  try{
   const proj=projectMeta.name||'BOQ';
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
   const modeLabel=incBuf?'QUOTATION — buffer items included':'SALES ORDER — buffer items excluded';
@@ -2268,6 +2304,7 @@ async function exportExcel(incBuf=true){
 
   const wb=new ExcelJS.Workbook();
   wb.creator='Stella Mobili BOQ Tool';
+  const usedSheetNames=new Set(['summary']);   // Excel sheet names are case-insensitive
 
   const styleHeaderRow=row=>{
     for(let i=1;i<=NCOLS;i++){const c=row.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE},size:9};c.alignment={vertical:'middle',horizontal:i===6||i===9?'right':(i===7?'center':'left')};}
@@ -2359,7 +2396,11 @@ async function exportExcel(incBuf=true){
 
   // ---- per-unit sheets ----
   unitData.forEach(({unit,rows,uTot,uBuf})=>{
-    const ws=wb.addWorksheet((unit.name.replace(/[\\/*?[\]:]/g,'').substring(0,31)||'Unit'));
+    const base=(unit.name.replace(/[\\/*?[\]:]/g,'').substring(0,28)||'Unit');
+    let sheetName=base, k=2;
+    while(usedSheetNames.has(sheetName.toLowerCase())) sheetName=base+' ('+(k++)+')';
+    usedSheetNames.add(sheetName.toLowerCase());
+    const ws=wb.addWorksheet(sheetName);
     ws.columns=widths.map(w=>({width:w}));
     const r1=ws.addRow([`${proj} — ${unit.name}`]); ws.mergeCells(r1.number,1,r1.number,NCOLS); r1.getCell(1).font={bold:true,size:14};
     const r2=ws.addRow([`${modeLabel}  ·  Price List ${plv}${projectMeta.date?'  ·  '+projectMeta.date:''}`]);
@@ -2385,7 +2426,8 @@ async function exportExcel(incBuf=true){
   a.download=exportFileBase(incBuf)+'.xlsx';
   document.body.appendChild(a); a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
-  toast(`Excel exported (${incBuf?'with buffer · quotation':'without buffer · SO'})`);
+  toast(`Excel exported (${incBuf?'with buffer':'without buffer'})`);
+  }catch(err){ toast('Excel export failed: '+err.message,'error',5000); }
 }
 
 // ====================================================================
@@ -2467,7 +2509,8 @@ function toast(msg,type='success',dur=2500){
   const stack=document.getElementById('toast-stack');
   const t=document.createElement('div'); t.className='toast '+(type||'success');
   const icons={success:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`,warn:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,error:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`};
-  t.innerHTML=(icons[type]||icons.success)+`<span>${msg}</span>`;
+  t.innerHTML=(icons[type]||icons.success);
+  const sp=document.createElement('span'); sp.textContent=msg; t.appendChild(sp);
   stack.appendChild(t); setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(10px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},dur);
 }
 

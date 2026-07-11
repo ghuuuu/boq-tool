@@ -482,7 +482,11 @@
 <h1>8 · Menyimpan &amp; Memuat</h1>
 
 <h2>Menyimpan</h2>
-<p>Klik <strong>Save .smbq</strong> di header Overview. Browser akan mengunduh file bernama <code>{Nama Proyek} {Versi Price List}.smbq</code> (mis. <code>Pak Budi – Kebayoran v26.06.02.smbq</code>). Ini menyimpan <strong>seluruh proyek</strong> ke satu file di komputer Anda — setiap unit, item, dan semua versi &amp; alternatif tersimpan Anda.</p>
+<p>Klik <strong>Save .smbq</strong> di header Overview. Browser akan mengunduh file bernama <code>{Nama Proyek}_{Tanggal}_Alt-{A}.smbq</code> (mis. <code>Pak Budi_Kebayoran Baru_2026-07-11_Alt-A.smbq</code>; versi yang sudah di-commit mendapat tambahan <code>-v2</code> dst.). Ini menyimpan <strong>seluruh proyek</strong> ke satu file di komputer Anda — setiap unit, item, dan semua versi &amp; alternatif tersimpan Anda.</p>
+
+<div class="tip">
+  <strong>Perlindungan dari crash:</strong> alat ini menyimpan otomatis (autosave) kondisi kerja Anda di latar belakang setiap 30 detik selama ada perubahan yang belum disimpan, dan memberi peringatan sebelum tab ditutup. Jika browser tertutup tak terduga, buka kembali alat ini — akan muncul tawaran untuk <strong>memulihkan pekerjaan yang belum tersimpan</strong>. Ini jaring pengaman, bukan pengganti menyimpan file <code>.smbq</code>.
+</div>
 
 <h2>Memuat</h2>
 <p>Klik <strong>ikon upload</strong> di topbar. Pilih file <code>.smbq</code>. Alat akan memulihkan seluruh proyek: semua unit, item, jumlah, catatan, dan versi price list yang tersimpan saat file dibuat.</p>
@@ -502,16 +506,28 @@
 <!-- ═══════════════════════════════════════ BAB 9 ═══════════════════════════════════════ -->
 <h1>9 · Ekspor</h1>
 
+<div class="warn">
+  <strong>Nama Proyek dan Client wajib diisi</strong> sebelum ekspor apa pun. Jika salah satunya kosong, alat akan berpindah ke Overview dan menandai kolom yang kosong dengan warna merah.
+</div>
+
+<h2>Pertanyaan buffer</h2>
+<p>Jika BOQ Anda berisi <strong>item buffer</strong> (stok cadangan, ditandai dengan ikon perisai), setiap ekspor akan bertanya terlebih dahulu dokumen mana yang Anda inginkan:</p>
+<ul>
+  <li><strong>Dengan buffer — untuk Quotation</strong>: semua item disertakan. Baris buffer diberi tanda (berwarna biru di PDF dan di Excel, dengan kolom Buffer) dan total ditampilkan baik <em>termasuk</em> maupun <em>tanpa</em> buffer. Nama file berakhiran <code>…_BOQ(Buffer)</code>.</li>
+  <li><strong>Tanpa buffer — untuk Sales Order</strong>: untuk pemesanan ke SM Jakarta. Item buffer tidak dimasukkan sama sekali ke daftar maupun total. Nama file berakhiran <code>…_BOQ</code>.</li>
+</ul>
+<p>Jika BOQ tidak memiliki item buffer, pertanyaan ini dilewati dan ekspor langsung berjalan.</p>
+
 <h2>Ekspor ke Excel <span class="badge gold">EXCEL</span></h2>
-<p>Klik <strong>Export Excel</strong> di header Overview. Alat menghasilkan file <code>.xlsx</code> dengan satu sheet per unit ditambah sheet <strong>Summary</strong> (informasi proyek, total per unit, dan daftar item lengkap). Nama file: <code>{Nama Proyek} {Versi Price List}.xlsx</code>.</p>
+<p>Klik <strong>Export Excel</strong> di header Overview. Alat menghasilkan file <code>.xlsx</code> yang sudah tertata rapi — header berwarna, band per seksi, baris buffer berwarna biru, dan format angka Rp — dengan satu sheet per unit ditambah sheet <strong>Summary</strong> (informasi proyek, total per unit, dan daftar item lengkap). Nama file: <code>{Nama Proyek}_{Tanggal}_Alt-{A}_BOQ(Buffer).xlsx</code>. Ekspor Excel bekerja sepenuhnya <strong>offline</strong> — tidak perlu internet.</p>
 
 <h2>Simpan ke PDF</h2>
 <p>Klik <strong>Save PDF</strong> di header Overview. Alat membangun tampilan cetak dan membuka <strong>dialog print</strong> browser Anda.</p>
 <ol class="steps">
   <li>Di dialog print, atur <strong>Destination</strong> ke <em>Save as PDF</em>.</li>
   <li>Atur ukuran kertas ke <strong>A4</strong>, orientasi <strong>Portrait</strong>.</li>
-  <li>Aktifkan <strong>Background graphics</strong> agar header ungu tercetak dengan benar.</li>
-  <li>Klik <strong>Save</strong>. Nama file default akan menjadi <code>{Nama Proyek} {Versi Price List}</code>.</li>
+  <li>Aktifkan <strong>Background graphics</strong> agar header ungu dan baris buffer biru tercetak dengan benar.</li>
+  <li>Klik <strong>Save</strong>. Nama file default akan menjadi <code>{Nama Proyek}_{Tanggal}_Alt-{A}_BOQ(Buffer)</code>.</li>
 </ol>
 
 <!-- ═══════════════════════════════════════ BAB 10 ═══════════════════════════════════════ -->

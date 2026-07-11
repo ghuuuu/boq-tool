@@ -364,7 +364,9 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 | `editFinish(cell, sec, id)` | In-place finish editor (replaces cell with <select>) |
 | `showCopyToUnit(sec)` | Show unit picker modal for copying selected rows |
 | `copyToUnit(sec, targetId)` | Copy selected rows from current unit to target unit |
-| `saveFile()` | Download .smbq, increment revision |
+| `saveFile()` | Download .smbq (named via `fileBaseCore()`); clears the localStorage autosave |
+| `autosaveNow()` / `applyLoadedState(st)` | Unsaved-work protection: state autosaved to `localStorage.smboq_autosave` every 30s while dirty + on beforeunload (which also warns); on startup a modal offers restore/discard. `applyLoadedState` is shared by loadFile and the restore |
+| `fileBaseCore()` / `exportFileBase(incBuf)` | Filename builder: `{Name}_{date}_Alt-K[-vN]` (+ `_BOQ(Buffer)`/`_BOQ` for exports); dashes in name collapse to `_` |
 | `loadFile(input)` | Parse .smbq, restore full state |
 | `openExportModal(kind)` | Buffer-mode chooser (with buffer=quotation / without=SO); skipped when no buffer items |
 | `exportExcel(incBuf)` | ExcelJS (inlined at build) — styled Summary + per-unit sheets; async, offline |

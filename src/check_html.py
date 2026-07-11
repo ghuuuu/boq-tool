@@ -1,19 +1,52 @@
-import os
+"""Sanity-check the built StellaMobili_BOM_Tool.html after a build.
+
+Verifies the build actually injected everything (price data, ExcelJS) and
+that the app shell is intact. Exits non-zero on any failure so it can gate
+a release. Run: python src/check_html.py
+"""
+import os, sys
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-with open(os.path.join(ROOT, 'StellaMobili_BOM_Tool.html'), encoding='utf-8') as f:
-    content = f.read()
+OUT = os.path.join(ROOT, 'StellaMobili_BOM_Tool.html')
 
-body_idx = content.find('<body>')
-print('Body tag at:', body_idx)
-print('After body tag:')
-print(content[body_idx:body_idx+300])
+failures = []
 
-print()
-print('Topbar in HTML:', '<header class="topbar">' in content)
-print('Shell in HTML:', '<div class="shell">' in content)
-print('Sidebar in HTML:', '<aside class="sidebar"' in content)
-print('Script tag:', '<script>' in content)
+def check(label, ok, detail=''):
+    print(('PASS' if ok else 'FAIL') + f'  {label}' + (f' — {detail}' if detail else ''))
+    if not ok:
+        failures.append(label)
 
-# Check if the header portion was captured correctly
-header_end = content.find('<script>')
-print('Content before script tag (last 100):', content[header_end-100:header_end])
+if not os.path.exists(OUT):
+    print(f'FAIL  built file missing: {OUT}')
+    sys.exit(1)
+
+size_mb = os.path.getsize(OUT) / 1024 / 1024
+with open(OUT, encoding='utf-8') as f:
+    c = f.read()
+
+# Build injections happened (markers replaced with real content)
+check('size plausible (> 3.5 MB)', size_mb > 3.5, f'{size_mb:.1f} MB')
+check('price data injected', 'const ALL_PRICE_DATA = {' in c)
+check('price-data marker replaced', '/*__PRICE_DATA_INJECTION__*/' not in c)
+check('ExcelJS injected', '/*! ExcelJS' in c)
+check('ExcelJS marker replaced', '/*__EXCELJS_INJECTION__*/' not in c)
+check('no external scripts (offline-safe)', '<script src=' not in c)
+check('version constants present', 'const PRICE_LIST_LATEST' in c and 'const PRICE_LIST_VERSIONS' in c)
+
+# App shell intact
+check('topbar', '<header class="topbar">' in c)
+check('shell', '<div class="shell">' in c)
+check('sidebar', '<aside class="sidebar"' in c)
+check('modal mount', 'id="modal-mount"' in c)
+check('toast stack', 'id="toast-stack"' in c)
+check('title', '<title>SM BOQ Tool</title>' in c)
+
+# Cheap structural sanity (note: ExcelJS source contains a literal '<script'
+# string, so raw open/close tag counts don't balance — check the tail instead)
+check('document tail intact', c.rstrip().endswith('</html>') and '</script>' in c[-500:])
+check('single html close', c.count('</html>') == 1)
+
+if failures:
+    print(f'\n{len(failures)} CHECK(S) FAILED')
+    sys.exit(1)
+print('\nAll checks passed.')

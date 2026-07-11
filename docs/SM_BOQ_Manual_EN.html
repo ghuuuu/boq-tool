@@ -482,7 +482,11 @@
 <h1>8 · Saving &amp; Loading</h1>
 
 <h2>Saving</h2>
-<p>Click <strong>Save .smbq</strong> in the Overview header. The browser downloads a file named <code>{Project Name} {Price List Version}.smbq</code> (e.g. <code>Pak Budi – Kebayoran v26.06.02.smbq</code>). This saves the <strong>whole project</strong> to one file on your computer — every unit, item, and all your saved versions &amp; alternatives.</p>
+<p>Click <strong>Save .smbq</strong> in the Overview header. The browser downloads a file named <code>{Project Name}_{Date}_Alt-{A}.smbq</code> (e.g. <code>Pak Budi_Kebayoran Baru_2026-07-11_Alt-A.smbq</code>; a committed version adds <code>-v2</code> etc.). This saves the <strong>whole project</strong> to one file on your computer — every unit, item, and all your saved versions &amp; alternatives.</p>
+
+<div class="tip">
+  <strong>Crash protection:</strong> the tool auto-saves your working state in the background every 30 seconds while you have unsaved edits, and warns you before closing the tab. If the browser ever closes unexpectedly, reopen the tool — it will offer to <strong>restore your unsaved work</strong>. This is a safety net, not a replacement for saving your <code>.smbq</code> file.
+</div>
 
 <h2>Loading</h2>
 <p>Click the <strong>upload icon</strong> in the topbar (or the Load button if visible). Select a <code>.smbq</code> file. The tool restores the full project: all units, items, quantities, notes, and the price list version stored at save time.</p>
@@ -502,16 +506,28 @@
 <!-- ═══════════════════════════════════════ CHAPTER 9 ═══════════════════════════════════════ -->
 <h1>9 · Exporting</h1>
 
+<div class="warn">
+  <strong>Project Name and Client are required</strong> before any export. If either is empty, the tool jumps to Overview and highlights the missing field in red.
+</div>
+
+<h2>The buffer question</h2>
+<p>If your BOQ contains <strong>buffer items</strong> (insurance stock, marked with the shield), every export first asks which document you want:</p>
+<ul>
+  <li><strong>With buffer — for Quotation</strong>: all items included. Buffer rows are marked (blue-tinted in the PDF and in Excel, with a Buffer column) and totals are shown both <em>including</em> and <em>excluding</em> buffer. The file is named <code>…_BOQ(Buffer)</code>.</li>
+  <li><strong>Without buffer — for Sales Order</strong>: for ordering to SM Jakarta. Buffer items are left out of the list and totals entirely. The file is named <code>…_BOQ</code>.</li>
+</ul>
+<p>If the BOQ has no buffer items, the question is skipped and the export runs directly.</p>
+
 <h2>Export to Excel <span class="badge gold">EXCEL</span></h2>
-<p>Click <strong>Export Excel</strong> in the Overview header. The tool generates an <code>.xlsx</code> file with one sheet per unit plus a <strong>Summary</strong> sheet (project info, unit totals, and the full item list). File name: <code>{Project Name} {Price List Version}.xlsx</code>.</p>
+<p>Click <strong>Export Excel</strong> in the Overview header. The tool generates a styled <code>.xlsx</code> file — colored headers, section bands, blue-tinted buffer rows, and Rp number formats — with one sheet per unit plus a <strong>Summary</strong> sheet (project info, unit totals, and the full item list). File name: <code>{Project Name}_{Date}_Alt-{A}_BOQ(Buffer).xlsx</code>. Excel export works fully <strong>offline</strong> — no internet needed.</p>
 
 <h2>Save to PDF</h2>
 <p>Click <strong>Save PDF</strong> in the Overview header. The tool builds a print-formatted view and opens your browser's <strong>print dialog</strong>.</p>
 <ol class="steps">
   <li>In the print dialog, set <strong>Destination</strong> to <em>Save as PDF</em>.</li>
   <li>Set paper size to <strong>A4</strong>, orientation <strong>Portrait</strong>.</li>
-  <li>Enable <strong>Background graphics</strong> (so the purple headers print correctly).</li>
-  <li>Click <strong>Save</strong>. The default filename will be <code>{Project Name} {Price List Version}</code>.</li>
+  <li>Enable <strong>Background graphics</strong> (so the purple headers and blue buffer rows print correctly).</li>
+  <li>Click <strong>Save</strong>. The default filename will be <code>{Project Name}_{Date}_Alt-{A}_BOQ(Buffer)</code>.</li>
 </ol>
 
 <!-- ═══════════════════════════════════════ CHAPTER 10 ═══════════════════════════════════════ -->
