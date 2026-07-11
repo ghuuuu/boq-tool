@@ -80,7 +80,7 @@ The entire app is **one HTML file**. Structure inside the file:
 <body>
   Topbar (brand, breadcrumb, dirty flag, alt/ver chip, save/load/export icons)
   Shell (sidebar + main)
-    Sidebar: navigation + unit list + DB tools
+    Sidebar: navigation + unit list
     Main: view-overview / view-totals / view-unit / print-all-units
   Toast stack
   Modal mount
@@ -366,7 +366,6 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 | `loadFile(input)` | Parse .smbq, restore full state |
 | `exportExcel()` | SheetJS — one sheet per unit + Summary sheet |
 | `savePDF()` | Build print DOM, trigger window.print() |
-| `openDBEditor()` | Modal with inline-editable price database |
 | `showModal(html)` | Mount modal HTML into #modal-mount |
 | `closeModal()` | Clear #modal-mount |
 | `toast(msg, type, dur)` | Animated toast notification |
@@ -491,16 +490,21 @@ printed document should also move to brass. Spectral BOM still uses blue — nev
 - [x] ~~`renderSidebarUnits()` re-renders the entire sidebar on every qty change.~~
       **Fixed:** `updateQty()` no longer calls `renderSidebarUnits()` (sidebar shows item count, which doesn't change on qty edits).
 
-- [ ] The DB editor only shows first 6 price columns per kitchen/wardrobe item.
-      There are up to 82 columns. Add pagination or a "show all finishes" expand.
-      *(Search filter added; full pagination still pending.)*
+- [x] ~~The DB editor only shows first 6 price columns per kitchen/wardrobe item.~~
+      **Resolved (2026-07-11):** the DB editor/browser was removed entirely — the user
+      decided it had no real use. Sidebar "View Database" button, `openDBEditor` /
+      `openDBItem` / `filterDBItems`, and the `.db-detail-table` CSS are gone.
+      (`.db-item-row` CSS kept — reused by the copy-to-unit modal.)
 
-- [ ] `importPriceList()` shows a preview but doesn't actually update `PRICE_DATA`.
-      Full re-parse needs to be wired up (use the Python extraction logic,
-      ported to JS, or do it server-side in the CRM).
+- [x] ~~`importPriceList()` shows a preview but doesn't actually update `PRICE_DATA`.~~
+      **Resolved:** feature dropped, not finished. The function was already absent from
+      the template; price updates go through `extract_price_data.py` + rebuild, and
+      price-list management moves to the CRM (MulyaOne) anyway.
 
-- [ ] Mobile: the search dropdown (`position:fixed`) can be mispositioned on
-      iOS Safari when the keyboard is open. May need `visualViewport` API.
+- [x] ~~Mobile: the search dropdown (`position:fixed`) can be mispositioned on
+      iOS Safari when the keyboard is open.~~
+      **Won't fix:** the office uses Windows PCs and Android tablets only — no iOS.
+      Android Chrome resizes the viewport on keyboard open, so `position:fixed` behaves.
 
 - [x] ~~Alt rows (makeAlt) visual grouping issue.~~
       **Resolved:** makeAlt feature removed from the built tool. `altGroup` field kept in save format as `null` for backward compat.
