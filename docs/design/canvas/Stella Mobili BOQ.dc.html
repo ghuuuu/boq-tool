@@ -126,7 +126,7 @@ html,body{margin:0;padding:0}
               <input value="{{ u.name }}" onChange="{{ u.onNameChange }}" onClick="{{ stopProp }}" title="Click to rename" style="width:100%;background:transparent;border:none;color:inherit;font-family:inherit;font-size:13px;font-weight:inherit;outline:none;cursor:text;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;padding:0" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
             </div>
           </div>
-          <button onclick="{{ u.onClone }}" title="Clone unit" style="display:{{ u.actionsDisplay }};width:20px;height:20px;border-radius:5px;color:var(--ink2);flex-shrink:0;border:none;background:transparent;white-space:nowrap;align-items:center;justify-content:center">
+          <button onclick="{{ u.onClone }}" title="Clone unit" style="display:{{ u.actionsDisplay }};width:20px;height:20px;border-radius:5px;color:color-mix(in srgb,var(--accent) 70%,var(--ink2));flex-shrink:0;border:none;background:transparent;white-space:nowrap;align-items:center;justify-content:center">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           </button>
           <button onclick="{{ u.onDelete }}" title="Delete unit" style="display:{{ u.actionsDisplay }};width:20px;height:20px;border-radius:5px;color:var(--danger);flex-shrink:0;border:none;background:transparent;white-space:nowrap;align-items:center;justify-content:center">
@@ -1714,7 +1714,7 @@ class Component extends DCLogic {
     const date=m.date||new Date().toISOString().slice(0,10);
     const ver='Alt-'+s.activeAltKey+(s.activeVerNum?'-v'+s.activeVerNum:'');
     const name=(m.name||'BOQ').trim().replace(/\s*[\u2013\u2014]\s*/g,'_').replace(/\s+-\s+/g,'_');
-    return (name+'_'+date+'_'+ver+'_'+(incBuf?'BOQ(Buffer)':'BOQ')).replace(/[\\/:*?"<>|]/g,'-');
+    return (name+'_'+date+'_'+ver+'_'+((incBuf&&this.hasBufferItems())?'BOQ(Buffer)':'BOQ')).replace(/[\\/:*?"<>|]/g,'-');
   }
   exportExcelNow = (incBuf=true)=>{
     if(typeof XLSX==='undefined'){ this.toast('XLSX not loaded','error'); return; }
