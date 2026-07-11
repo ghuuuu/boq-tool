@@ -1,0 +1,2178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Hanken+Grotesk:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@keyframes smbqSlideUp{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes smbqPulse{0%,100%{opacity:1}50%{opacity:.35}}
+html,body{margin:0;padding:0}
+.smroot{
+  --bg:#F1ECE1; --panel:#FBF9F4; --panel2:#FFFFFF; --ink:#26221B; --ink2:#7A7264;
+  --line:#E4DCCC; --line2:#EFE9DC; --accent:#8A5A3B; --on-accent:#fff;
+  --brass:#A6803E; --shadow:0 1px 2px rgba(50,40,24,.05); color-scheme:light;
+  --font-display:'Newsreader',Georgia,serif; --font-ui:'Hanken Grotesk',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sidebar:#26221B; --sidebar-ink:#C7BCA6;
+  --positive:#3E7C5A; --warn:#B4832E; --danger:#B4483E; --buffer:#3E648C;
+}
+.smroot[data-dir="b"]{
+  --bg:#0F1115; --panel:#171A20; --panel2:#1E222A; --ink:#E9ECF1; --ink2:#909BA8;
+  --line:#2A2F38; --line2:#232830; --accent:#E0A64B; --on-accent:#17140C;
+  --brass:#E0A64B; --shadow:0 1px 0 rgba(255,255,255,.03),0 10px 30px rgba(0,0,0,.4); color-scheme:dark;
+  --font-display:'Space Grotesk',system-ui,sans-serif; --font-ui:'IBM Plex Sans',system-ui,sans-serif;
+  --sidebar:#0B0D10; --sidebar-ink:#8A95A3;
+  --positive:#4FB183; --warn:#E0A64B; --danger:#E4685C; --buffer:#5C9BD6;
+}
+*{box-sizing:border-box}
+.smroot select,.smroot input,.smroot textarea{color:var(--ink)}
+.smroot input::placeholder,.smroot textarea::placeholder{color:var(--ink2);opacity:.8}
+.smroot{font-family:var(--font-ui)}
+/* Custom qty stepper — paired up/down buttons flush to the field edge (ported from tool) */
+.smroot .qtybox{position:relative;display:inline-flex;vertical-align:middle}
+.smroot .qtybox>input{padding-right:34px !important}
+.smroot .qsteps{position:absolute;top:1px;right:1px;bottom:1px;width:26px;display:flex;flex-direction:column;border-left:1px solid var(--line2);border-radius:0 6px 6px 0;overflow:hidden}
+.smroot .qsteps button{flex:1;min-height:0;padding:0;border:0;background:var(--panel2);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.smroot .qsteps button+button{border-top:1px solid var(--line2)}
+.smroot .qsteps button:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+</style>
+</helmet>
+
+<div class="smroot" data-dir="{{ themeDir }}" style="min-height:100vh;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;display:flex;flex-direction:column">
+
+  <!-- ===== TOPBAR ===== -->
+  <header style="background:var(--panel2);border-bottom:1px solid var(--line);padding:0 20px;height:57px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:500;box-shadow:0 1px 2px rgba(0,0,0,.1)">
+    <button onclick="{{ toggleMobileSidebar }}" style="display:{{ mobileMenuDisplay }};width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);align-items:center;justify-content:center;flex-shrink:0;white-space:nowrap;flex-shrink:0">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <div style="width:32px;height:32px;border-radius:8px;background:var(--brass);display:grid;place-items:center;color:var(--on-accent);box-shadow:0 4px 10px rgba(0,0,0,.25)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="4" rx="1"></rect><rect x="13" y="19" width="8" height="2" rx="1"></rect></svg>
+      </div>
+      <div style="display:flex;flex-direction:column;line-height:1.1">
+        <strong style="font-size:14px;font-weight:700;letter-spacing:-.01em">Stella Mobili BOQ</strong>
+        <span style="font-size:10.5px;color:var(--ink2);font-weight:600;letter-spacing:.04em;text-transform:uppercase">Costing System · Standalone</span>
+      </div>
+    </div>
+    <div style="display:{{ crumbDisplay }};align-items:center;gap:8px;flex:1;min-width:0;font-size:13px;color:var(--ink);overflow:hidden;white-space:nowrap">
+      <span>Projects</span><span style="color:var(--line);font-weight:600">/</span>
+      <span style="color:var(--ink2)">{{ crumbProject }}</span><span style="color:var(--line);font-weight:600">/</span>
+      <span style="color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis">{{ crumbView }}</span>
+    </div>
+    <div style="display:{{ crumbDisplay }};flex:1"></div>
+    <sc-if value="{{ dirty }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--warn);font-weight:600;flex-shrink:0">
+        <span style="width:7px;height:7px;border-radius:999px;background:var(--warn);animation:smbqPulse 1.6s ease-in-out infinite"></span>
+        Unsaved edits
+      </div>
+    </sc-if>
+    <span title="Alternative and version currently in the editor" style="background:color-mix(in srgb,var(--ink2) 10%,transparent);color:var(--ink2);border:1px solid color-mix(in srgb,var(--ink2) 28%,transparent);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0">{{ altVerChip }}</span>
+    <span title="Tool version" style="background:transparent;color:var(--ink2);border:1px solid var(--line);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0">v1.0.0</span>
+    <span style="background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0" data-comment-anchor="c06209d124-span">{{ revLabel }}</span>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+      <button onclick="{{ saveNow }}" title="Save .smbq" style="width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--ink);border:1px solid transparent;background:transparent;white-space:nowrap;flex-shrink:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+      </button>
+      <button onclick="{{ triggerLoadClick }}" title="Load .smbq" style="width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--ink);border:1px solid transparent;background:transparent;white-space:nowrap;flex-shrink:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      </button>
+      <input ref="{{ loadInputRef }}" type="file" accept=".smbq,.json" style="display:none" onChange="{{ onLoadFile }}">
+      <button onclick="{{ exportExcelNow }}" title="Export Excel" style="width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--ink);border:1px solid transparent;background:transparent;white-space:nowrap;flex-shrink:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 14 12 9 7 14"></polyline><line x1="12" y1="9" x2="12" y2="21"></line></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== SHELL ===== -->
+  <div style="flex:1;display:grid;grid-template-columns:{{ shellCols }};min-height:0">
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside style="{{ sidebarStyle }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px 4px;font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.08em;font-weight:700">
+        <span style="display:{{ sbLabelDisplay }}">Navigation</span>
+        <button onclick="{{ toggleSidebarCollapse }}" title="Toggle sidebar" style="width:24px;height:24px;border-radius:6px;border:none;background:transparent;color:var(--ink2);display:flex;align-items:center;justify-content:center;white-space:nowrap;flex-shrink:0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" style="{{ collapseArrowStyle }}"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+      </div>
+      <div onclick="{{ goOverview }}" style="{{ navOverviewStyle }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex-shrink:0"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+        <span style="display:{{ sbLabelDisplay }};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Overview</span>
+      </div>
+      <div style="height:1px;background:var(--line);margin:8px 0"></div>
+      <div style="display:{{ sbLabelDisplay }};align-items:center;justify-content:space-between;padding:8px 10px 4px;font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.08em;font-weight:700">
+        <span>Units</span>
+        <span style="background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);font-weight:700;font-size:10.5px;padding:2px 7px;border-radius:999px;font-family:var(--font-mono)">{{ sidebarUnits.length }}</span>
+      </div>
+      <sc-for list="{{ sidebarUnits }}" as="u" hint-placeholder-count="2">
+        <div draggable="true" onDragStart="{{ u.onDragStart }}" onDragOver="{{ u.onDragOver }}" onDrop="{{ u.onDrop }}" onDragEnd="{{ u.onDragEnd }}" onMouseEnter="{{ u.onMouseEnter }}" onMouseLeave="{{ u.onMouseLeave }}" style="{{ u.rowStyle }}">
+          <div onclick="{{ u.onClick }}" style="display:flex;align-items:center;gap:9px;flex:1;min-width:0;cursor:pointer">
+            <span title="Drag to reorder" style="display:{{ sbLabelDisplay }};cursor:grab;color:var(--ink2);flex-shrink:0">
+              <svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14"><circle cx="2" cy="2" r="1.3"></circle><circle cx="6" cy="2" r="1.3"></circle><circle cx="2" cy="7" r="1.3"></circle><circle cx="6" cy="7" r="1.3"></circle><circle cx="2" cy="12" r="1.3"></circle><circle cx="6" cy="12" r="1.3"></circle></svg>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="flex-shrink:0"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <div style="display:{{ sbLabelDisplay }};flex:1;min-width:0">
+              <input value="{{ u.name }}" onChange="{{ u.onNameChange }}" onClick="{{ stopProp }}" title="Click to rename" style="width:100%;background:transparent;border:none;color:inherit;font-family:inherit;font-size:13px;font-weight:inherit;outline:none;cursor:text;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;padding:0" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+            </div>
+          </div>
+          <button onclick="{{ u.onClone }}" title="Clone unit" style="display:{{ u.actionsDisplay }};width:20px;height:20px;border-radius:5px;color:var(--ink2);flex-shrink:0;border:none;background:transparent;white-space:nowrap;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+          <button onclick="{{ u.onDelete }}" title="Delete unit" style="display:{{ u.actionsDisplay }};width:20px;height:20px;border-radius:5px;color:var(--danger);flex-shrink:0;border:none;background:transparent;white-space:nowrap;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </sc-for>
+      <button onclick="{{ addUnitNow }}" style="margin-top:6px;padding:9px 10px;border:1.5px dashed color-mix(in srgb,var(--accent) 42%,transparent);color:var(--accent);border-radius:8px;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:{{ sbAddJustify }};gap:8px;background:transparent;white-space:nowrap;flex-shrink:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span style="display:{{ sbLabelDisplay }}">Add Unit / Room</span>
+      </button>
+      <div style="flex:1"></div>
+    </aside>
+    <div onMouseDown="{{ sbResizeStart }}" title="Drag to resize sidebar" style="{{ sbResizerStyle }}" style-hover="background:color-mix(in srgb,var(--accent) 45%,transparent)"></div>
+    <sc-if value="{{ sidebarMobileOpen }}" hint-placeholder-val="{{ false }}">
+      <div onclick="{{ toggleMobileSidebar }}" style="position:fixed;inset:0;z-index:88;background:rgba(0,0,0,.35)"></div>
+    </sc-if>
+
+    <!-- ===== MAIN ===== -->
+    <main style="padding:12px 16px 40px;width:100%;overflow:auto">
+
+      <sc-if value="{{ showOverview }}" hint-placeholder-val="{{ true }}">
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.1);margin-bottom:10px">
+          <div style="padding:9px 14px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div style="font-weight:700;font-size:14px">Project Information</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onclick="{{ saveNow }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline></svg>
+                Save .smbq
+              </button>
+              <button onclick="{{ triggerLoadClick }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid color-mix(in srgb,var(--accent) 42%,transparent);background:var(--panel2);color:var(--accent);white-space:nowrap;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline></svg>
+                Load .smbq
+              </button>
+              <span style="width:1px;height:22px;background:var(--line)"></span>
+              <button onclick="{{ exportExcelNow }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--ink);background:var(--ink);color:var(--bg);white-space:nowrap;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 14 12 9 7 14"></polyline></svg>
+                Export Excel
+              </button>
+              <button onclick="{{ savePdfNow }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--ink);background:var(--ink);color:var(--bg);white-space:nowrap;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                Save PDF
+              </button>
+            </div>
+          </div>
+          <div style="padding:16px 18px">
+            <div style="display:grid;grid-template-columns:{{ metaGridCols }};gap:10px" data-comment-anchor="b4618f2a1a-div">
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Project Name</label>
+                <input value="{{ ovProjName }}" onChange="{{ onProjNameChange }}" placeholder="e.g. Casa Grande Tower A" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Client</label>
+                <input value="{{ ovClient }}" onChange="{{ onClientChange }}" placeholder="Client name" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">PIC</label>
+                <input value="{{ ovPic }}" onChange="{{ onPicChange }}" placeholder="Person in charge" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Date</label>
+                <input type="date" value="{{ ovDate }}" onChange="{{ onDateChange }}" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase" data-comment-anchor="ee64d7977b-label">Notes</label>
+                <input value="{{ ovNotes }}" onChange="{{ onNotesChange }}" placeholder="Revision notes, special requests..." style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px" data-comment-anchor="c8ffd4ba53-div">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Price List</label>
+                <select value="{{ ovPriceListVersion }}" onChange="{{ onPriceListChange }}" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                  <sc-for list="{{ priceListOptions }}" as="opt" hint-placeholder-count="2">
+                    <option value="{{ opt }}">{{ opt }}</option>
+                  </sc-for>
+                </select>
+              </div>
+            </div>
+            <sc-if value="{{ isOldPriceList }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;display:flex;align-items:center;gap:10px;padding:10px 14px;background:color-mix(in srgb,var(--warn) 12%,transparent);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:8px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16" style="flex-shrink:0;color:var(--warn)"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <span style="font-size:13px;color:var(--warn);font-weight:600">A newer price list ({{ priceListLatest }}) is available for this project — switch above to re-price all catalogue items automatically.</span>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- ===== REVISIONS & ALTERNATIVES ===== -->
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.1);margin-bottom:10px">
+          <div style="padding:9px 14px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <div style="font-weight:700;font-size:14px">Revisions &amp; Alternatives</div>
+              <span style="{{ raWorkingChipStyle }}">{{ raWorkingLabel }}</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onclick="{{ openNewAltModal }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid color-mix(in srgb,var(--accent) 42%,transparent);background:var(--panel2);color:var(--accent);white-space:nowrap;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                New Alternative
+              </button>
+              <button onclick="{{ openCommitModal }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M20 6 9 17l-5-5"></path></svg>
+                {{ raSaveBtnLabel }}
+              </button>
+            </div>
+          </div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:12px;color:var(--ink2);line-height:1.6"><b style="color:var(--ink)">How it works:</b> build the calculation, then <b style="color:var(--ink)">save it as a version</b> (while a version is still a draft, saving updates it in place; once it's marked Ready, saving creates v2, v3… — the newest version is the one you quote). All versions and alternatives travel inside the <b style="color:var(--ink)">.smbq file</b> when you save it to the project folder. Offering the client a different scheme? Save it as a <b style="color:var(--ink)">new alternative</b> (Alt B) — alternatives sit side by side and the client picks one.</div>
+            <sc-if value="{{ raViewingOld }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:color-mix(in srgb,var(--warn) 12%,transparent);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:8px;flex-wrap:wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15" style="flex-shrink:0;color:var(--warn)"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"></path><path d="M3 3v5h5"></path></svg>
+                <span style="font-size:12.5px;color:var(--warn);font-weight:600;flex:1;min-width:200px">Viewing older version {{ raViewingLabel }}. Saving will add a new version on top of the latest.</span>
+                <button onclick="{{ raLoadActiveLatest }}" style="padding:5px 11px;border-radius:7px;font-size:12px;font-weight:700;border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);background:var(--panel2);color:var(--warn);white-space:nowrap;flex-shrink:0">Load latest</button>
+              </div>
+            </sc-if>
+            <sc-for list="{{ raAlts }}" as="ra" hint-placeholder-count="1">
+              <div onclick="{{ ra.onSelect }}" title="Click to switch to this alternative" style="{{ ra.rowStyle }}">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span style="{{ ra.badgeStyle }}">{{ ra.badge }}</span>
+                  <input value="{{ ra.name }}" onChange="{{ ra.onNameChange }}" onClick="{{ stopProp }}" title="Click to rename this alternative" style="flex:1;min-width:140px;background:transparent;border:none;font-size:13.5px;font-weight:700;color:var(--ink);font-family:inherit;outline:none;padding:0;cursor:text">
+                  <span style="{{ ra.statusStyle }}">{{ ra.statusLabel }}</span>
+                  <span style="font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--accent)">{{ ra.totalFmt }}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                  <sc-for list="{{ ra.versions }}" as="rv" hint-placeholder-count="1">
+                    <button onclick="{{ rv.pick }}" title="{{ rv.title }}" style="{{ rv.chipStyle }}">{{ rv.label }}</button>
+                  </sc-for>
+                  <span style="font-size:11.5px;color:var(--ink2)">{{ ra.metaLine }}</span>
+                  <span style="flex:1"></span>
+                  <button onclick="{{ ra.onToggleReady }}" style="display:{{ ra.readyDisplay }};align-items:center;gap:6px;padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:700;border:1px solid var(--line);background:var(--panel2);color:var(--ink);white-space:nowrap;flex-shrink:0">{{ ra.readyLabel }}</button>
+                  <button onclick="{{ ra.onDelete }}" title="{{ ra.deleteTitle }}" style="{{ ra.deleteStyle }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  </button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:{{ heroStatCols }};gap:8px;margin-bottom:8px">
+          <div style="{{ heroTotalStyle }}">
+            <div style="font-size:10.5px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:6px">Grand Total</div>
+            <div style="{{ grandTotalValueStyle }}"><span style="font-size:14px;font-weight:600;margin-right:5px;font-family:var(--font-ui);opacity:.85">Rp</span>{{ statGrandTotal }}</div>
+            <div style="font-size:11.5px;color:rgba(255,255,255,.7);margin-top:5px;display:{{ heroSubDisplay }}">Showroom price · excl. PPN</div>
+          </div>
+          <div style="{{ heroSideStyle }}">
+            <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px">
+              <div style="font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px">Total Units</div>
+              <div style="font-size:16px;font-weight:700;letter-spacing:-.02em;font-family:var(--font-mono)">{{ statTotalUnits }}</div>
+              <div style="font-size:11px;color:var(--ink2);margin-top:3px">rooms / locations</div>
+            </div>
+            <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px">
+              <div style="font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px">Total Items</div>
+              <div style="font-size:16px;font-weight:700;letter-spacing:-.02em;font-family:var(--font-mono)">{{ statTotalItems }}</div>
+              <div style="font-size:11px;color:var(--ink2);margin-top:3px">across all units</div>
+            </div>
+            <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px">
+              <div style="font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px">Working On</div>
+              <div style="font-size:15px;font-weight:700;letter-spacing:-.02em;font-family:var(--font-mono)">{{ statRevision }}</div>
+              <div style="font-size:11px;color:var(--ink2);margin-top:3px">{{ statRevisionSub }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.1)">
+          <div style="padding:9px 14px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-weight:700;font-size:14px">Units Overview</div>
+            <button onclick="{{ addUnitNow }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Add Unit
+            </button>
+          </div>
+          <div style="padding:0;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr>
+                  <th style="background:var(--sidebar);color:#fff;text-align:left;padding:6px 10px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border-radius:8px 0 0 0;width:28px"></th>
+                  <th style="background:var(--sidebar);color:#fff;text-align:left;padding:6px 10px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700">Unit / Room</th>
+                  <th style="background:var(--sidebar);color:#fff;text-align:right;padding:6px 10px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700">Kitchen</th>
+                  <th style="background:var(--sidebar);color:#fff;text-align:right;padding:6px 10px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700">Wardrobe</th>
+                  <th style="background:var(--sidebar);color:#fff;text-align:right;padding:6px 10px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700">Accessories</th>
+                  <th style="background:var(--sidebar);color:#fff;text-align:right;padding:6px 10px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border-radius:0 8px 0 0">Unit Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ overviewRows }}" as="r" hint-placeholder-count="2">
+                  <tr draggable="true" onDragStart="{{ r.onDragStart }}" onDragOver="{{ r.onDragOver }}" onDrop="{{ r.onDrop }}" onDragEnd="{{ r.onDragEnd }}" style="{{ r.rowStyle }}">
+                    <td style="padding:6px 4px 6px 10px;color:var(--ink2);cursor:grab">
+                      <svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14"><circle cx="2" cy="2" r="1.3"></circle><circle cx="6" cy="2" r="1.3"></circle><circle cx="2" cy="7" r="1.3"></circle><circle cx="6" cy="7" r="1.3"></circle><circle cx="2" cy="12" r="1.3"></circle><circle cx="6" cy="12" r="1.3"></circle></svg>
+                    </td>
+                    <td style="padding:6px 10px;border-bottom:1px solid var(--line2)"><span onclick="{{ r.onClick }}" style="color:var(--accent);font-weight:600;cursor:pointer">{{ r.name }}</span></td>
+                    <td style="padding:6px 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono);font-weight:600">{{ r.kitchen }}</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono);font-weight:600">{{ r.wardrobe }}</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono);font-weight:600">{{ r.accessories }}</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono);font-weight:700;color:var(--accent)">{{ r.total }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td style="background:var(--sidebar);border-radius:0 0 0 8px"></td>
+                  <td style="background:var(--sidebar);color:#fff;font-size:15px;font-weight:800;padding:9px 12px">Grand Total</td>
+                  <td style="background:var(--sidebar)"></td><td style="background:var(--sidebar)"></td><td style="background:var(--sidebar)"></td>
+                  <td style="background:var(--sidebar);color:#fff;font-size:15px;font-weight:800;padding:9px 12px;text-align:right;font-family:var(--font-mono);border-radius:0 0 8px 0">{{ grandTotalLabel }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== UNIT VIEW ===== -->
+      <sc-if value="{{ showUnit }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+          <div>
+            <h1 style="font-size:22px;margin:0;letter-spacing:-.02em;font-weight:700">{{ unitName }}</h1>
+            <div style="color:var(--ink2);font-size:13px;margin-top:3px">Showroom price · excl. PPN</div>
+          </div>
+          <button onclick="{{ clearUnitNow }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid color-mix(in srgb,var(--danger) 32%,transparent);background:var(--panel2);color:var(--danger);white-space:nowrap;flex-shrink:0">Clear Unit</button>
+        </div>
+        <div style="display:grid;grid-template-columns:{{ statRowCols }};gap:8px;margin-bottom:10px">
+          <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px">
+            <div style="font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px">Kitchen</div>
+            <div style="font-size:16px;font-weight:700;font-family:var(--font-mono)"><span style="font-size:11px;color:var(--ink2);font-weight:600;margin-right:3px;font-family:var(--font-ui)">Rp</span>{{ unitStatKitchen }}</div>
+            <div style="font-size:11px;color:var(--ink2);margin-top:3px">{{ unitCountKitchen }}</div>
+          </div>
+          <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px">
+            <div style="font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px">Wardrobe</div>
+            <div style="font-size:16px;font-weight:700;font-family:var(--font-mono)"><span style="font-size:11px;color:var(--ink2);font-weight:600;margin-right:3px;font-family:var(--font-ui)">Rp</span>{{ unitStatWardrobe }}</div>
+            <div style="font-size:11px;color:var(--ink2);margin-top:3px">{{ unitCountWardrobe }}</div>
+          </div>
+          <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px">
+            <div style="font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px">Accessories</div>
+            <div style="font-size:16px;font-weight:700;font-family:var(--font-mono)"><span style="font-size:11px;color:var(--ink2);font-weight:600;margin-right:3px;font-family:var(--font-ui)">Rp</span>{{ unitStatAccessories }}</div>
+            <div style="font-size:11px;color:var(--ink2);margin-top:3px">{{ unitCountAccessories }}</div>
+          </div>
+          <div style="background:var(--sidebar);border-radius:10px;padding:14px 16px">
+            <div style="font-size:10.5px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px">Unit Total</div>
+            <div style="font-size:16px;font-weight:700;font-family:var(--font-mono);color:#fff"><span style="font-size:11px;color:rgba(255,255,255,.75);font-weight:600;margin-right:3px;font-family:var(--font-ui)">Rp</span>{{ unitStatTotal }}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:3px">{{ unitTotalCaption }}</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:8px;overflow-x:auto">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+            <div onclick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }} <span style="{{ t.countStyle }}">{{ t.count }}</span></div>
+          </sc-for>
+        </div>
+
+        <!-- ===== KITCHEN ADD BAR ===== -->
+        <sc-if value="{{ isKitchenTab }}" hint-placeholder-val="{{ true }}">
+          <div style="background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:10px;padding:8px 10px;margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end" data-comment-anchor="86335054b8-div">
+            <div style="display:flex;flex-direction:column;gap:5px;min-width:150px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">1 · Category</label>
+              <select value="{{ kitCat }}" onChange="{{ onKitCatChange }}" style="padding:6px 8px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit;min-width:110px" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <sc-for list="{{ KIT_CATS }}" as="c" hint-placeholder-count="6"><option value="{{ c }}">{{ c }}</option></sc-for>
+              </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;min-width:200px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">2 · Finish</label>
+              <select value="{{ kitFinish }}" onChange="{{ onKitFinishChange }}" style="padding:7px 9px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit;min-width:140px" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <sc-for list="{{ kitFinishOptions }}" as="f" hint-placeholder-count="6"><option value="{{ f }}">{{ f }}</option></sc-for>
+              </select>
+            </div>
+            <div style="display:{{ kitHandleDisplay }};flex-direction:column;gap:5px;min-width:150px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">3 · Handle</label>
+              <div style="display:flex;gap:6px">
+                <button onclick="{{ onKitVariantStandard }}" style="{{ kitVariantStdStyle }};white-space:nowrap;flex-shrink:0">Standard</button>
+                <button onclick="{{ onKitVariantGola }}" disabled="{{ kitGolaDisabled }}" title="{{ kitGolaTitle }}" style="{{ kitVariantGolaStyle }};white-space:nowrap;flex-shrink:0">Gola</button>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Thickness</label>
+              <div style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel);color:var(--ink);font-size:13px;width:72px;text-align:center">{{ kitThicknessDisplay }}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;flex:2;min-width:160px;position:relative">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">4 · Search / Browse Item</label>
+              <input value="{{ kitSearch }}" onChange="{{ onKitSearchInput }}" onFocus="{{ onKitSearchFocus }}" onBlur="{{ onKitSearchBlur }}" placeholder="Type to search or click to browse…" style="padding:8px 10px 8px 32px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit;width:100%" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)" data-comment-anchor="584d52e554-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="color:var(--ink2);position:absolute;left:10px;top:32px"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <sc-if value="{{ kitOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:60px;left:0;right:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 36px rgba(0,0,0,.3);z-index:900;max-height:420px;overflow-y:auto;padding:5px">
+                  <sc-if value="{{ kitResultsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:16px;text-align:center;color:var(--ink2);font-size:13px">No items found</div></sc-if>
+                  <sc-for list="{{ kitResults }}" as="it" hint-placeholder-count="4">
+                    <div onmousedown="{{ it.onSelect }}" style="padding:9px 11px;border-radius:7px;cursor:pointer;display:flex;align-items:flex-start;gap:10px">
+                      <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">{{ it.name }}</div><div style="font-size:12.5px;color:var(--ink2);margin-top:2px">{{ it.meta }}</div></div>
+                      <div style="text-align:right;flex-shrink:0"><div style="font-weight:700;color:var(--accent);font-family:var(--font-mono);font-size:12.5px">Rp {{ it.price }}</div><div style="font-size:10.5px;color:var(--ink2);text-transform:uppercase">{{ it.unit }}</div></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Price</label>
+              <div style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel);color:var(--accent);font-weight:700;font-size:13px;width:130px;min-height:34px;display:flex;align-items:center;font-family:var(--font-mono)">{{ kitPricePreview }}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Qty</label>
+              <span class="qtybox"><input type="number" value="{{ kitQty }}" onChange="{{ onKitQtyChange }}" min="1" style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;width:86px;text-align:left;font-family:var(--font-mono)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ onKitQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ onKitQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button onclick="{{ addKitRow }}" style="padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">+ Add</button>
+              <button onclick="{{ openCustomKit }}" style="padding:9px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);background:var(--panel2);color:var(--accent);white-space:nowrap;flex-shrink:0">Custom</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== WARDROBE ADD BAR ===== -->
+        <sc-if value="{{ isWardrobeTab }}" hint-placeholder-val="{{ false }}">
+          <div style="background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:10px;padding:8px 10px;margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+            <div style="display:flex;flex-direction:column;gap:5px;min-width:180px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">1 · Category</label>
+              <select value="{{ wdCat }}" onChange="{{ onWdCatChange }}" style="padding:7px 9px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit;min-width:130px" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <sc-for list="{{ WD_CATS }}" as="c" hint-placeholder-count="8"><option value="{{ c }}">{{ c }}</option></sc-for>
+              </select>
+            </div>
+            <div style="display:{{ wdFinishDisplay }};flex-direction:column;gap:5px;min-width:200px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">2 · Finish</label>
+              <select value="{{ wdFinish }}" onChange="{{ onWdFinishChange }}" style="padding:7px 9px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit;min-width:140px" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <sc-for list="{{ wdFinishOptions }}" as="f" hint-placeholder-count="6"><option value="{{ f }}">{{ f }}</option></sc-for>
+              </select>
+            </div>
+            <div style="display:{{ wdGlassDisplay }};flex-direction:column;gap:5px;min-width:170px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">2 · Glass Type</label>
+              <select value="{{ wdGlass }}" onChange="{{ onWdGlassChange }}" style="padding:7px 9px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit;min-width:120px" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <sc-for list="{{ wdGlassOptions }}" as="g" hint-placeholder-count="3"><option value="{{ g }}">{{ g }}</option></sc-for>
+              </select>
+            </div>
+            <div style="display:{{ wdGlassDisplay }};flex-direction:column;gap:5px;min-width:170px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">3 · {{ wdGlass2Label }}</label>
+              <select value="{{ wdGlass2 }}" onChange="{{ onWdGlass2Change }}" style="padding:7px 9px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit;min-width:120px" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <sc-for list="{{ wdGlass2Options }}" as="g" hint-placeholder-count="2"><option value="{{ g }}">{{ g }}</option></sc-for>
+              </select>
+            </div>
+            <div style="display:{{ wdThicknessDisplay }};flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Thickness</label>
+              <div style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel);color:var(--ink);font-size:13px;width:72px;text-align:center">{{ wdThicknessDisplay2 }}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;flex:2;min-width:160px;position:relative">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Search / Browse Item</label>
+              <input value="{{ wdSearch }}" onChange="{{ onWdSearchInput }}" onFocus="{{ onWdSearchFocus }}" onBlur="{{ onWdSearchBlur }}" placeholder="Type to search or click to browse…" style="padding:8px 10px 8px 32px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit;width:100%" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="color:var(--ink2);position:absolute;left:10px;top:32px"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <sc-if value="{{ wdOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:60px;left:0;right:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 36px rgba(0,0,0,.3);z-index:900;max-height:420px;overflow-y:auto;padding:5px">
+                  <sc-if value="{{ wdResultsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:16px;text-align:center;color:var(--ink2);font-size:13px">No items found</div></sc-if>
+                  <sc-for list="{{ wdResults }}" as="it" hint-placeholder-count="4">
+                    <div onmousedown="{{ it.onSelect }}" style="padding:9px 11px;border-radius:7px;cursor:pointer;display:flex;align-items:flex-start;gap:10px">
+                      <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">{{ it.name }}</div><div style="font-size:12.5px;color:var(--ink2);margin-top:2px">{{ it.meta }}</div></div>
+                      <div style="text-align:right;flex-shrink:0"><div style="font-weight:700;color:var(--accent);font-family:var(--font-mono);font-size:12.5px">Rp {{ it.price }}</div><div style="font-size:10.5px;color:var(--ink2);text-transform:uppercase">{{ it.unit }}</div></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Price</label>
+              <div style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel);color:var(--accent);font-weight:700;font-size:13px;width:130px;min-height:34px;display:flex;align-items:center;font-family:var(--font-mono)">{{ wdPricePreview }}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Qty</label>
+              <span class="qtybox"><input type="number" value="{{ wdQty }}" onChange="{{ onWdQtyChange }}" min="1" style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;width:86px;text-align:left;font-family:var(--font-mono)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ onWdQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ onWdQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button onclick="{{ addWdRow }}" style="padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">+ Add</button>
+              <button onclick="{{ openCustomWd }}" style="padding:9px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);background:var(--panel2);color:var(--accent);white-space:nowrap;flex-shrink:0">Custom</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== ACCESSORIES ADD BAR ===== -->
+        <sc-if value="{{ isAccessoriesTab }}" hint-placeholder-val="{{ false }}">
+          <div style="background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:10px;padding:8px 10px;margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+            <div style="display:flex;flex-direction:column;gap:5px;min-width:180px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">1 · Category</label>
+              <select value="{{ accCat }}" onChange="{{ onAccCatChange }}" style="padding:7px 9px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit;min-width:130px" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <sc-for list="{{ ACC_CATS }}" as="c" hint-placeholder-count="6"><option value="{{ c }}">{{ c }}</option></sc-for>
+              </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;flex:2;min-width:160px;position:relative">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">2 · Search / Browse Item</label>
+              <input value="{{ accSearch }}" onChange="{{ onAccSearchInput }}" onFocus="{{ onAccSearchFocus }}" onBlur="{{ onAccSearchBlur }}" placeholder="Type to search or click to browse…" style="padding:8px 10px 8px 32px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit;width:100%" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="color:var(--ink2);position:absolute;left:10px;top:32px"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <sc-if value="{{ accOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:60px;left:0;right:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 36px rgba(0,0,0,.3);z-index:900;max-height:420px;overflow-y:auto;padding:5px">
+                  <sc-if value="{{ accResultsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:16px;text-align:center;color:var(--ink2);font-size:13px">No items found</div></sc-if>
+                  <sc-for list="{{ accResults }}" as="it" hint-placeholder-count="4">
+                    <div onmousedown="{{ it.onSelect }}" style="padding:9px 11px;border-radius:7px;cursor:pointer;display:flex;align-items:flex-start;gap:10px">
+                      <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">{{ it.name }}</div><div style="font-size:12.5px;color:var(--ink2);margin-top:2px">{{ it.meta }}</div></div>
+                      <div style="text-align:right;flex-shrink:0"><div style="font-weight:700;color:var(--accent);font-family:var(--font-mono);font-size:12.5px">Rp {{ it.price }}</div><div style="font-size:10.5px;color:var(--ink2);text-transform:uppercase">{{ it.unit }}</div></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Price</label>
+              <div style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel);color:var(--accent);font-weight:700;font-size:13px;width:130px;min-height:34px;display:flex;align-items:center;font-family:var(--font-mono)">{{ accPricePreview }}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Qty</label>
+              <span class="qtybox"><input type="number" value="{{ accQty }}" onChange="{{ onAccQtyChange }}" min="1" style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;width:86px;text-align:left;font-family:var(--font-mono)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ onAccQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ onAccQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button onclick="{{ addAccRow }}" style="padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">+ Add</button>
+              <button onclick="{{ openCustomAcc }}" style="padding:9px 14px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);background:var(--panel2);color:var(--accent);white-space:nowrap;flex-shrink:0">Custom</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== ITEMS TABLE ===== -->
+        <sc-if value="{{ tableEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.1)">
+            <div style="padding:32px;text-align:center;color:var(--ink2);font-size:13px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36" style="opacity:.25;margin-bottom:10px"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              <div>No items yet. Use the form above to search and add items.</div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tableNotEmpty }}" hint-placeholder-val="{{ true }}">
+          <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.1)">
+            <sc-if value="{{ selBarVisible }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;margin:8px 12px 0;background:var(--panel2);border:1px solid color-mix(in srgb,var(--accent) 60%,transparent);border-left:4px solid var(--accent);border-radius:8px;flex-wrap:wrap;box-shadow:0 2px 8px color-mix(in srgb,var(--accent) 12%,transparent)">
+                <span style="font-size:13px;font-weight:700;color:var(--accent);flex:1;min-width:120px">{{ selCountLabel }}</span>
+                <button onclick="{{ openChangeFinishBulk }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">Change Finish</button>
+                <sc-if value="{{ showCopyToUnitBtn }}" hint-placeholder-val="{{ false }}">
+                  <button onclick="{{ openCopyToUnit }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel2);color:var(--ink);white-space:nowrap;flex-shrink:0">Copy to Unit</button>
+                </sc-if>
+                <button onclick="{{ deleteSelectedNow }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid color-mix(in srgb,var(--danger) 32%,transparent);background:var(--panel2);color:var(--danger);white-space:nowrap;flex-shrink:0">Delete Selected</button>
+                <button onclick="{{ clearSelectionNow }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--ink);white-space:nowrap;flex-shrink:0">Clear</button>
+              </div>
+            </sc-if>
+            <div style="padding:0;overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:900px">
+                <thead>
+                  <tr>
+                    <th style="padding:9px 4px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);width:22px"></th>
+                    <th style="padding:9px 4px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);width:32px;text-align:center;position:sticky;left:0;z-index:2"><input type="checkbox" checked="{{ selectAllChecked }}" onChange="{{ onToggleSelectAll }}"></th>
+                    <th style="padding:6px 8px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);width:32px;text-align:center;color:var(--ink2);font-size:10.5px">#</th>
+                    <th style="padding:6px 8px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);width:110px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700">Category</th>
+                    <th style="padding:6px 8px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);width:180px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700">Finish</th>
+                    <th style="padding:6px 8px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700;position:sticky;left:32px;z-index:2;min-width:220px">Description</th>
+                    <th style="padding:6px 8px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);width:120px;text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700">Unit Price</th>
+                    <th style="padding:6px 8px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);width:80px;text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700">Qty</th>
+                    <th style="padding:6px 8px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);width:140px;text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700">Total</th>
+                    <th style="padding:6px 8px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);min-width:140px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700">Notes</th>
+                    <th style="padding:6px 8px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 10%,transparent);width:70px"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ tableRows }}" as="row" hint-placeholder-count="3">
+                    <tr draggable="true" onDragStart="{{ row.onDragStart }}" onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDrop }}" onDragEnd="{{ row.onDragEnd }}" style="{{ row.trStyle }}">
+                      <td style="padding:{{ rowPadV }} 4px;border-bottom:1px solid var(--line2);color:var(--ink2);cursor:grab;text-align:center">
+                        <svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14"><circle cx="2" cy="2" r="1.3"></circle><circle cx="6" cy="2" r="1.3"></circle><circle cx="2" cy="7" r="1.3"></circle><circle cx="6" cy="7" r="1.3"></circle><circle cx="2" cy="12" r="1.3"></circle><circle cx="6" cy="12" r="1.3"></circle></svg>
+                      </td>
+                      <td style="{{ row.stickyCheckStyle }}"><input type="checkbox" checked="{{ row.isSelected }}" onChange="{{ row.onToggleSelect }}"></td>
+                      <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:center;color:var(--ink2)">{{ row.index }}</td>
+                      <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2)">
+                        <div style="display:inline-flex;flex-direction:column;align-items:stretch;gap:3px">
+                          <span style="display:block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--line2);color:var(--ink);text-align:center">{{ row.category }}</span>
+                          <sc-if value="{{ row.isCustom }}" hint-placeholder-val="{{ false }}"><span style="display:block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--brass) 12%,transparent);color:var(--brass);text-align:center">CUSTOM</span></sc-if>
+                          <sc-if value="{{ row.isBuffer }}" hint-placeholder-val="{{ false }}"><span title="Buffer / insurance item — counted in totals, excluded from SO" style="display:block;font-size:9.5px;font-weight:700;letter-spacing:.07em;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer);border:1px solid color-mix(in srgb,var(--buffer) 38%,transparent);text-align:center" data-comment-anchor="76cdee575f-span">BUFFER</span></sc-if>
+                        </div>
+                      </td>
+                      <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2)">
+                        <div onclick="{{ row.onEditFinish }}" style="cursor:pointer;display:flex;align-items:center;gap:4px">
+                          <div data-comment-anchor="9e511c8de7-div" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%"><span style="font-size:12px;color:var(--ink)">{{ row.finishDisplay }}</span><sc-if value="{{ row.hasThickness }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;color:var(--ink2);background:var(--line2);padding:1px 5px;border-radius:3px;margin-left:4px;font-family:var(--font-mono)">{{ row.thickness }}</span></sc-if></div>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="{{ row.pencilStyle }}"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </div>
+                      </td>
+                      <td style="{{ row.stickyDescStyle }}" data-comment-anchor="0d27284490-td">
+                        <div style="font-weight:600;color:var(--ink)">{{ row.desc }}</div>
+                        <div style="margin-top:2px">
+                          <sc-if value="{{ row.hasSubcat }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--line2);color:var(--ink)">{{ row.subcat }}</span></sc-if>
+                          <sc-if value="{{ row.hasDims }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;color:var(--ink2);background:var(--line2);padding:1px 5px;border-radius:3px;margin-left:4px;font-family:var(--font-mono)">{{ row.dims }}</span></sc-if>
+                        </div>
+                      </td>
+                      <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono)">{{ row.priceLabel }}</td>
+                      <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:right">
+                        <span class="qtybox"><input type="number" value="{{ row.qty }}" onChange="{{ row.onQtyChange }}" min="1" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:86px;text-align:left;font-family:var(--font-mono);font-size:13px" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ row.onQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ row.onQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
+                      </td>
+                      <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono);font-weight:700;color:var(--accent)">{{ row.totalLabel }}</td>
+                      <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2)">
+                        <input value="{{ row.notes }}" onChange="{{ row.onNotesChange }}" placeholder="+ Add note…" style="width:100%;border:1px solid var(--line2);padding:5px 7px;border-radius:5px;font-size:12px;font-family:inherit;color:var(--ink);background:var(--panel)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                      </td>
+                      <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:right">
+                        <div style="display:flex;gap:4px;justify-content:flex-end">
+                          <button onclick="{{ row.onToggleBuffer }}" title="{{ row.bufferTitle }}" style="{{ row.bufferBtnStyle }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                          </button>
+                          <button onclick="{{ row.onDuplicate }}" title="Duplicate row" style="width:24px;height:24px;border-radius:5px;border:1px solid var(--line);background:var(--panel2);display:grid;place-items:center;color:var(--ink);white-space:nowrap;flex-shrink:0">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                          </button>
+                          <button onclick="{{ row.onRemove }}" title="Delete row" style="width:24px;height:24px;border-radius:5px;border:1px solid transparent;background:transparent;display:grid;place-items:center;color:var(--ink2);white-space:nowrap;flex-shrink:0">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td style="background:color-mix(in srgb,var(--accent) 10%,transparent)"></td><td style="background:color-mix(in srgb,var(--accent) 10%,transparent)"></td>
+                    <td colspan="6" style="padding:6px 8px;font-weight:700;border-top:2px solid color-mix(in srgb,var(--accent) 42%,transparent);background:color-mix(in srgb,var(--accent) 10%,transparent)">Subtotal · {{ currentTabLabel }} <span style="font-weight:600;font-size:11px;color:var(--buffer);margin-left:8px">{{ subtotalBufferNote }}</span></td>
+                    <td style="padding:6px 8px;font-weight:700;border-top:2px solid color-mix(in srgb,var(--accent) 42%,transparent);background:color-mix(in srgb,var(--accent) 10%,transparent);text-align:right;font-family:var(--font-mono);color:var(--accent)">{{ subtotalLabel }}</td>
+                    <td style="background:color-mix(in srgb,var(--accent) 10%,transparent)"></td><td style="background:color-mix(in srgb,var(--accent) 10%,transparent)"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </sc-if>
+      </sc-if>
+    </main>
+  </div>
+
+  <!-- ===== TOAST STACK ===== -->
+  <div style="position:fixed;bottom:24px;right:24px;z-index:3000;display:flex;flex-direction:column;gap:8px;pointer-events:none">
+    <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="0">
+      <div style="{{ t.style }}">
+        <span>{{ t.icon }}</span><span>{{ t.msg }}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- ===== MODAL MOUNT ===== -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onclick="{{ onBackdropClick }}" style="position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:4000;backdrop-filter:blur(2px);padding:18px">
+      <div style="{{ modalBoxStyle }}">
+
+        <!-- ===== CUSTOM ITEM ===== -->
+        <sc-if value="{{ isCustomModal }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:17px 22px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between">
+            <h2 style="margin:0;font-size:16px;font-weight:700">Add Custom Item</h2>
+            <button onclick="{{ closeModal }}" style="width:22px;height:22px;border-radius:4px;border:none;background:transparent;color:var(--ink2);display:grid;place-items:center;white-space:nowrap;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+          <div style="padding:18px 22px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Description</label>
+              <input value="{{ cmDesc }}" onChange="{{ onCmDescChange }}" placeholder="Item description" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Finish / Material</label>
+              <input value="{{ cmFinish }}" onChange="{{ onCmFinishChange }}" placeholder="e.g. Custom, Solid Teak…" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Thickness</label>
+                <input value="{{ cmThickness }}" onChange="{{ onCmThicknessChange }}" placeholder="e.g. 18mm (optional)" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Unit</label>
+                <input value="{{ cmUnit }}" onChange="{{ onCmUnitChange }}" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Unit Price (IDR)</label>
+                <input type="number" value="{{ cmPrice }}" onChange="{{ onCmPriceChange }}" placeholder="0" min="0" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Qty</label>
+                <input type="number" value="{{ cmQty }}" onChange="{{ onCmQtyChange }}" min="1" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Notes</label>
+              <input value="{{ cmNotes }}" onChange="{{ onCmNotesChange }}" placeholder="Optional" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+            </div>
+          </div>
+          <div style="padding:13px 22px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end;gap:8px">
+            <button onclick="{{ closeModal }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--ink);white-space:nowrap;flex-shrink:0">Cancel</button>
+            <button onclick="{{ confirmCustom }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">Add Item</button>
+          </div>
+        </sc-if>
+
+        <!-- ===== COMMIT CALCULATION ===== -->
+        <sc-if value="{{ isCommitModal }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:17px 22px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between">
+            <h2 style="margin:0;font-size:16px;font-weight:700">{{ cmtTitle }}</h2>
+            <button onclick="{{ closeModal }}" style="width:22px;height:22px;border-radius:4px;border:none;background:transparent;color:var(--ink2);display:grid;place-items:center;white-space:nowrap;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+          <div style="padding:18px 22px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 13px;background:var(--panel);border:1px solid var(--line);border-radius:8px">
+              <div>
+                <div style="font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;font-weight:700">Working calculation</div>
+                <div style="font-size:11.5px;color:var(--ink2);margin-top:2px">{{ cmtCountsLabel }}</div>
+              </div>
+              <div style="font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--accent)">{{ cmtTotalFmt }}</div>
+            </div>
+            <div style="font-size:12.5px;color:var(--ink2);line-height:1.6">{{ cmtHeadline }}</div>
+            <sc-if value="{{ cmtIsAlt }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Alternative name</label>
+                <input value="{{ cmtName }}" onChange="{{ onCmtNameChange }}" placeholder="e.g. Dekton benchtop, Budget scheme…" style="width:100%;padding:7px 9px;border:1px solid {{ cmtNameBorder }};border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <sc-if value="{{ cmtNameError }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:11.5px;color:var(--danger);font-weight:600">Name this alternative before saving — e.g. "Dekton benchtop".</div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">What changed <span style="font-weight:600;text-transform:none;letter-spacing:0">(revision note)</span></label>
+              <input value="{{ cmtNote }}" onChange="{{ onCmtNoteChange }}" placeholder="e.g. Client removed island unit, switched finish to Collalto Gold" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+            </div>
+            <div onclick="{{ cmtToggleReady }}" style="display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:var(--panel)" data-comment-anchor="92f6a71761-div">
+              <span style="{{ cmtReadyBoxStyle }}"><sc-if value="{{ cmtReady }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="12" height="12"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></span>
+              <div>
+                <div style="font-size:13px;font-weight:700">Ready for quotation</div>
+                <div style="font-size:11.5px;color:var(--ink2);margin-top:2px">Marks this version as final — the one to quote to the client. Untick to keep it as a draft — you can mark it ready later.</div>
+              </div>
+            </div>
+            <div style="font-size:12px;color:var(--ink2)">{{ cmtSwitchHint }} <span onclick="{{ cmtSwitchMode }}" style="color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline">{{ cmtSwitchLabel }}</span></div>
+          </div>
+          <div style="padding:13px 22px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end;gap:8px">
+            <button onclick="{{ closeModal }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--ink);white-space:nowrap;flex-shrink:0">Cancel</button>
+            <button onclick="{{ confirmCommit }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">{{ cmtConfirmLabel }}</button>
+          </div>
+        </sc-if>
+
+        <!-- ===== CHANGE FINISH — SINGLE ===== -->
+        <sc-if value="{{ isEfModal }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:17px 22px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between">
+            <h2 style="margin:0;font-size:16px;font-weight:700">Change Finish</h2>
+            <button onclick="{{ closeModal }}" style="width:22px;height:22px;border-radius:4px;border:none;background:transparent;color:var(--ink2);display:grid;place-items:center;white-space:nowrap;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+          <div style="padding:18px 22px;display:flex;flex-direction:column;gap:12px">
+            <p style="font-size:12px;color:var(--ink2);margin:0">{{ efItemDesc }}</p>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Finish / Handle</label>
+              <select value="{{ efSelKey }}" onChange="{{ onEfSelectChange }}" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <sc-for list="{{ efOptions }}" as="o" hint-placeholder-count="4"><option value="{{ o.key }}">{{ o.optionLabel }}</option></sc-for>
+              </select>
+            </div>
+          </div>
+          <div style="padding:13px 22px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end;gap:8px">
+            <button onclick="{{ closeModal }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--ink);white-space:nowrap;flex-shrink:0">Cancel</button>
+            <button onclick="{{ commitFinishSingle }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">Apply</button>
+          </div>
+        </sc-if>
+
+        <!-- ===== CHANGE FINISH — BULK ===== -->
+        <sc-if value="{{ isBfcModal }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:17px 22px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between">
+            <h2 style="margin:0;font-size:16px;font-weight:700">Change Finish · {{ bfcCountLabel }}</h2>
+            <button onclick="{{ closeModal }}" style="width:22px;height:22px;border-radius:4px;border:none;background:transparent;color:var(--ink2);display:grid;place-items:center;white-space:nowrap;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+          <div style="padding:18px 22px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">New Finish</label>
+              <select value="{{ bfcFinish }}" onChange="{{ onBfcFinishChange }}" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <sc-for list="{{ bfcFinishOptions }}" as="f" hint-placeholder-count="4"><option value="{{ f }}">{{ f }}</option></sc-for>
+              </select>
+            </div>
+            <sc-if value="{{ bfcShowHandle }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Handle</label>
+                <div style="display:flex;gap:6px">
+                  <button onclick="{{ onBfcVariantStandard }}" style="{{ bfcVariantStdStyle }};white-space:nowrap;flex-shrink:0">Standard</button>
+                  <button onclick="{{ onBfcVariantGola }}" style="{{ bfcVariantGolaStyle }};white-space:nowrap;flex-shrink:0">Gola</button>
+                </div>
+              </div>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:8px;font-size:12.5px;color:var(--accent);font-weight:600">{{ bfcPreviewText }}</div>
+            <p style="font-size:11.5px;color:var(--ink2);margin:0">Items where the selected finish is unavailable will keep their current finish.</p>
+          </div>
+          <div style="padding:13px 22px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end;gap:8px">
+            <button onclick="{{ closeModal }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--ink);white-space:nowrap;flex-shrink:0">Cancel</button>
+            <button onclick="{{ applyBulkFinish }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">Apply</button>
+          </div>
+        </sc-if>
+
+        <!-- ===== COPY TO UNIT ===== -->
+        <sc-if value="{{ isCtuModal }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:17px 22px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between">
+            <h2 style="margin:0;font-size:16px;font-weight:700">Copy to Unit</h2>
+            <button onclick="{{ closeModal }}" style="width:22px;height:22px;border-radius:4px;border:none;background:transparent;color:var(--ink2);display:grid;place-items:center;white-space:nowrap;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+          <div style="padding:18px 22px">
+            <p style="font-size:13px;color:var(--ink2);margin:0 0 10px">Copy {{ ctuCountLabel }} to:</p>
+            <sc-for list="{{ ctuUnits }}" as="u" hint-placeholder-count="2">
+              <div onclick="{{ u.onClick }}" style="{{ u.rowStyle }}">{{ u.name }}</div>
+            </sc-for>
+            <sc-if value="{{ ctuConfirming }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;padding:12px;background:color-mix(in srgb,var(--warn) 12%,transparent);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+                <span style="font-size:13px;color:var(--warn);font-weight:600">Copy {{ ctuCountLabel }} to "{{ ctuConfirmName }}"?</span>
+                <div style="display:flex;gap:8px">
+                  <button onclick="{{ cancelCopyConfirm }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel2);color:var(--ink);white-space:nowrap;flex-shrink:0">Cancel</button>
+                  <button onclick="{{ confirmCopy }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">Confirm Copy</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+          <div style="padding:13px 22px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end;gap:8px">
+            <button onclick="{{ closeModal }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--ink);white-space:nowrap;flex-shrink:0">Cancel</button>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;editorial&quot;,&quot;options&quot;:[&quot;editorial&quot;,&quot;dark&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;},&quot;layoutVariant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;B&quot;,&quot;options&quot;:[&quot;A&quot;,&quot;B&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;tableDensity&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;compact&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+class Component extends DCLogic {
+  state = {
+    loaded: false,
+    priceData: null, priceListVersions: [], priceListLatest: '',
+    KIT_CATS: [], NO_HANDLE_CATS: [], WD_CATS: [], WD_GLASS_CATS: [], WD_NOFIN_CATS: [], ACC_CATS: [],
+
+    projectMeta: { name:'', client:'', pic:'', date: new Date().toISOString().split('T')[0], notes:'', priceListVersion:'' },
+    units: [], unitCounter: 0, activeUnitId: null,
+    currentView: 'overview', currentTab: 'kitchen',
+
+    sidebarCollapsed: false, sidebarMobileOpen: false, sidebarW: 260, windowWidth: 1440, hoveredUnitId: null,
+
+    alts: [{key:'A', name:'Initial scheme', versions:[]}],
+    activeAltKey: 'A', activeVerNum: null,
+    cmtMode: 'version', cmtName: '', cmtNote: '', cmtReady: true,
+    dirty: false,
+    toasts: [],
+
+    kitCat: '', kitFinish: '', kitVariant: 'standard', kitSearch: '', kitOpen: false, kitSelected: null, kitQty: 1,
+    wdCat: '', wdFinish: '', wdGlass: '', wdGlass2: '', wdSearch: '', wdOpen: false, wdSelected: null, wdQty: 1,
+    accCat: '', accSearch: '', accOpen: false, accSelected: null, accQty: 1,
+
+    selectedRows: { kitchen: {}, wardrobe: {}, accessories: {} },
+
+    dragUnitId: null, dragOverUnitId: null, dragOverUnitPos: null,
+    dragRowSec: null, dragRowId: null, dragOverRowId: null, dragOverRowPos: null,
+
+    modal: null,
+    cmDesc:'', cmFinish:'', cmThickness:'', cmUnit:'set', cmPrice:'', cmQty:1, cmNotes:'', cmSection:'kitchen',
+    efSec:null, efRowId:null, efSelKey:'',
+    bfcSec:null, bfcEligibleIds:[], bfcFinishOptions:[], bfcFinish:'', bfcVariant:'standard',
+    ctuSec:null, ctuConfirmTarget:null,
+  };
+
+  componentDidMount(){
+    import('./sm-boq-data.js').then(mod=>{
+      const firstUnit = { id:'u1', name:'Kitchen', items:{kitchen:[],wardrobe:[],accessories:[]} };
+      this.setState({
+        loaded:true,
+        priceData: mod.ALL_PRICE_DATA,
+        priceListVersions: mod.PRICE_LIST_VERSIONS,
+        priceListLatest: mod.PRICE_LIST_LATEST,
+        KIT_CATS: mod.KIT_CATS, NO_HANDLE_CATS: mod.NO_HANDLE_CATS,
+        WD_CATS: mod.WD_CATS, WD_GLASS_CATS: mod.WD_GLASS_CATS, WD_NOFIN_CATS: mod.WD_NOFIN_CATS,
+        ACC_CATS: mod.ACC_CATS,
+        units: [firstUnit], unitCounter: 1, activeUnitId: 'u1',
+        kitCat: mod.KIT_CATS[0], wdCat: mod.WD_CATS[0], accCat: mod.ACC_CATS[0],
+      }, ()=>{
+        this.initKitFinishes(); this.onWdCatChange();
+        this.state.projectMeta.priceListVersion = mod.PRICE_LIST_LATEST;
+      });
+    });
+    window.addEventListener('resize', this.onResize);
+    this.onResize();
+    try{ const sw=parseInt(localStorage.getItem('smbq_sidebar_w'),10); if(sw) this.setState({sidebarW: Math.min(440, Math.max(190, sw))}); }catch(err){}
+    document.addEventListener('keydown', this.onKeyDown);
+  }
+  componentWillUnmount(){
+    window.removeEventListener('resize', this.onResize);
+    document.removeEventListener('keydown', this.onKeyDown);
+  }
+  onResize = ()=>{ this.setState({ windowWidth: window.innerWidth }); };
+  onKeyDown = (e)=>{
+    if(e.key==='Escape'){
+      this.setState({ kitOpen:false, wdOpen:false, accOpen:false });
+      if(this.state.modal) this.closeModal();
+    }
+  };
+
+  // ---------- helpers ----------
+  fmt(n){ return 'Rp ' + Math.round(n||0).toLocaleString('id-ID'); }
+  fmtNum(n){ return Math.round(n||0).toLocaleString('id-ID'); }
+  getPD(){ return this.state.priceData ? (this.state.priceData[this.state.projectMeta.priceListVersion] || this.state.priceData[this.state.priceListLatest]) : {kitchen:{},wardrobe:{},accessories:{}}; }
+  getUnit(id){ return this.state.units.find(u=>u.id===(id||this.state.activeUnitId)); }
+  unitTotal(u){ return ['kitchen','wardrobe','accessories'].reduce((s,sec)=>s+u.items[sec].filter(r=>r.enabled!==false).reduce((ss,r)=>ss+r.price*r.qty,0),0); }
+  secTotal(u,sec){ return u.items[sec].filter(r=>r.enabled!==false).reduce((s,r)=>s+r.price*r.qty,0); }
+  secBufferTotal(u,sec){ return u.items[sec].filter(r=>r.enabled!==false&&r.buffer===true).reduce((s,r)=>s+r.price*r.qty,0); }
+  unitBufferTotal(u){ return ['kitchen','wardrobe','accessories'].reduce((s,sec)=>s+this.secBufferTotal(u,sec),0); }
+  markDirty(){ if(!this.state.dirty) this.setState({dirty:true}); }
+  uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+  toast(msg,type){
+    const id=this.uid();
+    this.setState(s=>({toasts:[...s.toasts,{id,msg,type:type||'success'}]}));
+    setTimeout(()=>{ this.setState(s=>({toasts:s.toasts.filter(t=>t.id!==id)})); }, 3200);
+  }
+  mutateUnits(fn){
+    const units = this.state.units.map(u=>({...u, items:{kitchen:[...u.items.kitchen],wardrobe:[...u.items.wardrobe],accessories:[...u.items.accessories]}}));
+    fn(units);
+    this.setState({units}); this.markDirty();
+  }
+
+  // ---------- navigation ----------
+  goOverview = ()=>{ this.setState({currentView:'overview'}); };
+  showUnit(id){ this.setState({currentView:'unit', activeUnitId:id}); }
+  toggleSidebarCollapse = ()=>{ this.setState(s=>({sidebarCollapsed:!s.sidebarCollapsed})); };
+  sbResizeStart = (e)=>{
+    e.preventDefault();
+    const startX = e.clientX, startW = this.state.sidebarW;
+    const move = (ev)=>{ this.setState({sidebarW: Math.min(440, Math.max(190, startW + ev.clientX - startX))}); };
+    const up = ()=>{
+      document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+      document.body.style.cursor=''; document.body.style.userSelect='';
+      try{ localStorage.setItem('smbq_sidebar_w', String(this.state.sidebarW)); }catch(err){}
+    };
+    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+    document.body.style.cursor='col-resize'; document.body.style.userSelect='none';
+  };
+  toggleMobileSidebar = ()=>{ this.setState(s=>({sidebarMobileOpen:!s.sidebarMobileOpen})); };
+  stopProp = (e)=>{ e.stopPropagation(); };
+
+  // ---------- units ----------
+  addUnitNow = ()=>{
+    const n = this.state.unitCounter+1;
+    const id = 'u'+n;
+    const units = [...this.state.units, {id, name:'Unit '+n, items:{kitchen:[],wardrobe:[],accessories:[]}}];
+    this.setState({units, unitCounter:n, activeUnitId: this.state.activeUnitId||id});
+    this.markDirty();
+  };
+  deleteUnit(id){
+    if(this.state.units.length<=1){ this.toast('Need at least one unit.','warn'); return; }
+    if(!window.confirm('Delete this unit and all its items?')) return;
+    const units = this.state.units.filter(u=>u.id!==id);
+    const activeUnitId = this.state.activeUnitId===id ? units[0].id : this.state.activeUnitId;
+    this.setState({units, activeUnitId, currentView: this.state.activeUnitId===id ? 'overview' : this.state.currentView});
+    this.markDirty();
+  }
+  cloneUnit(id){
+    const src = this.getUnit(id); if(!src) return;
+    const n = this.state.unitCounter+1;
+    const cloned = JSON.parse(JSON.stringify(src));
+    cloned.id = 'u'+n; cloned.name = src.name+' (copy)';
+    ['kitchen','wardrobe','accessories'].forEach(sec=>cloned.items[sec].forEach(r=>{ r.id=this.uid(); }));
+    const idx = this.state.units.findIndex(u=>u.id===id);
+    const units = [...this.state.units]; units.splice(idx+1,0,cloned);
+    this.setState({units, unitCounter:n});
+    this.markDirty(); this.toast('Cloned: '+cloned.name);
+  }
+  renameUnit(id,val){
+    const units = this.state.units.map(u=>u.id===id?{...u,name:val}:u);
+    this.setState({units}); this.markDirty();
+  }
+  clearUnitNow = ()=>{
+    if(!window.confirm('Clear all items in this unit?')) return;
+    this.mutateUnits(units=>{
+      const u = units.find(u=>u.id===this.state.activeUnitId);
+      if(u) u.items = {kitchen:[],wardrobe:[],accessories:[]};
+    });
+  };
+
+  // ---------- unit drag reorder ----------
+  unitDragStart(id,e){ e.dataTransfer.effectAllowed='move'; this.setState({dragUnitId:id}); }
+  unitDragOver(id,e){
+    e.preventDefault();
+    if(id===this.state.dragUnitId) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos = e.clientY < rect.top+rect.height/2 ? 'above':'below';
+    this.setState({dragOverUnitId:id, dragOverUnitPos:pos});
+  }
+  unitDrop(targetId,e){
+    e.preventDefault();
+    const {dragUnitId, dragOverUnitPos} = this.state;
+    if(!dragUnitId || dragUnitId===targetId){ this.setState({dragUnitId:null,dragOverUnitId:null}); return; }
+    const units=[...this.state.units];
+    const srcIdx=units.findIndex(u=>u.id===dragUnitId);
+    const [moved]=units.splice(srcIdx,1);
+    let tgtIdx=units.findIndex(u=>u.id===targetId);
+    units.splice(dragOverUnitPos==='below'?tgtIdx+1:tgtIdx,0,moved);
+    this.setState({units, dragUnitId:null, dragOverUnitId:null, dragOverUnitPos:null});
+    this.markDirty();
+  }
+  unitDragEnd = ()=>{ this.setState({dragUnitId:null, dragOverUnitId:null, dragOverUnitPos:null}); };
+
+  // ---------- kitchen add bar ----------
+  initKitFinishes(){
+    const cat=this.state.kitCat; if(!cat) return;
+    const items=(this.getPD().kitchen[cat])||[];
+    const fs=new Set();
+    items.forEach(it=>Object.keys(it.prices).forEach(k=>{ const f=k.split('__')[0]; if(f&&f!=='(No Finish)') fs.add(f); }));
+    const list=[...fs].sort();
+    const cur = list.includes(this.state.kitFinish) ? this.state.kitFinish : (list[0]||'');
+    this.setState({kitFinish:cur});
+  }
+  onKitCatChange = (e)=>{
+    this.setState({kitCat:e.target.value, kitSearch:'', kitSelected:null, kitOpen:false}, ()=>{
+      this.initKitFinishes();
+      const noHandle = this.state.NO_HANDLE_CATS.includes(this.state.kitCat);
+      if(noHandle) this.setState({kitVariant:'standard'});
+    });
+  };
+  onKitFinishChange = (e)=>{ this.setState({kitFinish:e.target.value, kitSearch:'', kitSelected:null, kitOpen:false}); };
+  onKitVariantStandard = ()=>{ this.setState({kitVariant:'standard'}); };
+  onKitVariantGola = ()=>{ if(!this.kitGolaAvailable()) return; this.setState({kitVariant:'gola'}); };
+  kitGolaAvailable(){
+    const cat=this.state.kitCat;
+    if(this.state.NO_HANDLE_CATS.includes(cat)) return false;
+    const items=(this.getPD().kitchen[cat])||[];
+    return items.some(it=> (this.state.kitFinish+'__gola') in it.prices);
+  }
+  getKitPool(){
+    const cat=this.state.kitCat, finish=this.state.kitFinish, variant=this.state.kitVariant||'standard';
+    const items=(this.getPD().kitchen[cat])||[];
+    return items.filter(it=>{
+      const keys=Object.keys(it.prices);
+      if(keys.every(k=>k.startsWith('(No Finish)'))) return true;
+      if(variant==='gola') return (finish+'__gola') in it.prices;
+      return (finish+'__standard') in it.prices;
+    });
+  }
+  kitPoolFiltered(){
+    const q=(this.state.kitSearch||'').toLowerCase().trim();
+    const pool=this.getKitPool();
+    if(!q) return pool;
+    const tokens=q.split(/\s+/).filter(Boolean);
+    return pool.filter(it=>{ const d=it.desc.toLowerCase(); return tokens.every(t=>d.includes(t)); });
+  }
+  kitPriceFor(it){
+    const isNoFinish=Object.keys(it.prices).every(k=>k.startsWith('(No Finish)'));
+    if(isNoFinish) return it.prices['(No Finish)__standard']||0;
+    return it.prices[this.state.kitFinish+'__'+this.state.kitVariant] || it.prices[this.state.kitFinish+'__standard'] || 0;
+  }
+  onKitSearchInput = (e)=>{ this.setState({kitSearch:e.target.value, kitOpen:true}); };
+  onKitSearchFocus = ()=>{ this.setState({kitOpen:true}); };
+  onKitSearchBlur = ()=>{ setTimeout(()=>this.setState({kitOpen:false}), 150); };
+  selectKitItem(it){
+    this.setState({kitSelected:it, kitSearch:it.desc, kitOpen:false});
+  }
+  addKitRow = ()=>{
+    const it=this.state.kitSelected; if(!it){ this.toast('Please select an item first','warn'); return; }
+    const unit=this.getUnit(); if(!unit) return;
+    const qty=Math.round((parseFloat(this.state.kitQty)||1)*10)/10;
+    const category=this.state.kitCat, f=this.state.kitFinish;
+    const noHandle=this.state.NO_HANDLE_CATS.includes(category);
+    let variant = noHandle ? '' : (this.state.kitVariant||'standard');
+    let finish, price, thickness=(it.thicknesses&&it.thicknesses[f+'__'+(variant||'standard')])||'';
+    const isNoFinish=Object.keys(it.prices).every(k=>k.startsWith('(No Finish)'));
+    if(isNoFinish){ finish='(No Finish)'; price=it.prices['(No Finish)__standard']||0; variant=''; }
+    else{
+      finish=f;
+      if(variant==='gola' && !((finish+'__gola') in it.prices)){ this.toast(`"${it.desc}" with finish "${finish}" does not support Gola handle.`,'error'); return; }
+      price = it.prices[finish+'__'+(variant||'standard')] || it.prices[finish+'__standard'] || 0;
+    }
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===unit.id);
+      u.items.kitchen.push({id:this.uid(), category, subcat:it.subcat||'', desc:it.desc, finish, variant, thickness, unit:it.unit||'set', w:it.w||null,h:it.h||null,d:it.d||null, qty, price, notes:'', custom:false});
+    });
+    this.setState({kitSearch:'', kitSelected:null, kitQty:1});
+    this.toast('Item added');
+  };
+
+  // ---------- wardrobe add bar ----------
+  onWdCatChange = (e)=>{
+    const cat = e ? e.target.value : this.state.wdCat;
+    this.setState({wdCat:cat, wdSearch:'', wdSelected:null, wdOpen:false}, ()=>{
+      const isGlass=this.state.WD_GLASS_CATS.includes(cat), isNoFin=this.state.WD_NOFIN_CATS.includes(cat);
+      if(!isGlass && !isNoFin) this.initWdFinishes();
+      if(isGlass) this.initWdGlass();
+    });
+  };
+  initWdFinishes(){
+    const cat=this.state.wdCat; const items=(this.getPD().wardrobe[cat])||[];
+    const fs=new Set();
+    items.forEach(it=>Object.keys(it.prices).forEach(k=>{ const f=k.split('__')[0]; if(f&&f!=='(No Finish)') fs.add(f); }));
+    const list=[...fs].sort();
+    const cur = list.includes(this.state.wdFinish) ? this.state.wdFinish : (list[0]||'');
+    this.setState({wdFinish:cur});
+  }
+  onWdFinishChange = (e)=>{ this.setState({wdFinish:e.target.value, wdSearch:'', wdSelected:null, wdOpen:false}); };
+  initWdGlass(){
+    const cat=this.state.wdCat; const items=(this.getPD().wardrobe[cat])||[];
+    const gs=new Set();
+    items.forEach(it=>Object.keys(it.prices).forEach(k=>{ const parts=k.split(' | '); if(parts.length>=2) gs.add(parts[0]); }));
+    const list=[...gs].sort();
+    const cur = list.includes(this.state.wdGlass) ? this.state.wdGlass : (list[0]||'');
+    this.setState({wdGlass:cur}, ()=>this.initWdGlass2());
+  }
+  initWdGlass2(){
+    const cat=this.state.wdCat, glass=this.state.wdGlass; const items=(this.getPD().wardrobe[cat])||[];
+    const t2=new Set();
+    items.forEach(it=>Object.keys(it.prices).forEach(k=>{ const parts=k.split(' | '); if(parts[0]===glass && parts.length>=2) t2.add(parts[1].replace('__standard','')); }));
+    const list=[...t2].sort();
+    const cur = list.includes(this.state.wdGlass2) ? this.state.wdGlass2 : (list[0]||'');
+    this.setState({wdGlass2:cur});
+  }
+  onWdGlassChange = (e)=>{ this.setState({wdGlass:e.target.value, wdSearch:'', wdSelected:null, wdOpen:false}, ()=>this.initWdGlass2()); };
+  onWdGlass2Change = (e)=>{ this.setState({wdGlass2:e.target.value, wdSearch:'', wdSelected:null, wdOpen:false}); };
+  wdGlass2Label(){ return this.state.wdCat==='Sliding Glass Door' ? 'Frame Type' : 'Hinge Type'; }
+  getWdPool(){
+    const cat=this.state.wdCat; if(!cat) return [];
+    const items=(this.getPD().wardrobe[cat])||[];
+    if(this.state.WD_NOFIN_CATS.includes(cat)) return items;
+    if(this.state.WD_GLASS_CATS.includes(cat)){
+      const glass=this.state.wdGlass, t2=this.state.wdGlass2;
+      if(!glass) return items;
+      const key=`${glass} | ${t2}__standard`;
+      return items.filter(it=>key in it.prices);
+    }
+    const f=this.state.wdFinish; if(!f) return items;
+    return items.filter(it=>(f+'__standard') in it.prices);
+  }
+  wdPoolFiltered(){
+    const q=(this.state.wdSearch||'').toLowerCase().trim();
+    const pool=this.getWdPool();
+    if(!q) return pool;
+    const tokens=q.split(/\s+/).filter(Boolean);
+    return pool.filter(it=>{ const d=it.desc.toLowerCase(); return tokens.every(t=>d.includes(t)); });
+  }
+  wdPriceFor(it){
+    const cat=this.state.wdCat;
+    if(this.state.WD_NOFIN_CATS.includes(cat)) return it.prices['(No Finish)__standard']||0;
+    if(this.state.WD_GLASS_CATS.includes(cat)) return it.prices[`${this.state.wdGlass} | ${this.state.wdGlass2}__standard`]||0;
+    return it.prices[this.state.wdFinish+'__standard']||0;
+  }
+  onWdSearchInput = (e)=>{ this.setState({wdSearch:e.target.value, wdOpen:true}); };
+  onWdSearchFocus = ()=>{ this.setState({wdOpen:true}); };
+  onWdSearchBlur = ()=>{ setTimeout(()=>this.setState({wdOpen:false}), 150); };
+  selectWdItem(it){ this.setState({wdSelected:it, wdSearch:it.desc, wdOpen:false}); }
+  addWdRow = ()=>{
+    const it=this.state.wdSelected; if(!it){ this.toast('Please select an item first','warn'); return; }
+    const unit=this.getUnit(); if(!unit) return;
+    const qty=Math.round((parseFloat(this.state.wdQty)||1)*10)/10;
+    const category=this.state.wdCat;
+    let finish='', variant='', thickness='', price=0;
+    if(this.state.WD_NOFIN_CATS.includes(category)){ finish='(No Finish)'; price=it.prices['(No Finish)__standard']||0; }
+    else if(this.state.WD_GLASS_CATS.includes(category)){
+      finish=this.state.wdGlass+' | '+this.state.wdGlass2;
+      price=it.prices[finish+'__standard']||0;
+    } else {
+      finish=this.state.wdFinish;
+      const key=finish+'__standard';
+      thickness=(it.thicknesses&&it.thicknesses[key])||'';
+      price=it.prices[key]||0;
+    }
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===unit.id);
+      u.items.wardrobe.push({id:this.uid(), category, subcat:it.subcat||'', desc:it.desc, finish, variant, thickness, unit:it.unit||'set', w:it.w||null,h:it.h||null,d:it.d||null, qty, price, notes:'', custom:false});
+    });
+    this.setState({wdSearch:'', wdSelected:null, wdQty:1});
+    this.toast('Item added');
+  };
+
+  // ---------- accessories add bar ----------
+  onAccCatChange = (e)=>{ this.setState({accCat:e.target.value, accSearch:'', accSelected:null, accOpen:false}); };
+  getAccPool(){ return (this.getPD().accessories[this.state.accCat])||[]; }
+  accPoolFiltered(){
+    const q=(this.state.accSearch||'').toLowerCase().trim();
+    const pool=this.getAccPool();
+    if(!q) return pool;
+    const tokens=q.split(/\s+/).filter(Boolean);
+    return pool.filter(it=>{ const d=it.desc.toLowerCase(); return tokens.every(t=>d.includes(t)); });
+  }
+  onAccSearchInput = (e)=>{ this.setState({accSearch:e.target.value, accOpen:true}); };
+  onAccSearchFocus = ()=>{ this.setState({accOpen:true}); };
+  onAccSearchBlur = ()=>{ setTimeout(()=>this.setState({accOpen:false}), 150); };
+  selectAccItem(it){ this.setState({accSelected:it, accSearch:it.desc, accOpen:false}); }
+  addAccRow = ()=>{
+    const it=this.state.accSelected; if(!it){ this.toast('Please select an item first','warn'); return; }
+    const unit=this.getUnit(); if(!unit) return;
+    const qty=Math.round((parseFloat(this.state.accQty)||1)*10)/10;
+    const price=it.prices['(No Finish)__standard']||0;
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===unit.id);
+      u.items.accessories.push({id:this.uid(), category:this.state.accCat, subcat:it.subcat||'', desc:it.desc, finish:'(No Finish)', variant:'', thickness:'', unit:it.unit||'pcs', w:null,h:null,d:null, qty, price, notes:'', custom:false});
+    });
+    this.setState({accSearch:'', accSelected:null, accQty:1});
+    this.toast('Item added');
+  };
+
+  // ---------- table row ops ----------
+  updateQty(sec,id,val){
+    const qty=Math.round((parseFloat(val)||1)*10)/10;
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      const r=u.items[sec].find(r=>r.id===id); if(r) r.qty=qty;
+    });
+  }
+  stepQtyState = (key,d)=>{ let v=parseFloat(this.state[key]); if(!isFinite(v)) v=0; v=Math.round((v+d)*10)/10; if(v<1) v=1; this.setState({[key]:v}); };
+  stepRowQty(sec,id,d){
+    const u=this.getUnit(); const r=u&&u.items[sec].find(r=>r.id===id); if(!r) return;
+    let v=parseFloat(r.qty); if(!isFinite(v)) v=0; v=Math.round((v+d)*10)/10; if(v<1) v=1;
+    this.updateQty(sec,id,v);
+  }
+  updateNotes(sec,id,val){
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      const r=u.items[sec].find(r=>r.id===id); if(r) r.notes=val;
+    });
+  }
+  removeRow(sec,id){
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      u.items[sec]=u.items[sec].filter(r=>r.id!==id);
+    });
+    const selectedRows={...this.state.selectedRows, [sec]:{...this.state.selectedRows[sec]}};
+    delete selectedRows[sec][id];
+    this.setState({selectedRows});
+  }
+  duplicateRow(sec,id){
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      const idx=u.items[sec].findIndex(r=>r.id===id);
+      if(idx>=0){ const clone={...u.items[sec][idx], id:this.uid()}; u.items[sec].splice(idx+1,0,clone); }
+    });
+    this.toast('Row duplicated');
+  }
+  toggleRowEnabled(sec,id){
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      const r=u.items[sec].find(r=>r.id===id);
+      if(r) r.enabled = r.enabled===false ? true : false;
+    });
+  }
+  toggleRowBuffer(sec,id){
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      const r=u.items[sec].find(r=>r.id===id);
+      if(r) r.buffer = r.buffer===true ? false : true;
+    });
+  }
+  updateDesc(sec,id,val){
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      const r=u.items[sec].find(r=>r.id===id); if(r) r.desc=val;
+    });
+  }
+  toggleRowSelect(sec,id,checked){
+    const sel={...this.state.selectedRows[sec]};
+    if(checked) sel[id]=true; else delete sel[id];
+    this.setState({selectedRows:{...this.state.selectedRows,[sec]:sel}});
+  }
+  toggleAllRows(sec,checked){
+    const unit=this.getUnit();
+    const sel={};
+    if(checked) unit.items[sec].forEach(r=>sel[r.id]=true);
+    this.setState({selectedRows:{...this.state.selectedRows,[sec]:sel}});
+  }
+  clearSelectionNow = ()=>{ this.setState({selectedRows:{...this.state.selectedRows,[this.state.currentTab]:{}}}); };
+  deleteSelectedNow = ()=>{
+    const sec=this.state.currentTab; const ids=Object.keys(this.state.selectedRows[sec]);
+    if(!ids.length) return;
+    if(!window.confirm(`Delete ${ids.length} selected item${ids.length===1?'':'s'}?`)) return;
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      u.items[sec]=u.items[sec].filter(r=>!ids.includes(r.id));
+    });
+    this.setState({selectedRows:{...this.state.selectedRows,[sec]:{}}});
+    this.toast(ids.length+' item'+(ids.length===1?'':'s')+' deleted');
+  };
+
+  // ---------- row drag reorder ----------
+  rowDragStart(sec,id,e){ e.dataTransfer.effectAllowed='move'; this.setState({dragRowSec:sec, dragRowId:id}); }
+  rowDragOver(sec,id,e){
+    e.preventDefault();
+    if(sec!==this.state.dragRowSec || id===this.state.dragRowId) return;
+    const rect=e.currentTarget.getBoundingClientRect();
+    const pos = e.clientY < rect.top+rect.height/2 ? 'above':'below';
+    this.setState({dragOverRowId:id, dragOverRowPos:pos});
+  }
+  rowDrop(sec,targetId,e){
+    e.preventDefault();
+    const {dragRowSec,dragRowId,dragOverRowPos} = this.state;
+    if(!dragRowId || dragRowSec!==sec || dragRowId===targetId){ this.setState({dragRowId:null,dragOverRowId:null}); return; }
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      const items=u.items[sec];
+      const srcIdx=items.findIndex(r=>r.id===dragRowId);
+      const [moved]=items.splice(srcIdx,1);
+      let tgtIdx=items.findIndex(r=>r.id===targetId);
+      items.splice(dragOverRowPos==='below'?tgtIdx+1:tgtIdx,0,moved);
+    });
+    this.setState({dragRowSec:null,dragRowId:null,dragOverRowId:null,dragOverRowPos:null});
+  }
+  rowDragEnd = ()=>{ this.setState({dragRowSec:null,dragRowId:null,dragOverRowId:null,dragOverRowPos:null}); };
+
+  // ---------- edit finish (single) ----------
+  editFinishOptions(sec,row){
+    let opts=[];
+    if(sec==='kitchen'){
+      const items=(this.getPD().kitchen[row.category])||[];
+      const descItem=items.find(it=>it.desc===row.desc);
+      if(descItem) Object.keys(descItem.prices).forEach(k=>{
+        const i=k.lastIndexOf('__'); const f=k.slice(0,i), v=k.slice(i+2);
+        if(!opts.find(o=>o.key===k)) opts.push({key:k, label:f+(v&&v!=='standard'?' / '+v:''), price:descItem.prices[k]});
+      });
+    } else if(sec==='wardrobe'){
+      const items=(this.getPD().wardrobe[row.category])||[];
+      const descItem=items.find(it=>it.desc===row.desc);
+      if(descItem) Object.keys(descItem.prices).forEach(k=>{
+        const finKey=k.replace('__standard','');
+        if(!opts.find(o=>o.key===finKey)) opts.push({key:finKey,label:finKey,price:descItem.prices[k]});
+      });
+    }
+    return opts;
+  }
+  editFinish(sec,rowId){
+    const unit=this.getUnit(); const row=unit.items[sec].find(r=>r.id===rowId); if(!row) return;
+    if(row.finish==='(No Finish)'){ this.toast('This item has no finish variants.','warn'); return; }
+    const opts=this.editFinishOptions(sec,row);
+    if(!opts.length){ this.toast('No alternative finishes available for this item.','warn'); return; }
+    const curKey = sec==='kitchen' ? (row.finish+'__'+(row.variant||'standard')) : row.finish;
+    this.setState({modal:'editFinishSingle', efSec:sec, efRowId:rowId, efSelKey:curKey});
+  }
+  commitFinishSingle = ()=>{
+    const {efSec,efRowId,efSelKey}=this.state;
+    const unit=this.getUnit(); const row=unit.items[efSec].find(r=>r.id===efRowId); if(!row) return;
+    if(efSec==='kitchen'){
+      const i=efSelKey.lastIndexOf('__'); const f=efSelKey.slice(0,i), v=efSelKey.slice(i+2);
+      const items=(this.getPD().kitchen[row.category])||[];
+      const descItem=items.find(it=>it.desc===row.desc);
+      if(v==='gola' && descItem && !((f+'__gola') in descItem.prices)){ this.toast(`Finish "${f}" does not support Gola handle.`,'error'); return; }
+      this.mutateUnits(units=>{
+        const u=units.find(u=>u.id===this.state.activeUnitId);
+        const r=u.items.kitchen.find(r=>r.id===efRowId);
+        r.finish=f; r.variant=v; r.thickness=(descItem&&descItem.thicknesses&&descItem.thicknesses[efSelKey])||'';
+        if(descItem) r.price=descItem.prices[efSelKey]||r.price;
+      });
+    } else {
+      const items=(this.getPD().wardrobe[row.category])||[];
+      const descItem=items.find(it=>it.desc===row.desc);
+      this.mutateUnits(units=>{
+        const u=units.find(u=>u.id===this.state.activeUnitId);
+        const r=u.items.wardrobe.find(r=>r.id===efRowId);
+        r.finish=efSelKey; r.variant='';
+        if(descItem){ r.price=descItem.prices[efSelKey+'__standard']||r.price; r.thickness=(descItem.thicknesses&&descItem.thicknesses[efSelKey+'__standard'])||''; }
+      });
+    }
+    this.closeModal();
+  };
+
+  // ---------- bulk finish change ----------
+  openChangeFinishBulk = ()=>{
+    const sec=this.state.currentTab;
+    const ids=Object.keys(this.state.selectedRows[sec]); if(!ids.length){ this.toast('No items selected','warn'); return; }
+    const unit=this.getUnit();
+    const eligible=unit.items[sec].filter(r=> ids.includes(r.id) && !r.custom && r.finish!=='(No Finish)' &&
+      !(sec==='wardrobe'&&this.state.WD_GLASS_CATS.includes(r.category)) &&
+      !(sec==='wardrobe'&&this.state.WD_NOFIN_CATS.includes(r.category)));
+    if(!eligible.length){ this.toast('No eligible items (custom, glass, and no-finish items are skipped)','warn'); return; }
+    const finishSet=new Set();
+    eligible.forEach(r=>{
+      const dataItems=(sec==='kitchen'?this.getPD().kitchen:this.getPD().wardrobe)[r.category]||[];
+      dataItems.forEach(it=>Object.keys(it.prices).forEach(k=>{ const f=k.split('__')[0]; if(f&&f!=='(No Finish)') finishSet.add(f); }));
+    });
+    const finishes=[...finishSet].sort();
+    if(!finishes.length){ this.toast('No common finishes available.','warn'); return; }
+    this.setState({modal:'bulkFinish', bfcSec:sec, bfcEligibleIds:eligible.map(r=>r.id), bfcFinishOptions:finishes, bfcFinish:finishes[0], bfcVariant:'standard'});
+  };
+  bulkFinishPreview(){
+    const {bfcSec,bfcEligibleIds,bfcFinish,bfcVariant}=this.state;
+    if(!bfcSec) return {updated:0,skipped:0};
+    const unit=this.getUnit();
+    let updated=0, skipped=0;
+    bfcEligibleIds.forEach(id=>{
+      const r=unit.items[bfcSec].find(r=>r.id===id); if(!r) return;
+      const dataPool=(bfcSec==='kitchen'?this.getPD().kitchen:this.getPD().wardrobe)[r.category]||[];
+      const descItem=dataPool.find(it=>it.desc===r.desc);
+      if(!descItem){ skipped++; return; }
+      if(bfcSec==='kitchen'){
+        const variant=this.state.NO_HANDLE_CATS.includes(r.category)?'standard':(bfcVariant||'standard');
+        const key=bfcFinish+'__'+variant, stdKey=bfcFinish+'__standard';
+        if(key in descItem.prices || stdKey in descItem.prices) updated++; else skipped++;
+      } else {
+        if((bfcFinish+'__standard') in descItem.prices) updated++; else skipped++;
+      }
+    });
+    return {updated,skipped};
+  }
+  applyBulkFinish = ()=>{
+    const {bfcSec,bfcEligibleIds,bfcFinish,bfcVariant}=this.state;
+    let updated=0, skipped=0;
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      bfcEligibleIds.forEach(id=>{
+        const r=u.items[bfcSec].find(r=>r.id===id); if(!r) return;
+        const dataPool=(bfcSec==='kitchen'?this.getPD().kitchen:this.getPD().wardrobe)[r.category]||[];
+        const descItem=dataPool.find(it=>it.desc===r.desc);
+        if(!descItem){ skipped++; return; }
+        if(bfcSec==='kitchen'){
+          const variant=this.state.NO_HANDLE_CATS.includes(r.category)?'standard':(bfcVariant||'standard');
+          const key=bfcFinish+'__'+variant, stdKey=bfcFinish+'__standard';
+          if(key in descItem.prices || stdKey in descItem.prices){
+            r.finish=bfcFinish; r.variant=this.state.NO_HANDLE_CATS.includes(r.category)?'':variant;
+            r.thickness=(descItem.thicknesses&&descItem.thicknesses[key])||(descItem.thicknesses&&descItem.thicknesses[stdKey])||'';
+            r.price=descItem.prices[key]||descItem.prices[stdKey]||r.price; updated++;
+          } else skipped++;
+        } else {
+          const key=bfcFinish+'__standard';
+          if(key in descItem.prices){
+            r.finish=bfcFinish; r.variant='';
+            r.thickness=(descItem.thicknesses&&descItem.thicknesses[key])||'';
+            r.price=descItem.prices[key]||r.price; updated++;
+          } else skipped++;
+        }
+      });
+    });
+    this.setState({selectedRows:{...this.state.selectedRows,[bfcSec]:{}}});
+    this.closeModal();
+    this.toast(`Updated ${updated} item${updated===1?'':'s'}${skipped?`, ${skipped} skipped`:''}`, updated?'success':'warn');
+  };
+
+  // ---------- copy to unit ----------
+  openCopyToUnit = ()=>{
+    const sec=this.state.currentTab;
+    const ids=Object.keys(this.state.selectedRows[sec]); if(!ids.length){ this.toast('No items selected','warn'); return; }
+    const others=this.state.units.filter(u=>u.id!==this.state.activeUnitId);
+    if(!others.length){ this.toast('No other units available','warn'); return; }
+    this.setState({modal:'copyToUnit', ctuSec:sec, ctuConfirmTarget:null});
+  };
+  selectCopyTarget(id){ this.setState({ctuConfirmTarget:id}); }
+  cancelCopyConfirm = ()=>{ this.setState({ctuConfirmTarget:null}); };
+  confirmCopy = ()=>{
+    const {ctuSec,ctuConfirmTarget}=this.state;
+    const ids=Object.keys(this.state.selectedRows[ctuSec]);
+    const src=this.getUnit();
+    const toCopy=src.items[ctuSec].filter(r=>ids.includes(r.id));
+    this.mutateUnits(units=>{
+      const tgt=units.find(u=>u.id===ctuConfirmTarget);
+      toCopy.forEach(r=>tgt.items[ctuSec].push({...r,id:this.uid()}));
+    });
+    const tgtName=this.state.units.find(u=>u.id===ctuConfirmTarget)?.name||'';
+    this.toast(`Copied ${toCopy.length} item${toCopy.length===1?'':'s'} to "${tgtName}"`);
+    this.closeModal();
+  };
+
+  // ---------- custom item ----------
+  openCustomModal(sec){ this.setState({modal:'custom', cmSection:sec, cmDesc:'', cmFinish:'', cmThickness:'', cmUnit:'set', cmPrice:'', cmQty:1, cmNotes:''}); }
+  confirmCustom = ()=>{
+    const desc=(this.state.cmDesc||'').trim(); if(!desc){ this.toast('Description required','warn'); return; }
+    this.mutateUnits(units=>{
+      const u=units.find(u=>u.id===this.state.activeUnitId);
+      u.items[this.state.cmSection].push({
+        id:this.uid(), category:'Custom', subcat:'', desc,
+        finish:(this.state.cmFinish||'').trim(), variant:'', thickness:(this.state.cmThickness||'').trim(),
+        unit:this.state.cmUnit||'set', w:null,h:null,d:null,
+        qty:Math.round((parseFloat(this.state.cmQty)||1)*10)/10, price:parseFloat(this.state.cmPrice)||0,
+        notes:(this.state.cmNotes||'').trim(), custom:true,
+      });
+    });
+    this.closeModal(); this.toast('Custom item added');
+  };
+
+  // ---------- modal ----------
+  closeModal = ()=>{ this.setState({modal:null}); };
+
+  // ---------- revisions & alternatives ----------
+  grandNow(){ return this.state.units.reduce((s,u)=>s+this.unitTotal(u),0); }
+  itemsNow(){ return this.state.units.reduce((sum,u)=>sum+['kitchen','wardrobe','accessories'].reduce((ss,sec)=>ss+u.items[sec].length,0),0); }
+  getActiveAlt(){ return this.state.alts.find(a=>a.key===this.state.activeAltKey) || this.state.alts[0]; }
+  nextAltKey(){ return String.fromCharCode(65+this.state.alts.length); }
+  openCommitModal = ()=>{ this.setState({modal:'commit', cmtMode:'version', cmtName:'', cmtNote:'', cmtReady:false, cmtNameError:false}); };
+  openNewAltModal = ()=>{ this.setState({modal:'commit', cmtMode:'alt', cmtName:'', cmtNote:'', cmtReady:false, cmtNameError:false}); };
+  confirmCommit = ()=>{
+    const s=this.state;
+    const entry={
+      date:new Date().toISOString().split('T')[0],
+      status: s.cmtReady?'Ready for quotation':'Draft',
+      note:(s.cmtNote||'').trim(),
+      total:this.grandNow(), unitsCount:s.units.length, itemsCount:this.itemsNow(),
+      priceList:s.projectMeta.priceListVersion||s.priceListLatest,
+      snapshot: JSON.parse(JSON.stringify({units:s.units, unitCounter:s.unitCounter, priceListVersion:s.projectMeta.priceListVersion})),
+    };
+    if(s.cmtMode==='alt'){
+      const name=(s.cmtName||'').trim();
+      if(!name){ this.setState({cmtNameError:true}); this.toast('Give the new alternative a name (e.g. "Dekton benchtop").','warn'); return; }
+      const key=this.nextAltKey();
+      this.setState({ alts:[...s.alts, {key, name, versions:[{...entry, ver:1}]}], activeAltKey:key, activeVerNum:1, dirty:false, modal:null });
+      this.toast('Saved as Alt '+key+' · v1 — '+name);
+    } else {
+      const alt=this.getActiveAlt();
+      const latest=alt.versions[0];
+      const viewingOld=!!(latest&&s.activeVerNum&&s.activeVerNum<latest.ver);
+      if(latest && latest.status==='Draft' && !viewingOld){
+        // Latest version is still a draft — update it in place, no new version.
+        const alts=s.alts.map(a=> a.key!==alt.key ? a : {...a, versions:[{...entry, ver:latest.ver, note:(s.cmtNote||'').trim()||latest.note}, ...a.versions.slice(1)]});
+        this.setState({ alts, activeAltKey:alt.key, activeVerNum:latest.ver, dirty:false, modal:null });
+        this.toast('Updated Alt '+alt.key+' · v'+latest.ver+' — draft updated in place, no new version');
+      } else {
+        const ver=(latest?latest.ver:0)+1;
+        const alts=s.alts.map(a=> a.key!==alt.key ? a : {...a, versions:[{...entry, ver}, ...a.versions.map(v=>({...v, status:'Superseded'}))]});
+        this.setState({ alts, activeAltKey:alt.key, activeVerNum:ver, dirty:false, modal:null });
+        this.toast('Saved Alt '+alt.key+' · v'+ver+(ver>1?' — v'+(ver-1)+' kept in history':''));
+      }
+    }
+  };
+  loadVersion(altKey, ver){
+    const s=this.state;
+    if(s.dirty && !window.confirm('Discard unsaved edits and load Alt '+altKey+' · v'+ver+'?')) return;
+    const alt=s.alts.find(a=>a.key===altKey); const v=alt&&alt.versions.find(x=>x.ver===ver); if(!v) return;
+    const snap=JSON.parse(JSON.stringify(v.snapshot));
+    this.setState({
+      units:snap.units, unitCounter:snap.unitCounter||snap.units.length,
+      projectMeta:{...s.projectMeta, priceListVersion:snap.priceListVersion||s.projectMeta.priceListVersion},
+      activeUnitId:(snap.units[0]&&snap.units[0].id)||null, currentView:'overview',
+      activeAltKey:altKey, activeVerNum:ver, dirty:false,
+    });
+    const latest=alt.versions[0];
+    this.toast('Loaded Alt '+altKey+' · v'+ver+(latest&&latest.ver>ver?' (older version)':''));
+  }
+  toggleReady(altKey){
+    const alts=this.state.alts.map(a=>{
+      if(a.key!==altKey||!a.versions.length) return a;
+      const latest=a.versions[0];
+      const status=latest.status==='Ready for quotation'?'Draft':'Ready for quotation';
+      return {...a, versions:[{...latest, status}, ...a.versions.slice(1)]};
+    });
+    this.setState({alts});
+    const alt=alts.find(a=>a.key===altKey);
+    if(alt&&alt.versions.length) this.toast('Alt '+altKey+' · v'+alt.versions[0].ver+' → '+alt.versions[0].status);
+  }
+  deleteAlt(key){
+    const s=this.state;
+    const alt=s.alts.find(a=>a.key===key); if(!alt) return;
+    if(s.alts.length<=1){ this.toast('A BOQ needs at least one alternative — you can\'t delete the last one','warn'); return; }
+    const label='Alt '+key+(alt.name?' — '+alt.name:'');
+    if(!window.confirm('Delete '+label+'? Its saved versions will be removed. This can\'t be undone.')) return;
+    const remaining=s.alts.filter(a=>a.key!==key);
+    // Re-letter the remaining alternatives so keys stay contiguous (A, B, C…)
+    const relettered=remaining.map((a,i)=>({...a, key:String.fromCharCode(65+i)}));
+    const wasActive=s.activeAltKey===key;
+    const newActive=wasActive?relettered[0]:relettered[remaining.findIndex(a=>a.key===s.activeAltKey)];
+    const activeKey=(newActive&&newActive.key)||'A';
+    const nextState={alts:relettered, activeAltKey:activeKey};
+    if(wasActive){
+      const latest=newActive&&newActive.versions[0];
+      nextState.activeVerNum=latest?latest.ver:null;
+      if(latest&&latest.snapshot){
+        const snap=JSON.parse(JSON.stringify(latest.snapshot));
+        nextState.units=snap.units; nextState.unitCounter=snap.unitCounter||snap.units.length;
+        nextState.activeUnitId=(snap.units[0]&&snap.units[0].id)||null;
+        nextState.currentView='overview'; nextState.dirty=false;
+      }
+    }
+    this.setState(nextState);
+    this.toast('Deleted '+label);
+  }
+  renameAlt(key,val){ this.setState({alts:this.state.alts.map(a=>a.key===key?{...a,name:val}:a)}); }
+  selectAlt(key){
+    if(key===this.state.activeAltKey) return;
+    const alt=this.state.alts.find(a=>a.key===key); if(!alt) return;
+    const latest=alt.versions[0];
+    if(latest){ this.loadVersion(key, latest.ver); return; }
+    if(this.state.dirty && !window.confirm('Switch to Alt '+key+'? Your unsaved edits stay in the editor and can be saved into Alt '+key+' as v1.')){ return; }
+    this.setState({activeAltKey:key, activeVerNum:null});
+    this.toast('Now editing Alt '+key+' — use "Save as v1" when ready');
+  }
+
+  // ---------- price list switch ----------
+  onPriceListChange = (e)=>{
+    const v=e.target.value;
+    const pd=this.state.priceData[v]; if(!pd) return;
+    let updated=0, notFound=0;
+    this.mutateUnits(units=>{
+      units.forEach(unit=>{
+        ['kitchen','wardrobe','accessories'].forEach(sec=>{
+          unit.items[sec].forEach(r=>{
+            if(r.custom) return;
+            const dataPool = sec==='accessories'?pd.accessories:(sec==='kitchen'?pd.kitchen:pd.wardrobe);
+            const items=(dataPool[r.category])||[];
+            const descItem=items.find(it=>it.desc===r.desc);
+            if(!descItem){ notFound++; return; }
+            let key;
+            if(sec==='accessories') key='(No Finish)__standard';
+            else if(sec==='kitchen') key=r.finish+'__'+(r.variant||'standard');
+            else key=r.finish+'__standard';
+            const np=descItem.prices[key] || (sec!=='accessories'?descItem.prices[r.finish+'__standard']:null);
+            if(np){ r.price=np; updated++; } else notFound++;
+          });
+        });
+      });
+    });
+    this.setState({projectMeta:{...this.state.projectMeta, priceListVersion:v}});
+    const label = v===this.state.priceListLatest ? v : `${v} (not latest)`;
+    this.toast(`Switched to ${label}: ${updated} item${updated===1?'':'s'} re-priced${notFound?` · ${notFound} not found`:''}`, updated?'success':'warn');
+  };
+
+  // ---------- project meta ----------
+  onProjNameChange = (e)=>{ this.setState({projectMeta:{...this.state.projectMeta, name:e.target.value}}); this.markDirty(); };
+  onClientChange = (e)=>{ this.setState({projectMeta:{...this.state.projectMeta, client:e.target.value}}); this.markDirty(); };
+  onPicChange = (e)=>{ this.setState({projectMeta:{...this.state.projectMeta, pic:e.target.value}}); this.markDirty(); };
+  onDateChange = (e)=>{ this.setState({projectMeta:{...this.state.projectMeta, date:e.target.value}}); this.markDirty(); };
+  onNotesChange = (e)=>{ this.setState({projectMeta:{...this.state.projectMeta, notes:e.target.value}}); this.markDirty(); };
+
+  // ---------- save/load/export ----------
+  saveNow = ()=>{
+    const st=this.state;
+    const s={version:3, project:st.projectMeta, units:st.units, unitCounter:st.unitCounter,
+      alts:st.alts, activeAltKey:st.activeAltKey, activeVerNum:st.activeVerNum, boqId:st.boqId||null, savedAt:new Date().toISOString()};
+    const proj=(st.projectMeta.name||'BOQ').trim();
+    const plv=st.projectMeta.priceListVersion||st.priceListLatest;
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));
+    a.download=`${proj} Alt-${st.activeAltKey}${st.activeVerNum?' v'+st.activeVerNum:''} ${plv}.smbq`; a.click();
+    this.toast('Saved .smbq — all versions & alternatives included');
+  };
+  triggerLoadClick = ()=>{ if(this.loadInputRef) this.loadInputRef.click(); };
+  onLoadFile = (e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try{
+        const s=JSON.parse(ev.target.result);
+        const projectMeta = Object.assign({name:'',client:'',pic:'',date:'',notes:'',priceListVersion:this.state.priceListLatest}, s.project||{});
+        this.setState({
+          projectMeta, units: s.units||[], unitCounter: s.unitCounter||(s.units||[]).length,
+          activeUnitId: (s.units&&s.units[0]&&s.units[0].id)||null,
+          alts: (s.alts&&s.alts.length)?s.alts:[{key:'A', name:'Initial scheme', versions:[]}],
+          activeAltKey: s.activeAltKey||'A', activeVerNum: s.activeVerNum||null, boqId: s.boqId||null,
+          currentView:'overview', dirty:false,
+        });
+        this.toast('Loaded: '+file.name);
+      }catch(err){ this.toast('Failed to load: '+err.message,'error'); }
+    };
+    reader.readAsText(file); e.target.value='';
+  };
+  exportExcelNow = ()=>{
+    if(typeof XLSX==='undefined'){ this.toast('XLSX not loaded','error'); return; }
+    const proj=this.state.projectMeta.name||'BOQ', wb=XLSX.utils.book_new();
+    const hdr=['#','Unit','Category','Subcat','Finish','Handle','Dims (W×H×D)','Description','Unit Price (IDR)','Qty','Total (IDR)','Notes','Buffer'];
+    const allRows=[]; let rn=1;
+    this.state.units.forEach(unit=>{
+      const sr=[hdr]; let n=1;
+      ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].filter(r=>r.enabled!==false).forEach(r=>{
+        const dims=(r.w&&r.h&&r.d)?`${r.w}×${r.h}×${r.d}`:'';
+        const row=[n++,unit.name,r.category,r.subcat||'',r.finish+(r.thickness&&r.finish!=='(No Finish)'?' · '+r.thickness:''),r.variant||'',dims,r.desc,r.price,r.qty,r.price*r.qty,r.notes||'',(r.buffer===true?'YES':'')];
+        sr.push(row); allRows.push([rn++,unit.name,...row.slice(1)]);
+      }));
+      sr.push([]); sr.push(['','','','','','','','','','UNIT TOTAL →',this.unitTotal(unit),'']);
+      const ws=XLSX.utils.aoa_to_sheet(sr);
+      ws['!cols']=[{wch:4},{wch:18},{wch:14},{wch:22},{wch:26},{wch:10},{wch:14},{wch:42},{wch:16},{wch:6},{wch:16},{wch:28},{wch:8}];
+      XLSX.utils.book_append_sheet(wb,ws,(unit.name.replace(/[\\/*?[\]]/g,'').substring(0,31)||'Unit'));
+    });
+    const sum=[['PROJECT BOQ — STELLA MOBILI'],['Project',this.state.projectMeta.name,'Client',this.state.projectMeta.client,'PIC',this.state.projectMeta.pic,'Date',this.state.projectMeta.date],['Notes',this.state.projectMeta.notes],['Revision','Alt '+this.state.activeAltKey+((this.getActiveAlt()||{}).name?' — '+this.getActiveAlt().name:'')+(this.state.activeVerNum?' · v'+this.state.activeVerNum:' · unsaved working copy'),'Status',(()=>{const a=this.getActiveAlt();const l=a&&a.versions[0];return (l&&this.state.activeVerNum===l.ver)?l.status:(this.state.activeVerNum?'Older version':'Not saved yet');})(),'Note',(()=>{const a=this.getActiveAlt();const l=a&&a.versions[0];return (l&&this.state.activeVerNum===l.ver&&l.note)?l.note:'';})()],['Price List',this.state.projectMeta.priceListVersion||this.state.priceListLatest],[],['UNIT TOTALS'],['Unit','Kitchen','Wardrobe','Accessories','Total']];
+    this.state.units.forEach(u=>{ const k=this.secTotal(u,'kitchen'),w=this.secTotal(u,'wardrobe'),a=this.secTotal(u,'accessories'); sum.push([u.name,k,w,a,k+w+a]); });
+    sum.push([],['','','','','GRAND TOTAL',this.state.units.reduce((s,u)=>s+this.unitTotal(u),0)],[],['FULL ITEM LIST'],hdr,...allRows);
+    const ws2=XLSX.utils.aoa_to_sheet(sum); ws2['!cols']=[{wch:4},{wch:18},{wch:14},{wch:22},{wch:26},{wch:10},{wch:14},{wch:42},{wch:16},{wch:6},{wch:16},{wch:28},{wch:8}];
+    XLSX.utils.book_append_sheet(wb,ws2,'Summary');
+    wb.SheetNames=['Summary',...wb.SheetNames.filter(n=>n!=='Summary')];
+    const plv=this.state.projectMeta.priceListVersion||this.state.priceListLatest;
+    XLSX.writeFile(wb,`${proj} Alt-${this.state.activeAltKey}${this.state.activeVerNum?' v'+this.state.activeVerNum:''} ${plv}.xlsx`);
+    this.toast('Excel exported');
+  };
+  savePdfNow = ()=>{
+    const s=this.state;
+    const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const alt=this.getActiveAlt()||{key:'A',name:'',versions:[]};
+    const latest=alt.versions[0]||null;
+    const onLatest=!!(latest&&s.activeVerNum===latest.ver);
+    const revLabel='Alt '+alt.key+(alt.name?' — '+alt.name:'')+(s.activeVerNum?' · v'+s.activeVerNum:' · unsaved working copy');
+    const revStatus=onLatest?latest.status:(s.activeVerNum?'Older version':'Not saved yet');
+    const revNote=(onLatest&&latest.note)?latest.note:'';
+    let units=''; let grand=0;
+    s.units.forEach(unit=>{
+      let rows=''; let n=1;
+      ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].filter(r=>r.enabled!==false).forEach(r=>{
+        const dims=(r.w&&r.h&&r.d)?(r.w+'\u00d7'+r.h+'\u00d7'+r.d):'\u2014';
+        const fin=r.finish+((r.thickness&&r.finish!=='(No Finish)')?' \u00b7 '+r.thickness:'')+(r.variant?' \u00b7 '+r.variant:'');
+        rows+='<tr><td class="c">'+(n++)+'</td><td>'+esc(r.category)+(r.subcat?'<span class="sub"> \u00b7 '+esc(r.subcat)+'</span>':'')+'</td><td>'+esc(r.desc)+(r.buffer===true?' <span class="buf">BUFFER</span>':'')+(r.notes?'<div class="note">'+esc(r.notes)+'</div>':'')+'</td><td>'+esc(fin)+'</td><td class="c">'+esc(dims)+'</td><td class="r">'+this.fmtNum(r.price)+'</td><td class="c">'+r.qty+'</td><td class="r">'+this.fmtNum(r.price*r.qty)+'</td></tr>';
+      }));
+      if(n===1) return;
+      const ut=this.unitTotal(unit); grand+=ut;
+      units+='<h2>'+esc(unit.name)+'</h2><table><thead><tr><th class="c" style="width:24px">#</th><th style="width:15%">Category</th><th>Description</th><th style="width:18%">Finish</th><th class="c" style="width:11%">Dims (W\u00d7H\u00d7D)</th><th class="r" style="width:10%">Unit Price</th><th class="c" style="width:5%">Qty</th><th class="r" style="width:11%">Total (IDR)</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td colspan="7">'+esc(unit.name)+' \u2014 subtotal</td><td class="r">'+this.fmtNum(ut)+'</td></tr></tfoot></table>';
+    });
+    if(!units){ this.toast('Nothing to export yet \u2014 add items first','warn'); return; }
+    const m=s.projectMeta;
+    const plv=m.priceListVersion||s.priceListLatest;
+    const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+    const metaCell=(l,v)=>'<div class="mc"><div class="ml">'+l+'</div><div class="mv">'+(esc(v)||'\u2014')+'</div></div>';
+    const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(m.name||'BOQ')+' \u2014 BOQ</title><style>'
+      +'@page{size:A4;margin:15mm 13mm}'
+      +'body{font-family:Georgia,\'Times New Roman\',serif;color:#26221B;margin:0;font-size:11px;line-height:1.45}'
+      +'.brand{font-family:Verdana,sans-serif;font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#8A5A3B;font-weight:700;margin-bottom:6px}'
+      +'h1{font-size:25px;margin:0;font-weight:600;letter-spacing:-.01em}'
+      +'.doc{font-size:12px;color:#7A7264;margin-top:2px;font-style:italic}'
+      +'.hd{border-bottom:2.5px solid #26221B;padding-bottom:12px}'
+      +'.meta{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid #E4DCCC;margin-bottom:4px}'
+      +'.mc{padding:8px 18px 8px 0;min-width:110px}'
+      +'.ml{font-family:Verdana,sans-serif;font-size:7.5px;letter-spacing:.14em;text-transform:uppercase;color:#7A7264;font-weight:700;margin-bottom:2px}'
+      +'.mv{font-size:11.5px}'
+      +'.rev{background:#F1ECE1;border:1px solid #E4DCCC;padding:7px 12px;margin:10px 0 2px;font-size:11px}'
+      +'h2{font-size:15px;font-weight:600;margin:20px 0 6px;padding-bottom:3px;border-bottom:1px solid #26221B}'
+      +'table{width:100%;border-collapse:collapse;font-size:10px}'
+      +'th{font-family:Verdana,sans-serif;font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:#7A7264;text-align:left;padding:5px 6px;border-bottom:1.5px solid #26221B}'
+      +'td{padding:5px 6px;border-bottom:1px solid #EFE9DC;vertical-align:top}'
+      +'.c{text-align:center}.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}'
+      +'.sub{color:#7A7264}.note{color:#7A7264;font-style:italic;font-size:9.5px}'
+      +'.buf{font-family:Verdana,sans-serif;font-size:6.5px;letter-spacing:.08em;font-weight:700;color:#3E648C;border:1px solid #3E648C;padding:1px 4px;border-radius:3px;vertical-align:middle;white-space:nowrap}'
+      +'tfoot td{border-top:1.5px solid #26221B;border-bottom:none;font-weight:700;padding-top:6px}'
+      +'.grand{display:flex;justify-content:space-between;align-items:center;background:#26221B;color:#F1ECE1;padding:12px 16px;margin-top:24px}'
+      +'.grand .gl{font-family:Verdana,sans-serif;font-size:9px;letter-spacing:.2em;text-transform:uppercase}'
+      +'.grand .gv{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}'
+      +'.ft{margin-top:14px;font-size:9px;color:#7A7264;font-style:italic}'
+      +'thead{display:table-header-group}tr{page-break-inside:avoid}'
+      +'</style></head><body>'
+      +'<div class="hd"><div class="brand">Stella Mobili</div><h1>'+esc(m.name||'Untitled Project')+'</h1><div class="doc">Bill of Quantities \u2014 '+esc(revLabel)+'</div></div>'
+      +'<div class="meta">'+metaCell('Client',m.client)+metaCell('PIC',m.pic)+metaCell('Date',m.date||today)+metaCell('Price List',plv)+metaCell('Status',revStatus)+'</div>'
+      +(revNote?'<div class="rev"><b>Revision note:</b> '+esc(revNote)+'</div>':'')
+      +(m.notes?'<div class="rev"><b>Project notes:</b> '+esc(m.notes)+'</div>':'')
+      +units
+      +'<div class="grand"><span class="gl">Grand Total \u2014 '+s.units.length+' unit'+(s.units.length===1?'':'s')+'</span><span class="gv">Rp '+this.fmtNum(grand)+'</span></div>'
+      +'<div class="ft">Generated '+today+' \u00b7 '+esc(revLabel)+' \u00b7 Price list '+esc(plv)+' \u00b7 Stella Mobili BOQ tool</div>'
+      +'</body></html>';
+    const f=document.createElement('iframe');
+    f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    document.body.appendChild(f);
+    const d=f.contentDocument; d.open(); d.write(html); d.close();
+    setTimeout(()=>{ try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(err){ this.toast('Could not open print dialog: '+err.message,'error'); } setTimeout(()=>f.remove(), 60000); }, 350);
+    this.toast('Opening print dialog \u2014 choose "Save as PDF"');
+  };
+
+  // ---------- custom item modal field bindings ----------
+  onCmDescChange = (e)=>this.setState({cmDesc:e.target.value});
+  onCmFinishChange = (e)=>this.setState({cmFinish:e.target.value});
+  onCmThicknessChange = (e)=>this.setState({cmThickness:e.target.value});
+  onCmUnitChange = (e)=>this.setState({cmUnit:e.target.value});
+  onCmPriceChange = (e)=>this.setState({cmPrice:e.target.value});
+  onCmQtyChange = (e)=>this.setState({cmQty:e.target.value});
+  onCmNotesChange = (e)=>this.setState({cmNotes:e.target.value});
+
+  // ---------- edit finish (single) field bindings ----------
+  onEfSelectChange = (e)=>this.setState({efSelKey:e.target.value});
+
+  // ---------- bulk finish field bindings ----------
+  onBfcFinishChange = (e)=>this.setState({bfcFinish:e.target.value});
+  onBfcVariantStandard = ()=>this.setState({bfcVariant:'standard'});
+  onBfcVariantGola = ()=>this.setState({bfcVariant:'gola'});
+
+  onBackdropClick = (e)=>{ if(e.target===e.currentTarget) this.closeModal(); };
+
+  renderVals(){
+    const s=this.state;
+    if(!s.loaded){
+      return { loaded:false, themeDir:(this.props.theme==='dark'?'b':'a'), showOverview:false, showUnit:false, toasts:[], sidebarUnits:[], overviewRows:[], altVerChip:'', raAlts:[],
+        shellCols:'260px 5px 1fr', sbResizerStyle:'', sidebarStyle:'background:var(--panel2);border-right:1px solid var(--line);padding:16px 12px', mobileMenuDisplay:'none', crumbDisplay:'flex', crumbProject:'—', crumbView:'Loading…', revLabel:'', dirty:false,
+        sbLabelDisplay:'flex', sbAddJustify:'flex-start', collapseArrowStyle:'', navOverviewStyle:'', metaGridCols:'1fr', heroStatCols:'1fr', heroTotalStyle:'', heroSideStyle:'', statRowCols:'1fr', tabs:[], isKitchenTab:false, isWardrobeTab:false, isAccessoriesTab:false, tableEmpty:false, tableNotEmpty:false, tableRows:[], selBarVisible:false, KIT_CATS:[], WD_CATS:[], ACC_CATS:[],
+      };
+    }
+    const isMobile = s.windowWidth<=900;
+    const isNarrow = s.windowWidth<=540;
+    const unit = this.getUnit();
+    const grand = s.units.reduce((sum,u)=>sum+this.unitTotal(u),0);
+
+    // ---- toasts ----
+    const toastColors = {success:'var(--positive)', warn:'var(--warn)', error:'var(--danger)'};
+    const toastIcons = {success:'✓', warn:'!', error:'✕'};
+    const toasts = s.toasts.map(t=>({
+      id:t.id, msg:t.msg, icon:toastIcons[t.type]||toastIcons.success,
+      style:`background:${toastColors[t.type]||toastColors.success};color:#fff;padding:11px 16px;border-radius:9px;font-size:13px;font-weight:500;box-shadow:0 12px 36px rgba(0,0,0,.3);display:flex;align-items:center;gap:9px;animation:smbqSlideUp .22s ease-out;min-width:220px`,
+    }));
+
+    // ---- sidebar ----
+    const sidebarUnits = s.units.map(u=>{
+      const total=this.unitTotal(u);
+      const k=this.secTotal(u,'kitchen'), w=this.secTotal(u,'wardrobe'), a=this.secTotal(u,'accessories');
+      const denom = total>0?total:1;
+      const isActive = s.currentView==='unit' && u.id===s.activeUnitId;
+      const isDragOver = s.dragOverUnitId===u.id;
+      let rowStyle = `display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:7px;font-size:12.5px;font-weight:500;cursor:pointer;user-select:none;`;
+      rowStyle += isActive ? `background:var(--accent);color:var(--on-accent);font-weight:600;` : `background:transparent;color:var(--ink);`;
+      rowStyle += isDragOver ? (s.dragOverUnitPos==='above'?`box-shadow:0 -2px 0 var(--accent);`:`box-shadow:0 2px 0 var(--accent);`) : '';
+      rowStyle += s.dragUnitId===u.id ? 'opacity:.4;' : '';
+      rowStyle += s.sidebarCollapsed ? 'justify-content:center;' : '';
+      const count = ['kitchen','wardrobe','accessories'].reduce((sum,sec)=>sum+u.items[sec].length,0);
+      const collapsedNow = s.sidebarCollapsed && !isMobile;
+      const showActions = s.hoveredUnitId===u.id || isMobile;
+      return {
+        id:u.id, name:u.name, count,
+        actionsDisplay: collapsedNow ? 'none' : (showActions ? 'flex':'none'),
+        countDisplay: collapsedNow ? 'none' : (showActions ? 'none':'flex'),
+        onMouseEnter: ()=>this.setState({hoveredUnitId:u.id}),
+        onMouseLeave: ()=>this.setState(st=>st.hoveredUnitId===u.id?{hoveredUnitId:null}:null),
+        kBarStyle:`flex:${Math.max(k,1)};background:${isActive?'color-mix(in srgb,var(--on-accent) 85%,transparent)':'var(--accent)'}`,
+        wBarStyle:`flex:${Math.max(w,1)};background:${isActive?'color-mix(in srgb,var(--on-accent) 55%,transparent)':'color-mix(in srgb,var(--accent) 60%,transparent)'}`,
+        aBarStyle:`flex:${Math.max(a,1)};background:${isActive?'color-mix(in srgb,var(--on-accent) 32%,transparent)':'color-mix(in srgb,var(--accent) 28%,transparent)'}`,
+        totalLabel: this.fmt(total),
+        rowStyle,
+        onClick: ()=>this.showUnit(u.id),
+        onNameChange: (e)=>this.renameUnit(u.id, e.target.value),
+        onClone: (e)=>{e.stopPropagation(); this.cloneUnit(u.id);},
+        onDelete: (e)=>{e.stopPropagation(); this.deleteUnit(u.id);},
+        onDragStart: (e)=>this.unitDragStart(u.id,e),
+        onDragOver: (e)=>this.unitDragOver(u.id,e),
+        onDrop: (e)=>this.unitDrop(u.id,e),
+        onDragEnd: this.unitDragEnd,
+      };
+    });
+
+    // ---- overview ----
+    const priceListOptions = s.priceListVersions;
+    const isOldPriceList = s.projectMeta.priceListVersion && s.projectMeta.priceListVersion!==s.priceListLatest;
+    const overviewRows = s.units.map(u=>{
+      const isDragOver = s.dragOverUnitId===u.id;
+      let rowStyle='';
+      rowStyle += isDragOver ? (s.dragOverUnitPos==='above'?`box-shadow:inset 0 2px 0 var(--accent);`:`box-shadow:inset 0 -2px 0 var(--accent);`) : '';
+      rowStyle += s.dragUnitId===u.id ? 'opacity:.4;' : '';
+      return {
+        id:u.id, name:u.name,
+        kitchen:this.fmt(this.secTotal(u,'kitchen')), wardrobe:this.fmt(this.secTotal(u,'wardrobe')), accessories:this.fmt(this.secTotal(u,'accessories')),
+        total:this.fmt(this.unitTotal(u)),
+        rowStyle,
+        onClick: ()=>this.showUnit(u.id),
+        onDragStart:(e)=>this.unitDragStart(u.id,e), onDragOver:(e)=>this.unitDragOver(u.id,e), onDrop:(e)=>this.unitDrop(u.id,e), onDragEnd:this.unitDragEnd,
+      };
+    });
+
+    // ---- unit view / tabs ----
+    let tabs=[], tableRows=[], tableEmpty=false, tableNotEmpty=false, subtotalLabel='', subtotalBufferNote='', selCount=0;
+    let kitFinishOptions=[], wdFinishOptions=[], wdGlassOptions=[], wdGlass2Options=[];
+    let kitResults=[], wdResults=[], accResults=[];
+    if(unit){
+      const secLabel={kitchen:'Kitchen',wardrobe:'Wardrobe',accessories:'Accessories'};
+      tabs = ['kitchen','wardrobe','accessories'].map(sec=>{
+        const active = s.currentTab===sec;
+        return {
+          key:sec, label:secLabel[sec], count:unit.items[sec].length,
+          style:`padding:6px 10px;border-bottom:2.5px solid ${active?'var(--accent)':'transparent'};font-size:12.5px;font-weight:600;color:${active?'var(--accent)':'var(--ink2)'};cursor:pointer;white-space:nowrap;user-select:none`,
+          countStyle:`background:${active?'color-mix(in srgb,var(--accent) 28%,transparent)':'var(--line2)'};color:${active?'var(--accent)':'var(--ink2)'};font-size:10.5px;padding:1px 6px;border-radius:999px;font-family:var(--font-mono);font-weight:700;margin-left:5px`,
+          onClick: ()=>this.setState({currentTab:sec}),
+        };
+      });
+      const sec=s.currentTab;
+      const rows=unit.items[sec];
+      tableEmpty = rows.length===0; tableNotEmpty=!tableEmpty;
+      subtotalLabel = this.fmt(this.secTotal(unit,sec));
+      const secBuf = this.secBufferTotal(unit,sec);
+      subtotalBufferNote = secBuf>0 ? ('incl. buffer '+this.fmt(secBuf)) : '';
+      const selMap = s.selectedRows[sec];
+      selCount = Object.keys(selMap).length;
+      tableRows = rows.map((r,i)=>{
+        const isSelected = !!selMap[r.id];
+        const isEnabled = r.enabled !== false;
+        const isBuffer = r.buffer === true;
+        const isDragOver = s.dragOverRowId===r.id && s.dragRowSec===sec;
+        let trStyle = `background:${isSelected?'color-mix(in srgb,var(--accent) 10%,transparent)':'var(--panel2)'};`;
+        trStyle += isDragOver ? (s.dragOverRowPos==='above'?'box-shadow:inset 0 2px 0 var(--accent);':'box-shadow:inset 0 -2px 0 var(--accent);') : '';
+        trStyle += s.dragRowId===r.id ? 'opacity:.35;' : (!isEnabled ? 'opacity:.4;' : '');
+        const fd = r.finish==='(No Finish)' ? 'N/A' : (r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
+        const dims = (r.w&&r.h&&r.d) ? `${r.w}×${r.h}×${r.d}` : '';
+        return {
+          id:r.id, index:i+1, category:r.category, isCustom:r.custom,
+          finishDisplay: fd, hasThickness: !!(r.thickness && r.finish!=='(No Finish)'), thickness:r.thickness,
+          desc:r.desc, hasSubcat: !!r.subcat, subcat:r.subcat, hasDims: !!dims, dims,
+          priceLabel: this.fmt(r.price), qty:r.qty,
+          totalLabel: isEnabled ? this.fmt(r.price*r.qty) : '—',
+          notes:r.notes||'',
+          isSelected, trStyle,
+          stickyCheckStyle: `padding:10px 4px;border-bottom:1px solid var(--line2);text-align:center;position:sticky;left:0;background:${isSelected?'color-mix(in srgb,var(--accent) 10%,transparent)':'var(--panel2)'};z-index:1`,
+          stickyDescStyle: `padding:10px 10px;border-bottom:1px solid var(--line2);position:sticky;left:32px;background:${isSelected?'color-mix(in srgb,var(--accent) 10%,transparent)':'var(--panel2)'};z-index:1;min-width:160px;max-width:240px`,
+          pencilStyle: 'opacity:.6;flex-shrink:0',
+          toggleBtnStyle: isEnabled
+            ? 'border:1px solid color-mix(in srgb,var(--accent) 42%,transparent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent)'
+            : 'border:1px solid var(--line);background:var(--panel);color:var(--ink2)',
+          toggleTitle: isEnabled ? 'Disable item (hides from total & PDF)' : 'Re-enable item',
+          onEditFinish: ()=>this.editFinish(sec,r.id),
+          onQtyChange: (e)=>this.updateQty(sec,r.id,e.target.value),
+          onQtyUp: ()=>this.stepRowQty(sec,r.id,1),
+          onQtyDown: ()=>this.stepRowQty(sec,r.id,-1),
+          onNotesChange: (e)=>this.updateNotes(sec,r.id,e.target.value),
+          onDescChange: (e)=>this.updateDesc(sec,r.id,e.target.value),
+          isBuffer,
+          bufferTitle: isBuffer ? 'Buffer item — counted in totals, excluded from SO. Click to unmark' : 'Mark as buffer (insurance stock: counts in totals, excluded from SO)',
+          bufferBtnStyle: 'width:24px;height:24px;border-radius:5px;display:grid;place-items:center;white-space:nowrap;flex-shrink:0;'+(isBuffer
+            ? 'border:1px solid color-mix(in srgb,var(--buffer) 55%,transparent);background:color-mix(in srgb,var(--buffer) 14%,transparent);color:var(--buffer)'
+            : 'border:1px solid var(--line);background:var(--panel2);color:var(--ink2)'),
+          onToggleBuffer: ()=>this.toggleRowBuffer(sec,r.id),
+          onDuplicate: ()=>this.duplicateRow(sec,r.id),
+          onRemove: ()=>this.removeRow(sec,r.id),
+          onToggleEnabled: ()=>this.toggleRowEnabled(sec,r.id),
+          onToggleSelect: (e)=>this.toggleRowSelect(sec,r.id,e.target.checked),
+          onDragStart: (e)=>this.rowDragStart(sec,r.id,e),
+          onDragOver: (e)=>this.rowDragOver(sec,r.id,e),
+          onDrop: (e)=>this.rowDrop(sec,r.id,e),
+          onDragEnd: this.rowDragEnd,
+        };
+      });
+
+      if(sec==='kitchen'){
+        kitFinishOptions = [...new Set((this.getPD().kitchen[s.kitCat]||[]).flatMap(it=>Object.keys(it.prices).map(k=>k.split('__')[0])).filter(f=>f!=='(No Finish)'))].sort();
+        kitResults = this.kitPoolFiltered().map((it,idx)=>{
+          const price=this.kitPriceFor(it);
+          const dims=(it.w&&it.h&&it.d)?`${it.w}×${it.h}×${it.d}`:'';
+          return { name:it.desc, meta:[it.subcat,dims].filter(Boolean).join(' · '), price:this.fmtNum(price), unit:it.unit||'set', onSelect:(e)=>{e.preventDefault(); this.selectKitItem(it);} };
+        });
+      } else if(sec==='wardrobe'){
+        wdFinishOptions = [...new Set((this.getPD().wardrobe[s.wdCat]||[]).flatMap(it=>Object.keys(it.prices).map(k=>k.split('__')[0])).filter(f=>f!=='(No Finish)'))].sort();
+        const wdItems=(this.getPD().wardrobe[s.wdCat])||[];
+        wdGlassOptions = [...new Set(wdItems.flatMap(it=>Object.keys(it.prices).map(k=>{const p=k.split(' | ');return p.length>=2?p[0]:null;}).filter(Boolean)))].sort();
+        wdGlass2Options = [...new Set(wdItems.flatMap(it=>Object.keys(it.prices).map(k=>{const p=k.split(' | ');return (p.length>=2 && p[0]===s.wdGlass)?p[1].replace('__standard',''):null;}).filter(Boolean)))].sort();
+        wdResults = this.wdPoolFiltered().map((it)=>{
+          const price=this.wdPriceFor(it);
+          const dims=(it.w&&it.h&&it.d)?`${it.w}×${it.h}×${it.d}`:'';
+          return { name:it.desc, meta:[it.subcat,dims].filter(Boolean).join(' · '), price:this.fmtNum(price), unit:it.unit||'set', onSelect:(e)=>{e.preventDefault(); this.selectWdItem(it);} };
+        });
+      } else if(sec==='accessories'){
+        accResults = this.accPoolFiltered().map((it)=>{
+          const price=it.prices['(No Finish)__standard']||0;
+          const extra = it.code?('#'+it.code):(dims=>dims)('');
+          return { name:it.desc, meta:[it.subcat,it.code?('#'+it.code):''].filter(Boolean).join(' · '), price:this.fmtNum(price), unit:it.unit||'pcs', onSelect:(e)=>{e.preventDefault(); this.selectAccItem(it);} };
+        });
+      }
+    }
+
+    const golaAvail = this.kitGolaAvailable();
+    const noHandle = s.NO_HANDLE_CATS.includes(s.kitCat);
+
+    return {
+      loaded:true,
+      mobileMenuDisplay: isMobile ? 'flex':'none',
+      crumbDisplay: s.windowWidth<=480 ? 'none':'flex',
+      crumbProject: s.projectMeta.name||'—',
+      crumbView: s.currentView==='overview' ? 'Overview' : ('Unit · '+(unit?unit.name:'')),
+      revLabel: 'Pricelist '+(s.projectMeta.priceListVersion||s.priceListLatest),
+      dirty: s.dirty,
+      themeDir: (this.props.theme==='dark'?'b':'a'),
+      toasts,
+      saveNow: this.saveNow, triggerLoadClick: this.triggerLoadClick, onLoadFile: this.onLoadFile,
+      loadInputRef: (el)=>{ this.loadInputRef = el; },
+      exportExcelNow: this.exportExcelNow, savePdfNow: this.savePdfNow,
+      toggleMobileSidebar: this.toggleMobileSidebar,
+
+      shellCols: isMobile ? '1fr' : (s.sidebarCollapsed ? '56px 1fr' : s.sidebarW+'px 5px 1fr'),
+      sbResizeStart: this.sbResizeStart,
+      sbResizerStyle: (isMobile || s.sidebarCollapsed) ? 'display:none' : 'cursor:col-resize;z-index:60;background:transparent;margin-left:-1px',
+      sidebarStyle: isMobile
+        ? `background:var(--panel2);border-right:1px solid var(--line);padding:16px 12px;display:${s.sidebarMobileOpen?'flex':'none'};flex-direction:column;gap:4px;overflow-y:auto;position:fixed;top:57px;bottom:0;left:0;width:280px;z-index:200;box-shadow:0 12px 36px rgba(0,0,0,.3)`
+        : `background:var(--panel2);border-right:1px solid var(--line);padding:${s.sidebarCollapsed?'16px 6px':'16px 12px'};display:flex;flex-direction:column;gap:4px;overflow-y:auto`,
+      sidebarMobileOpen: s.sidebarMobileOpen,
+      sbLabelDisplay: s.sidebarCollapsed && !isMobile ? 'none':'flex',
+      sbAddJustify: s.sidebarCollapsed && !isMobile ? 'center':'flex-start',
+      collapseArrowStyle: s.sidebarCollapsed ? 'transform:rotate(180deg)':'',
+      navOverviewStyle: `display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;justify-content:${s.sidebarCollapsed&&!isMobile?'center':'flex-start'};background:${s.currentView==='overview'?'var(--accent)':'transparent'};color:${s.currentView==='overview'?'var(--on-accent)':'var(--ink)'}`,
+      goOverview: this.goOverview, toggleSidebarCollapse: this.toggleSidebarCollapse,
+      stopProp: this.stopProp,
+      sidebarUnits, showUnitBreakdown: this.props.showUnitBreakdown!==false && !s.sidebarCollapsed,
+      addUnitNow: this.addUnitNow,
+
+      showOverview: s.currentView==='overview', showUnit: s.currentView==='unit',
+
+      ovProjName: s.projectMeta.name, ovClient: s.projectMeta.client, ovPic: s.projectMeta.pic, ovDate: s.projectMeta.date, ovNotes: s.projectMeta.notes,
+      onProjNameChange: this.onProjNameChange, onClientChange: this.onClientChange, onPicChange: this.onPicChange, onDateChange: this.onDateChange, onNotesChange: this.onNotesChange,
+      priceListOptions, ovPriceListVersion: s.projectMeta.priceListVersion, onPriceListChange: this.onPriceListChange,
+      isOldPriceList, priceListLatest: s.priceListLatest,
+      metaGridCols: isNarrow ? '1fr' : (isMobile ? '1fr 1fr' : '2fr 1.5fr 1fr 1fr 2fr 1.2fr'),
+
+      heroStatCols: (this.props.layoutVariant==='B') ? (isMobile?'1fr 1fr':'repeat(4,1fr)') : (isMobile ? '1fr' : '1.3fr 2fr'),
+      heroTotalStyle: 'background:var(--sidebar);border-radius:10px;padding:'+((this.props.layoutVariant==='B')?'10px 12px':'14px 18px')+';display:flex;flex-direction:column;justify-content:center',
+      heroSideStyle: (this.props.layoutVariant==='B') ? 'display:contents' : `display:grid;grid-template-columns:repeat(3,1fr);gap:12px`,
+      grandTotalValueStyle: `font-size:${(this.props.layoutVariant==='B')?'17px':'24px'};font-weight:800;letter-spacing:-.02em;color:#fff;font-family:var(--font-mono)`,
+      heroSubDisplay: (this.props.layoutVariant==='B') ? 'none':'block',
+      statTotalUnits: s.units.length,
+      statTotalItems: s.units.reduce((sum,u)=>sum+['kitchen','wardrobe','accessories'].reduce((ss,sec)=>ss+u.items[sec].length,0),0),
+      statGrandTotal: this.fmtNum(grand),
+      grandTotalLabel: this.fmt(grand),
+      overviewRows,
+
+      unitName: unit?unit.name:'', clearUnitNow: this.clearUnitNow,
+      statRowCols: isNarrow ? '1fr 1fr' : (isMobile ? '1fr 1fr' : 'repeat(4,1fr)'),
+      unitStatKitchen: unit?this.fmtNum(this.secTotal(unit,'kitchen')):'0', unitCountKitchen: unit?(unit.items.kitchen.length+' items'):'',
+      unitStatWardrobe: unit?this.fmtNum(this.secTotal(unit,'wardrobe')):'0', unitCountWardrobe: unit?(unit.items.wardrobe.length+' items'):'',
+      unitStatAccessories: unit?this.fmtNum(this.secTotal(unit,'accessories')):'0', unitCountAccessories: unit?(unit.items.accessories.length+' items'):'',
+      unitStatTotal: unit?this.fmtNum(this.unitTotal(unit)):'0',
+      unitTotalCaption: (()=>{ const b=unit?this.unitBufferTotal(unit):0; return b>0?('incl. buffer '+this.fmt(b)):'all sections'; })(),
+      tabs, currentTabLabel: s.currentTab.charAt(0).toUpperCase()+s.currentTab.slice(1),
+
+      isKitchenTab: s.currentTab==='kitchen', isWardrobeTab: s.currentTab==='wardrobe', isAccessoriesTab: s.currentTab==='accessories',
+
+      KIT_CATS: s.KIT_CATS, kitCat: s.kitCat, onKitCatChange: this.onKitCatChange,
+      kitFinishOptions, kitFinish: s.kitFinish, onKitFinishChange: this.onKitFinishChange,
+      kitHandleDisplay: noHandle ? 'none':'flex',
+      kitVariantStdStyle: `padding:0 12px;height:36px;border-radius:6px;font-size:12.5px;font-weight:600;border:1px solid ${s.kitVariant==='standard'?'var(--accent)':'color-mix(in srgb,var(--accent) 28%,transparent)'};background:${s.kitVariant==='standard'?'var(--accent)':'var(--panel2)'};color:${s.kitVariant==='standard'?'var(--on-accent)':'var(--accent)'}`,
+      kitVariantGolaStyle: `padding:0 12px;height:36px;border-radius:6px;font-size:12.5px;font-weight:600;border:1px solid ${!golaAvail?'var(--line)':(s.kitVariant==='gola'?'var(--accent)':'color-mix(in srgb,var(--accent) 60%,transparent)')};background:${!golaAvail?'var(--panel)':(s.kitVariant==='gola'?'var(--accent)':'color-mix(in srgb,var(--accent) 16%,transparent)')};color:${!golaAvail?'var(--ink2)':(s.kitVariant==='gola'?'var(--on-accent)':'var(--accent)')};cursor:${!golaAvail?'not-allowed':'pointer'}`,
+      onKitVariantStandard: this.onKitVariantStandard, onKitVariantGola: this.onKitVariantGola,
+      kitGolaDisabled: !golaAvail, kitGolaTitle: golaAvail ? '' : 'Gola handle is not available for this finish',
+      kitThicknessDisplay: s.kitSelected ? (s.kitSelected.thicknesses && s.kitSelected.thicknesses[s.kitFinish+'__'+s.kitVariant] || s.kitSelected.thicknesses && s.kitSelected.thicknesses[s.kitFinish+'__standard'] || '—') : '—',
+      kitSearch: s.kitSearch, onKitSearchInput: this.onKitSearchInput, onKitSearchFocus: this.onKitSearchFocus, onKitSearchBlur: this.onKitSearchBlur,
+      kitOpen: s.kitOpen, kitResults, kitResultsEmpty: kitResults.length===0,
+      kitPricePreview: s.kitSelected ? this.fmt(this.kitPriceFor(s.kitSelected)) : '—',
+      kitQty: s.kitQty, onKitQtyChange: (e)=>this.setState({kitQty:e.target.value}), onKitQtyUp: ()=>this.stepQtyState('kitQty',1), onKitQtyDown: ()=>this.stepQtyState('kitQty',-1),
+      addKitRow: this.addKitRow, openCustomKit: ()=>this.openCustomModal('kitchen'),
+
+      WD_CATS: s.WD_CATS, wdCat: s.wdCat, onWdCatChange: this.onWdCatChange,
+      wdFinishDisplay: (!s.WD_GLASS_CATS.includes(s.wdCat) && !s.WD_NOFIN_CATS.includes(s.wdCat)) ? 'flex':'none',
+      wdFinishOptions, wdFinish: s.wdFinish, onWdFinishChange: this.onWdFinishChange,
+      wdGlassDisplay: s.WD_GLASS_CATS.includes(s.wdCat) ? 'flex':'none',
+      wdGlassOptions, wdGlass: s.wdGlass, onWdGlassChange: this.onWdGlassChange,
+      wdGlass2Options, wdGlass2: s.wdGlass2, onWdGlass2Change: this.onWdGlass2Change, wdGlass2Label: this.wdGlass2Label(),
+      wdThicknessDisplay: s.WD_NOFIN_CATS.includes(s.wdCat) ? 'none':'flex',
+      wdThicknessDisplay2: s.wdSelected ? ((s.wdSelected.thicknesses && s.wdSelected.thicknesses[s.wdFinish+'__standard']) || '—') : '—',
+      wdSearch: s.wdSearch, onWdSearchInput: this.onWdSearchInput, onWdSearchFocus: this.onWdSearchFocus, onWdSearchBlur: this.onWdSearchBlur,
+      wdOpen: s.wdOpen, wdResults, wdResultsEmpty: wdResults.length===0,
+      wdPricePreview: s.wdSelected ? this.fmt(this.wdPriceFor(s.wdSelected)) : '—',
+      wdQty: s.wdQty, onWdQtyChange: (e)=>this.setState({wdQty:e.target.value}), onWdQtyUp: ()=>this.stepQtyState('wdQty',1), onWdQtyDown: ()=>this.stepQtyState('wdQty',-1),
+      addWdRow: this.addWdRow, openCustomWd: ()=>this.openCustomModal('wardrobe'),
+
+      ACC_CATS: s.ACC_CATS, accCat: s.accCat, onAccCatChange: this.onAccCatChange,
+      accSearch: s.accSearch, onAccSearchInput: this.onAccSearchInput, onAccSearchFocus: this.onAccSearchFocus, onAccSearchBlur: this.onAccSearchBlur,
+      accOpen: s.accOpen, accResults, accResultsEmpty: accResults.length===0,
+      accPricePreview: s.accSelected ? this.fmt(s.accSelected.prices['(No Finish)__standard']||0) : '—',
+      accQty: s.accQty, onAccQtyChange: (e)=>this.setState({accQty:e.target.value}), onAccQtyUp: ()=>this.stepQtyState('accQty',1), onAccQtyDown: ()=>this.stepQtyState('accQty',-1),
+      addAccRow: this.addAccRow, openCustomAcc: ()=>this.openCustomModal('accessories'),
+
+      tableEmpty, tableNotEmpty, tableRows, subtotalLabel, subtotalBufferNote,
+      rowPadV: (this.props.tableDensity==='compact') ? '5px':'10px',
+      selBarVisible: selCount>0, selCountLabel: selCount+' item'+(selCount===1?'':'s')+' selected',
+      showCopyToUnitBtn: s.units.length>1,
+      openChangeFinishBulk: this.openChangeFinishBulk, openCopyToUnit: this.openCopyToUnit,
+      deleteSelectedNow: this.deleteSelectedNow, clearSelectionNow: this.clearSelectionNow,
+      selectAllChecked: unit ? (Object.keys(s.selectedRows[s.currentTab]).length>0 && Object.keys(s.selectedRows[s.currentTab]).length===unit.items[s.currentTab].length) : false,
+      onToggleSelectAll: (e)=>this.toggleAllRows(s.currentTab, e.target.checked),
+
+      ...this.revisionRenderVals(s),
+      ...this.modalRenderVals(s, unit),
+    };
+  }
+
+  revisionRenderVals(s){
+    const pill=c=>`display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:${c};background:color-mix(in srgb,${c} 12%,transparent);border:1px solid color-mix(in srgb,${c} 30%,transparent);white-space:nowrap;flex-shrink:0`;
+    const stColor=st=> st==='Ready for quotation'?'var(--positive)':st==='Draft'?'var(--warn)':'var(--ink2)';
+    const activeAlt=this.getActiveAlt()||{key:'A',name:'',versions:[]};
+    const activeLatest=activeAlt.versions[0]||null;
+    const raAlts=s.alts.map(a=>{
+      const latest=a.versions[0]||null;
+      const isActive=a.key===s.activeAltKey;
+      return {
+        badge:'ALT '+a.key,
+        badgeStyle:`display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:10.5px;font-weight:800;letter-spacing:.06em;font-family:var(--font-mono);flex-shrink:0;background:${isActive?'var(--accent)':'color-mix(in srgb,var(--ink2) 14%,transparent)'};color:${isActive?'var(--on-accent)':'var(--ink2)'}`,
+        name:a.name, onNameChange:(e)=>this.renameAlt(a.key,e.target.value),
+        onSelect:()=>this.selectAlt(a.key),
+        statusLabel:latest?latest.status:'Not saved yet',
+        statusStyle:pill(latest?stColor(latest.status):'var(--ink2)'),
+        totalFmt:latest?this.fmt(latest.total):'—',
+        metaLine:latest?('latest v'+latest.ver+' · '+latest.date+(latest.note?' — '+latest.note:'')):'no versions yet — use "Save as v1"',
+        readyLabel:latest&&latest.status==='Ready for quotation'?'Back to Draft':'Mark Ready',
+        readyDisplay:latest?'inline-flex':'none',
+        onToggleReady:(e)=>{ e.stopPropagation(); this.toggleReady(a.key); },
+        onDelete:(e)=>{ e.stopPropagation(); this.deleteAlt(a.key); },
+        deleteTitle:s.alts.length<=1?'A BOQ needs at least one alternative':'Delete this alternative',
+        deleteStyle:`display:${s.alts.length<=1?'none':'inline-flex'};align-items:center;justify-content:center;padding:5px 8px;border-radius:7px;flex-shrink:0;border:1px solid var(--line);background:var(--panel2);color:var(--danger);cursor:pointer`,
+        rowStyle:`display:flex;flex-direction:column;gap:8px;padding:11px 13px;border-radius:10px;cursor:${isActive?'default':'pointer'};border:1px solid ${isActive?'color-mix(in srgb,var(--accent) 45%,transparent)':'var(--line)'};background:${isActive?'color-mix(in srgb,var(--accent) 6%,transparent)':'transparent'}`,
+        versions:a.versions.slice().reverse().map(v=>{
+          const isLoaded=isActive&&s.activeVerNum===v.ver;
+          const isLatest=latest&&v.ver===latest.ver;
+          return {
+            label:'v'+v.ver,
+            title:'Alt '+a.key+' · v'+v.ver+' · '+v.status+' · '+v.date+' · '+this.fmt(v.total)+(v.note?' — '+v.note:''),
+            pick:(e)=>{ e.stopPropagation(); this.loadVersion(a.key,v.ver); },
+            chipStyle:`padding:3px 11px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);cursor:pointer;white-space:nowrap;flex-shrink:0;border:1px solid ${isLoaded?'var(--accent)':(isLatest?'color-mix(in srgb,var(--accent) 42%,transparent)':'var(--line)')};background:${isLoaded?'var(--accent)':'transparent'};color:${isLoaded?'var(--on-accent)':(isLatest?'var(--accent)':'var(--ink2)')}`,
+          };
+        }),
+      };
+    });
+    const raViewingOld=!!(activeLatest&&s.activeVerNum&&s.activeVerNum<activeLatest.ver);
+    const nextKey=this.nextAltKey();
+    const nextVer=(activeLatest?activeLatest.ver:0)+1;
+    const canOverwrite=!!(activeLatest&&activeLatest.status==='Draft'&&!raViewingOld);
+    const saveVer=canOverwrite?activeLatest.ver:nextVer;
+    const isAlt=s.cmtMode==='alt';
+    const dirtyColor=s.dirty?'var(--warn)':'var(--ink2)';
+    return {
+      raAlts, raViewingOld,
+      raViewingLabel:'Alt '+activeAlt.key+' · v'+(s.activeVerNum||1),
+      raLoadActiveLatest:()=>{ if(activeLatest) this.loadVersion(activeAlt.key, activeLatest.ver); },
+      raWorkingLabel:'Editing Alt '+activeAlt.key+(s.activeVerNum?' · v'+s.activeVerNum:' · no saved version yet')+(s.dirty?' · unsaved edits':''),
+      raWorkingChipStyle:`display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);white-space:nowrap;color:${dirtyColor};background:color-mix(in srgb,${dirtyColor} 10%,transparent);border:1px solid color-mix(in srgb,${dirtyColor} 30%,transparent)`,
+      openCommitModal:this.openCommitModal, openNewAltModal:this.openNewAltModal,
+      altVerChip:'Alt '+activeAlt.key+(s.activeVerNum?' · v'+s.activeVerNum:' · unsaved'),
+      statRevision:'Alt '+activeAlt.key+(s.activeVerNum?' · v'+s.activeVerNum:' · —'),
+      statRevisionSub:s.dirty?'unsaved edits':(s.activeVerNum?'saved':'no versions saved yet'),
+      isCommitModal:s.modal==='commit',
+      cmtTitle:isAlt?'Save as New Alternative':(canOverwrite?'Update Draft Version':'Save New Version'),
+      cmtTotalFmt:this.fmt(this.grandNow()),
+      cmtCountsLabel:s.units.length+' unit'+(s.units.length===1?'':'s')+' · '+this.itemsNow()+' items · pricelist '+(s.projectMeta.priceListVersion||s.priceListLatest),
+      cmtIsAlt:isAlt,
+      cmtHeadline: isAlt
+        ? ('Saves the working calculation as Alt '+nextKey+' · v1 — a separate option the client picks between. Alt '+activeAlt.key+' keeps its own versions.')
+        : (canOverwrite
+          ? ('Alt '+activeAlt.key+' · v'+activeLatest.ver+' is still a draft, so saving updates it in place. No new version is created.')
+          : ('Saves the working calculation as Alt '+activeAlt.key+' · v'+nextVer+'.'+(activeLatest?(' v'+activeLatest.ver+' stays in the history below it — the newest ready version is the one you quote.'):' This is the first saved version of this alternative.'))),
+      cmtSwitchHint: isAlt ? ('Just updating Alt '+activeAlt.key+' instead?') : 'Offering the client a different scheme instead?',
+      cmtSwitchLabel: isAlt ? ((canOverwrite?'Update v':'Save as v')+saveVer+' of Alt '+activeAlt.key) : ('Save as a new alternative (Alt '+nextKey+')'),
+      cmtSwitchMode:()=>this.setState({cmtMode:isAlt?'version':'alt'}),
+      cmtName:s.cmtName, onCmtNameChange:(e)=>this.setState({cmtName:e.target.value, cmtNameError:false}),
+      cmtNameError:!!s.cmtNameError,
+      cmtNameBorder:s.cmtNameError?'var(--danger)':'var(--line)',
+      cmtNote:s.cmtNote, onCmtNoteChange:(e)=>this.setState({cmtNote:e.target.value}),
+      cmtReady:s.cmtReady,
+      cmtToggleReady:()=>this.setState({cmtReady:!s.cmtReady}),
+      cmtReadyBoxStyle:`width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;border:1.5px solid ${s.cmtReady?'var(--positive)':'var(--line)'};background:${s.cmtReady?'var(--positive)':'var(--panel2)'};color:#fff`,
+      confirmCommit:this.confirmCommit,
+      cmtConfirmLabel:isAlt?('Save Alt '+nextKey+' · v1'):((canOverwrite?'Update Alt ':'Save Alt ')+activeAlt.key+' · v'+saveVer),
+      raSaveBtnLabel:canOverwrite?('Update v'+saveVer):('Save as v'+nextVer),
+    };
+  }
+
+  modalRenderVals(s, unit){
+    const modalOpen = !!s.modal;
+    const isCustomModal = s.modal==='custom';
+    const isEfModal = s.modal==='editFinishSingle';
+    const isBfcModal = s.modal==='bulkFinish';
+    const isCtuModal = s.modal==='copyToUnit';
+    const modalBoxStyle = `background:var(--panel2);border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 12px 36px rgba(0,0,0,.3)`;
+
+    const out = {
+      modalOpen, modalBoxStyle, onBackdropClick: this.onBackdropClick, closeModal: this.closeModal,
+      isCustomModal, isEfModal, isBfcModal, isCtuModal,
+      cmDesc:s.cmDesc, cmFinish:s.cmFinish, cmThickness:s.cmThickness, cmUnit:s.cmUnit, cmPrice:s.cmPrice, cmQty:s.cmQty, cmNotes:s.cmNotes,
+      onCmDescChange:this.onCmDescChange, onCmFinishChange:this.onCmFinishChange, onCmThicknessChange:this.onCmThicknessChange,
+      onCmUnitChange:this.onCmUnitChange, onCmPriceChange:this.onCmPriceChange, onCmQtyChange:this.onCmQtyChange, onCmNotesChange:this.onCmNotesChange,
+      confirmCustom: this.confirmCustom,
+      efItemDesc:'', efOptions:[], efSelKey:s.efSelKey, onEfSelectChange:this.onEfSelectChange, commitFinishSingle:this.commitFinishSingle,
+      bfcCountLabel:'', bfcShowHandle:false, bfcFinish:s.bfcFinish, bfcFinishOptions:s.bfcFinishOptions, onBfcFinishChange:this.onBfcFinishChange,
+      bfcVariantStdStyle:'', bfcVariantGolaStyle:'', onBfcVariantStandard:this.onBfcVariantStandard, onBfcVariantGola:this.onBfcVariantGola,
+      bfcPreviewText:'', applyBulkFinish:this.applyBulkFinish,
+      ctuCountLabel:'', ctuUnits:[], ctuConfirming:!!s.ctuConfirmTarget, ctuConfirmName:'', cancelCopyConfirm:this.cancelCopyConfirm, confirmCopy:this.confirmCopy,
+    };
+
+    if(isEfModal && s.efSec && s.efRowId){
+      const u = this.getUnit();
+      const row = u && u.items[s.efSec].find(r=>r.id===s.efRowId);
+      if(row){
+        out.efItemDesc = row.desc;
+        out.efOptions = this.editFinishOptions(s.efSec,row).map(o=>({key:o.key, optionLabel:o.label+' — Rp '+this.fmtNum(o.price)}));
+      }
+    }
+
+    if(isBfcModal){
+      out.bfcCountLabel = s.bfcEligibleIds.length + ' Item' + (s.bfcEligibleIds.length===1?'':'s');
+      out.bfcShowHandle = s.bfcSec==='kitchen';
+      out.bfcVariantStdStyle = `padding:0 12px;height:36px;border-radius:6px;font-size:12.5px;font-weight:600;border:1px solid ${s.bfcVariant==='standard'?'var(--accent)':'color-mix(in srgb,var(--accent) 28%,transparent)'};background:${s.bfcVariant==='standard'?'var(--accent)':'var(--panel2)'};color:${s.bfcVariant==='standard'?'var(--on-accent)':'var(--accent)'}`;
+      out.bfcVariantGolaStyle = `padding:0 12px;height:36px;border-radius:6px;font-size:12.5px;font-weight:600;border:1px solid ${s.bfcVariant==='gola'?'var(--accent)':'color-mix(in srgb,var(--accent) 28%,transparent)'};background:${s.bfcVariant==='gola'?'var(--accent)':'var(--panel2)'};color:${s.bfcVariant==='gola'?'var(--on-accent)':'var(--accent)'}`;
+      const {updated,skipped} = this.bulkFinishPreview();
+      out.bfcPreviewText = `Will update ${updated} item${updated===1?'':'s'}${skipped?`, skip ${skipped} (finish unavailable)`:''}`;
+    }
+
+    if(isCtuModal){
+      const sec = s.ctuSec;
+      const ids = Object.keys(s.selectedRows[sec]||{});
+      out.ctuCountLabel = ids.length + ' item' + (ids.length===1?'':'s');
+      out.ctuUnits = s.units.filter(u=>u.id!==s.activeUnitId).map(u=>({
+        id:u.id, name:u.name,
+        rowStyle:`padding:9px 12px;border:1px solid ${s.ctuConfirmTarget===u.id?'var(--accent)':'var(--line)'};border-radius:7px;font-size:13px;cursor:pointer;margin-bottom:6px;background:${s.ctuConfirmTarget===u.id?'color-mix(in srgb,var(--accent) 10%,transparent)':'var(--panel2)'}`,
+        onClick: ()=>this.selectCopyTarget(u.id),
+      }));
+      if(s.ctuConfirmTarget){ out.ctuConfirmName = (s.units.find(u=>u.id===s.ctuConfirmTarget)||{}).name||''; }
+    }
+
+    return out;
+  }
+}
+
+</script>
+</body>
+</html>
