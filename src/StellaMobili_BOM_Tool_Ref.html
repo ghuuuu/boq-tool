@@ -2208,8 +2208,9 @@ function requireProjectFields(){
 // Export filename: project name, date, quotation version, mode — Windows-safe.
 function exportFileBase(incBuf){
   const date=projectMeta.date||new Date().toISOString().slice(0,10);
-  const ver='Alt '+activeAltKey+(activeVerNum?' v'+activeVerNum:' draft');
-  return ((projectMeta.name||'BOQ').trim()+'_'+date+'_'+ver+'_'+(incBuf?'BOQ (Buffer)':'BOQ')).replace(/[\\/:*?"<>|]/g,'-');
+  const ver='Alt-'+activeAltKey+(activeVerNum?'-v'+activeVerNum:'');
+  const name=(projectMeta.name||'BOQ').trim().replace(/\s*[–—]\s*/g,'_').replace(/\s+-\s+/g,'_');
+  return (name+'_'+date+'_'+ver+'_'+(incBuf?'BOQ(Buffer)':'BOQ')).replace(/[\\/:*?"<>|]/g,'-');
 }
 
 function openExportModal(kind){
