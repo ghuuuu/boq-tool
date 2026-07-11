@@ -283,7 +283,7 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
 .col-qty{width:80px;text-align:right}
 .col-price{width:130px;text-align:right}
 .col-total{width:150px;text-align:right}
-.col-actions{width:70px;text-align:right}
+.col-actions{width:122px;text-align:right}
 .item-name{font-weight:600;color:var(--ink)}
 .item-sub{font-size:12px;color:var(--ink-faint);margin-top:2px}
 .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.02em;background:var(--pu-50);color:var(--pu-700);margin-left:4px;vertical-align:middle}
@@ -294,11 +294,18 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
 /* Category cell: stack the category tag + CUSTOM + BUFFER pills vertically */
 .cat-stack{display:inline-flex;flex-direction:column;align-items:stretch;gap:3px}
 .cat-stack .tag{margin-left:0;text-align:center;display:block}
-/* Buffer toggle (shield) — insurance stock: counts in totals, excluded from the Sales Order */
-.buf-btn{width:26px;height:26px;border-radius:5px;display:grid;place-items:center;flex-shrink:0;border:1px solid var(--line);background:var(--surface);color:var(--ink-faint);cursor:pointer;transition:all .15s}
-.buf-btn:hover{border-color:color-mix(in srgb,var(--buffer) 55%,transparent);color:var(--buffer)}
-.buf-btn.on{border-color:color-mix(in srgb,var(--buffer) 55%,transparent);background:color-mix(in srgb,var(--buffer) 14%,transparent);color:var(--buffer)}
-.buf-btn svg{width:13px;height:13px}
+/* Row actions — uniform segmented group (buffer / duplicate / delete), flush-joined like the qty stepper */
+.row-actions{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--surface);flex-shrink:0}
+.row-actions button{width:36px;height:34px;display:grid;place-items:center;border:0;background:transparent;cursor:pointer;transition:background .12s,color .12s;padding:0}
+.row-actions button+button{border-left:1px solid var(--line)}
+.row-actions button svg{width:16px;height:16px}
+.row-actions .act-buf{color:color-mix(in srgb,var(--buffer) 70%,var(--ink-faint))}
+.row-actions .act-buf:hover{background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer)}
+.row-actions .act-buf.on{background:color-mix(in srgb,var(--buffer) 16%,transparent);color:var(--buffer)}
+.row-actions .act-dup{color:color-mix(in srgb,var(--accent) 70%,var(--ink-faint))}
+.row-actions .act-dup:hover{background:var(--pu-50);color:var(--pu-700)}
+.row-actions .act-del{color:color-mix(in srgb,var(--danger) 62%,var(--ink-faint))}
+.row-actions .act-del:hover{background:var(--danger-bg);color:var(--danger)}
 .buffer-note{font-weight:600;font-size:12px;color:var(--buffer);margin-left:8px}
 .notes-input{width:100%;border:1px solid transparent;padding:4px 6px;border-radius:5px;font-size:13px;font-family:inherit;color:var(--ink-faint);background:transparent;transition:border-color .15s}
 .notes-input:hover{border-color:var(--line)}
@@ -1531,17 +1538,17 @@ function buildTableCard(unit, sec){
       <td class="col-qty"><span class="qtybox"><input class="input compact qty" type="number" value="${r.qty}" min="1" step="any" onchange="updateQty('${sec}','${r.id}',this.value)">${QSTEPS}</span></td>
       <td class="col-total mono" style="font-weight:700;color:var(--pu-700)">${fmt(r.price*r.qty)}</td>
       <td><input class="notes-input" type="text" placeholder="Notes…" value="${escAttr(r.notes||'')}" onchange="updateNotes('${sec}','${r.id}',this.value)">${r.notes?`<span class="notes-print-val">${esc(r.notes)}</span>`:''}</td>
-      <td class="col-actions"><div class="row" style="gap:4px;justify-content:flex-end">
-        <button class="buf-btn${r.buffer===true?' on':''}" onclick="toggleRowBuffer('${sec}','${r.id}')" title="${r.buffer===true?'Buffer item — counted in totals, excluded from the Sales Order. Click to unmark.':'Mark as buffer (insurance stock: counts in totals, excluded from the Sales Order)'}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <td class="col-actions"><span class="row-actions">
+        <button class="act-buf${r.buffer===true?' on':''}" onclick="toggleRowBuffer('${sec}','${r.id}')" title="${r.buffer===true?'Buffer item — counted in totals, excluded from the Sales Order. Click to unmark.':'Mark as buffer (insurance stock: counts in totals, excluded from the Sales Order)'}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </button>
-        <button class="btn btn-xs" onclick="duplicateRow('${sec}','${r.id}')" title="Duplicate row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <button class="act-dup" onclick="duplicateRow('${sec}','${r.id}')" title="Duplicate item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
-        <button class="icon-x" onclick="removeRow('${sec}','${r.id}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <button class="act-del" onclick="removeRow('${sec}','${r.id}')" title="Delete item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
-      </div></td>
+      </span></td>
     </tr>`;
   }).join('');
   const selBar=`<div class="sel-bar${selCount?'':' hidden'}" id="sel-bar-${sec}">
