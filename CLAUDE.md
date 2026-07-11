@@ -514,6 +514,28 @@ printed document should also move to brass. Spectral BOM still uses blue — nev
 
 ---
 
+## Claude Design Project Sync
+
+The linked Claude Design project ("SM BOQ Tool", projectId `9874fbe6-f645-4f10-9fdb-981917e3d868`,
+claude.ai/design) holds an interactive design mock of this tool:
+- `Stella Mobili BOQ.dc.html` — the design canvas (React mock, `sc-if`/`sc-for` templating,
+  sample data from `sm-boq-data.js`, runtime `support.js`). Includes a dark-mode variant
+  (`data-dir="b"`) that intentionally does NOT exist in the tool.
+- `uploads/StellaMobili_BOM_Tool.html` — reference copy of the current built tool.
+
+**This repo is the source of truth.** The canvas is vendored at `docs/design/canvas/`
+(same three files, git-versioned). Sync workflow after a UI change to the tool:
+1. Port the change into `docs/design/canvas/Stella Mobili BOQ.dc.html` (edit locally,
+   preview via the `design-canvas` entry in `.claude/launch.json` — it runs standalone).
+2. Push via the DesignSync tool: `finalize_plan` + `write_files` to the projectId above
+   (write `Stella Mobili BOQ.dc.html` from the vendored copy; also refresh
+   `uploads/StellaMobili_BOM_Tool.html` from the repo root after a rebuild).
+3. Commit the vendored copy so git history matches what's on claude.ai.
+
+Last full sync: 2026-07-11 (DB browser removed, tool-version chip added, qty steppers ported).
+
+---
+
 ## What Spectral_BOM.html Is
 
 The Spectral BOM tool (`Spectral_BOM.html`) is the **design reference**.
