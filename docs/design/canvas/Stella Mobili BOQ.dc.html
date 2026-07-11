@@ -1714,8 +1714,9 @@ class Component extends DCLogic {
   exportFileBase(incBuf){
     const s=this.state, m=s.projectMeta;
     const date=m.date||new Date().toISOString().slice(0,10);
-    const ver='Alt '+s.activeAltKey+(s.activeVerNum?' v'+s.activeVerNum:' draft');
-    return ((m.name||'BOQ').trim()+'_'+date+'_'+ver+'_'+(incBuf?'BOQ (Buffer)':'BOQ')).replace(/[\\/:*?"<>|]/g,'-');
+    const ver='Alt-'+s.activeAltKey+(s.activeVerNum?'-v'+s.activeVerNum:'');
+    const name=(m.name||'BOQ').trim().replace(/\s*[\u2013\u2014]\s*/g,'_').replace(/\s+-\s+/g,'_');
+    return (name+'_'+date+'_'+ver+'_'+(incBuf?'BOQ(Buffer)':'BOQ')).replace(/[\\/:*?"<>|]/g,'-');
   }
   exportExcelNow = (incBuf=true)=>{
     if(typeof XLSX==='undefined'){ this.toast('XLSX not loaded','error'); return; }
