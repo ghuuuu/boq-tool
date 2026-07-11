@@ -1059,7 +1059,7 @@ function buildAddBar(sec){
       <div class="field ab-search" style="flex:2;min-width:220px"><label>Search / Browse Item</label>
         <div class="search-picker search-icon-wrap">
           <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="input compact input-search" type="text" id="kit-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('kit')" onfocus="onSearchFocus('kit')" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter('kit','kitchen');}" style="width:100%">
+          <input class="input compact input-search" type="text" id="kit-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('kit')" onfocus="onSearchFocus('kit')" onclick="onSearchClick('kit')" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter('kit','kitchen');}" style="width:100%">
           <div class="search-results hidden" id="kit-results"></div>
         </div>
       </div>
@@ -1089,7 +1089,7 @@ function buildAddBar(sec){
       <div class="field ab-search" style="flex:2;min-width:220px"><label>Search / Browse Item</label>
         <div class="search-picker search-icon-wrap">
           <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="input compact input-search" type="text" id="wd-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('wd')" onfocus="onSearchFocus('wd')" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter('wd','wardrobe');}" style="width:100%">
+          <input class="input compact input-search" type="text" id="wd-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('wd')" onfocus="onSearchFocus('wd')" onclick="onSearchClick('wd')" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter('wd','wardrobe');}" style="width:100%">
           <div class="search-results hidden" id="wd-results"></div>
         </div>
       </div>
@@ -1111,7 +1111,7 @@ function buildAddBar(sec){
     <div class="field ab-search" style="flex:2;min-width:220px"><label>Search / Browse Item</label>
       <div class="search-picker search-icon-wrap">
         <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="input compact input-search" type="text" id="acc-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('acc')" onfocus="onSearchFocus('acc')" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter('acc','accessories');}" style="width:100%">
+        <input class="input compact input-search" type="text" id="acc-search" placeholder="Type to search or click to browse…" autocomplete="off" oninput="onSearch('acc')" onfocus="onSearchFocus('acc')" onclick="onSearchClick('acc')" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEnter('acc','accessories');}" style="width:100%">
         <div class="search-results hidden" id="acc-results"></div>
       </div>
     </div>
@@ -1295,6 +1295,12 @@ function getPool(p){
 }
 
 function onSearchFocus(p){ if(!(el(p+'-search')?.value)) showDropdown(p, getPool(p)); }
+// Click on an already-focused field fires no focus event — reopen the dropdown explicitly.
+function onSearchClick(p){
+  const r=el(p+'-results');
+  if(r && !r.classList.contains('hidden')) return;   // already open
+  if(el(p+'-search')?.value) onSearch(p); else showDropdown(p, getPool(p));
+}
 function onSearch(p){
   const q=(el(p+'-search')?.value||'').toLowerCase();
   const pool=getPool(p);
@@ -1491,6 +1497,7 @@ function addRow(sec){
   if(el(p+'-preview')) el(p+'-preview').textContent='—';
   selectedItems[p]=null;
   el(p+'-search')?.focus();
+  showDropdown(p, getPool(p));   // reopen browse list — focus() alone fires no event if already focused
 }
 
 function validateGola(item, finish, variant){
