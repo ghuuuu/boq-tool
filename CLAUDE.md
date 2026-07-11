@@ -514,6 +514,18 @@ printed document should also move to brass. Spectral BOM still uses blue — nev
 
 ---
 
+## Tool Versioning (the "v1.0.0" topbar chip)
+
+The tool-version chip (`#toolVer` in the topbar, hardcoded in the template) is bumped
+**manually, only when the user asks** — usually at the end of a working session. The user
+decides together with Claude whether the session's changes warrant bumping the minor
+(second number: feature additions the PIC would notice) or the patch (third number: small
+fixes/tweaks). Do NOT bump it automatically or wire it to the build. When bumping, update
+the chip in `src/StellaMobili_BOM_Tool_Ref.html` and port the same value to the design
+canvas so both stay in step.
+
+---
+
 ## Claude Design Project Sync
 
 The linked Claude Design project ("SM BOQ Tool", projectId `9874fbe6-f645-4f10-9fdb-981917e3d868`,
