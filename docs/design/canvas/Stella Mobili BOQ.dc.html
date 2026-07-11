@@ -47,6 +47,17 @@ html,body{margin:0;padding:0}
 .smroot .qsteps button{flex:1;min-height:0;padding:0;border:0;background:var(--panel2);color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .smroot .qsteps button+button{border-top:1px solid var(--line2)}
 .smroot .qsteps button:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+/* Row actions — uniform segmented group (buffer / duplicate / delete), flush-joined like the qty stepper */
+.smroot .row-actions{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--panel2);flex-shrink:0}
+.smroot .row-actions button{width:36px;height:34px;display:grid;place-items:center;border:0;background:transparent;cursor:pointer;transition:background .12s,color .12s;padding:0}
+.smroot .row-actions button+button{border-left:1px solid var(--line)}
+.smroot .row-actions button svg{width:16px;height:16px}
+.smroot .row-actions .act-buf{color:color-mix(in srgb,var(--buffer) 70%,var(--ink2))}
+.smroot .row-actions .act-buf:hover{background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer)}
+.smroot .row-actions .act-dup{color:color-mix(in srgb,var(--accent) 70%,var(--ink2))}
+.smroot .row-actions .act-dup:hover{background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent)}
+.smroot .row-actions .act-del{color:color-mix(in srgb,var(--danger) 62%,var(--ink2))}
+.smroot .row-actions .act-del:hover{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}
 </style>
 </helmet>
 
@@ -608,17 +619,17 @@ html,body{margin:0;padding:0}
                         <input value="{{ row.notes }}" onChange="{{ row.onNotesChange }}" placeholder="+ Add note…" style="width:100%;border:1px solid var(--line2);padding:5px 7px;border-radius:5px;font-size:12px;font-family:inherit;color:var(--ink);background:var(--panel)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
                       </td>
                       <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:right">
-                        <div style="display:flex;gap:4px;justify-content:flex-end">
-                          <button onclick="{{ row.onToggleBuffer }}" title="{{ row.bufferTitle }}" style="{{ row.bufferBtnStyle }}">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <span class="row-actions">
+                          <button class="act-buf" onclick="{{ row.onToggleBuffer }}" title="{{ row.bufferTitle }}" style="{{ row.bufferBtnStyle }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                           </button>
-                          <button onclick="{{ row.onDuplicate }}" title="Duplicate row" style="width:24px;height:24px;border-radius:5px;border:1px solid var(--line);background:var(--panel2);display:grid;place-items:center;color:var(--ink);white-space:nowrap;flex-shrink:0">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                          <button class="act-dup" onclick="{{ row.onDuplicate }}" title="Duplicate item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                           </button>
-                          <button onclick="{{ row.onRemove }}" title="Delete row" style="width:24px;height:24px;border-radius:5px;border:1px solid transparent;background:transparent;display:grid;place-items:center;color:var(--ink2);white-space:nowrap;flex-shrink:0">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                          <button class="act-del" onclick="{{ row.onRemove }}" title="Delete item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                           </button>
-                        </div>
+                        </span>
                       </td>
                     </tr>
                   </sc-for>
@@ -1898,9 +1909,7 @@ class Component extends DCLogic {
           onDescChange: (e)=>this.updateDesc(sec,r.id,e.target.value),
           isBuffer,
           bufferTitle: isBuffer ? 'Buffer item — counted in totals, excluded from SO. Click to unmark' : 'Mark as buffer (insurance stock: counts in totals, excluded from SO)',
-          bufferBtnStyle: 'width:24px;height:24px;border-radius:5px;display:grid;place-items:center;white-space:nowrap;flex-shrink:0;'+(isBuffer
-            ? 'border:1px solid color-mix(in srgb,var(--buffer) 55%,transparent);background:color-mix(in srgb,var(--buffer) 14%,transparent);color:var(--buffer)'
-            : 'border:1px solid var(--line);background:var(--panel2);color:var(--ink2)'),
+          bufferBtnStyle: isBuffer ? 'background:color-mix(in srgb,var(--buffer) 16%,transparent);color:var(--buffer)' : '',
           onToggleBuffer: ()=>this.toggleRowBuffer(sec,r.id),
           onDuplicate: ()=>this.duplicateRow(sec,r.id),
           onRemove: ()=>this.removeRow(sec,r.id),
