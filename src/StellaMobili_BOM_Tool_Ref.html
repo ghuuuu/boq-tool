@@ -84,6 +84,10 @@ input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
 .rev-pill{background:var(--pu-50);color:var(--pu-700);border:1px solid var(--pu-100);font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.04em;font-family:var(--font-num);font-variant-numeric:tabular-nums}
 .alt-ver-chip{background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent)}
 .tool-ver-chip{background:transparent;color:var(--ink2);border-color:var(--line)}
+.save-status{display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--ink-faint);border-color:var(--line);transition:color .2s,border-color .2s}
+.save-status.unsaved{color:#B4832E;border-color:color-mix(in srgb,#B4832E 40%,transparent);background:color-mix(in srgb,#B4832E 8%,transparent)}
+.save-status.saving{color:var(--ink-faint);font-style:italic}
+.save-status.autosaved{color:#3E7C5A;border-color:color-mix(in srgb,#3E7C5A 35%,transparent)}
 .dirty-flag{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--warn);font-weight:600;flex-shrink:0}
 .dirty-dot{width:7px;height:7px;border-radius:999px;background:var(--warn);animation:dirtyPulse 1.6s ease-in-out infinite}
 @keyframes dirtyPulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -499,21 +503,9 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
     <span class="here" id="crumb-view">Overview</span>
   </div>
   <div class="topbar-actions">
-    <span class="dirty-flag" id="dirtyFlag" style="display:none"><span class="dirty-dot"></span>Unsaved edits</span>
-    <span class="rev-pill alt-ver-chip" id="altVerChip" title="Alternative and version currently in the editor">Alt A · unsaved</span>
+    <span class="rev-pill save-status saved" id="saveStatus" title="Autosave status">Saved</span>
     <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.1.0</span>
-    <span class="rev-pill" id="revPill" title="Price list version">v1</span>
-    <div class="topbar-iconbtns">
-      <button class="icon-btn" onclick="saveFile()" title="Save .smbq to disk">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      </button>
-      <button class="icon-btn" onclick="document.getElementById('loadInput').click()" title="Load .smbq from disk">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      </button>
-      <button class="icon-btn" onclick="openExportModal('excel')" title="Export to Excel">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 14 12 9 7 14"/><line x1="12" y1="9" x2="12" y2="21"/></svg>
-      </button>
-    </div>
+    <span class="rev-pill" id="revPill" title="Price list version">Pricelist</span>
     <input type="file" id="loadInput" accept=".smbq,.json" style="display:none" onchange="loadFile(this)">
   </div>
 </header>
@@ -586,13 +578,14 @@ let customModalSection = 'kitchen';
 let projectMeta = {name:'',client:'',pic:'',date:'',notes:'',priceListVersion:''};
 // Revisions & Alternatives + dirty tracking
 let alts = [{key:'A', name:'Initial scheme', versions:[]}];
+let _autosaveDebounce=null, _lastAutosaveAt=null;   // save-status chip + debounced autosave
 let activeAltKey = 'A', activeVerNum = null, dirty = false;
 let selectedRows = {kitchen:new Set(),wardrobe:new Set(),accessories:new Set()};
 let dragUnit = null, dragRow = {sec:null, id:null};
 let _mousedownEl = null;
 
 function getPD(){ return ALL_PRICE_DATA[projectMeta.priceListVersion] || ALL_PRICE_DATA[PRICE_LIST_LATEST]; }
-function updateRevPill(){ const p=document.getElementById('revPill'); if(p) p.textContent=projectMeta.priceListVersion||PRICE_LIST_LATEST; }
+function updateRevPill(){ const p=document.getElementById('revPill'); if(p) p.textContent='Pricelist '+(projectMeta.priceListVersion||PRICE_LIST_LATEST); }
 
 // ====================================================================
 // INIT
@@ -618,7 +611,12 @@ document.addEventListener('keydown', e => {
 // ---- Unsaved-work protection: autosave to localStorage + warn before closing ----
 const AUTOSAVE_KEY='smboq_autosave';
 function autosaveNow(){
-  try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(Object.assign(getState(),{autosavedAt:new Date().toISOString()}))); }catch(e){}
+  try{
+    updateSaveStatus('saving');
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(Object.assign(getState(),{autosavedAt:new Date().toISOString()})));
+    _lastAutosaveAt=new Date();
+  }catch(e){}
+  setTimeout(()=>updateSaveStatus(), 400);
 }
 setInterval(()=>{ if(dirty) autosaveNow(); }, 30000);
 window.addEventListener('beforeunload', e=>{
@@ -1884,22 +1882,51 @@ function confirmCustom(){
 // ====================================================================
 // REVISIONS & ALTERNATIVES + DIRTY TRACKING
 // ====================================================================
-function markDirty(){ if(!dirty){ dirty=true; updateDirtyIndicator(); updateAltVerChip(); } }
-function updateDirtyIndicator(){
-  const f=document.getElementById('dirtyFlag'); if(f) f.style.display=dirty?'flex':'none';
+function markDirty(){
+  if(!dirty){ dirty=true; _lastAutosaveAt=null; }
+  updateSaveStatus();
+  clearTimeout(_autosaveDebounce);
+  _autosaveDebounce=setTimeout(()=>{ if(dirty) autosaveNow(); }, 2500);   // M365-style: autosave shortly after the edit
 }
-function updateAltVerChip(){
-  const c=document.getElementById('altVerChip');
-  if(c) c.textContent='Alt '+activeAltKey+(activeVerNum?' · v'+activeVerNum:' · unsaved');
+function updateSaveStatus(state){
+  const c=document.getElementById('saveStatus'); if(!c) return;
+  let txt, cls='rev-pill save-status', dot=false;
+  if(state==='saving'){ txt='Saving…'; cls+=' saving'; }
+  else if(!dirty){ txt='Saved'; cls+=' saved'; }
+  else if(_lastAutosaveAt){ txt='Autosaved '+_lastAutosaveAt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); cls+=' autosaved'; }
+  else { txt='Unsaved edits'; cls+=' unsaved'; dot=true; }
+  c.className=cls;
+  c.innerHTML=(dot?'<span class="dirty-dot"></span>':'')+esc(txt);
 }
+function updateDirtyIndicator(){ updateSaveStatus(); }   // legacy callers
+function updateAltVerChip(){ updateSaveStatus(); }       // legacy callers (chip replaced by save status)
 function grandNow(){ return units.reduce((s,u)=>s+unitTotal(u),0); }
 function itemsNow(){ return units.reduce((sum,u)=>sum+['kitchen','wardrobe','accessories'].reduce((ss,sec)=>ss+u.items[sec].length,0),0); }
 function getActiveAlt(){ return alts.find(a=>a.key===activeAltKey) || alts[0]; }
 function nextAltKey(){ return String.fromCharCode(65+alts.length); }
 
 let _commit = {mode:'version', ready:false, nameError:false};
-function openCommitModal(){ _commit={mode:'version', ready:false, nameError:false}; renderCommitModal(); }
-function openNewAltModal(){ _commit={mode:'alt', ready:false, nameError:false}; renderCommitModal(); }
+function openCommitModal(){ _commit={mode:'version', ready:false, nameError:false}; bufferGateThenCommit(); }
+// #3: BOQs without buffer get a dedicated blue warning FIRST (Back / Continue), then the commit modal.
+function bufferGateThenCommit(){
+  if(units.some(u=>unitBufferTotal(u)>0)){ renderCommitModal(); return; }
+  showModal(`
+    <div class="modal-head"><h2>No buffer items</h2>
+      <button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding-top:22px;padding-bottom:8px">
+      <span style="width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:color-mix(in srgb,var(--buffer) 14%,transparent);border:1.5px solid color-mix(in srgb,var(--buffer) 40%,transparent);color:var(--buffer)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </span>
+      <div style="font-size:16px;font-weight:800;color:var(--buffer)">This BOQ has no buffer items</div>
+      <div style="font-size:13px;color:var(--ink-soft);line-height:1.6;max-width:380px">Buffer items are insurance stock — counted in the quotation but excluded from the Sales Order. Consider marking spare items with the <strong style="color:var(--buffer)">shield button</strong> on the item rows before saving this version.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Back</button>
+      <button class="btn" style="background:var(--buffer);border-color:var(--buffer);color:#fff" onclick="renderCommitModal()">Continue anyway</button>
+    </div>`);
+}
+function openNewAltModal(){ _commit={mode:'alt', ready:false, nameError:false}; bufferGateThenCommit(); }
 function commitToggleReady(){ _commit.ready=!_commit.ready; renderCommitModal(true); }
 function commitSwitchMode(){ _commit.mode=_commit.mode==='alt'?'version':'alt'; _commit.nameError=false; renderCommitModal(); }
 
@@ -1934,7 +1961,6 @@ function renderCommitModal(keepInputs){
             <div style="font-size:11.5px;color:var(--ink-faint);margin-top:2px">${esc(countsLabel)}</div></div>
           <div class="mono" style="font-weight:700;font-size:15px;color:var(--accent)">${fmt(grandNow())}</div>
         </div>
-        ${units.some(u=>unitBufferTotal(u)>0)?'':`<div style="display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border:1px solid #E8CE9A;background:#FCF4E4;border-radius:8px"><svg viewBox="0 0 24 24" fill="none" stroke="#8A6519" stroke-width="2" width="15" height="15" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span style="font-size:12px;color:#8A6519;line-height:1.5"><strong>No buffer items in this BOQ.</strong> Consider marking insurance stock (the shield button on item rows) before saving this version.</span></div>`}
         <div style="font-size:12.5px;color:var(--ink-faint);line-height:1.6">${esc(headline)}</div>
         ${isAlt?`<div class="field"><label>Alternative name</label>
           <input class="input compact" id="cmt-name" placeholder="e.g. Dekton benchtop, Budget scheme…" value="${escAttr(prevName)}" style="border-color:${nameBorder}">
@@ -2118,7 +2144,7 @@ function saveFile(){
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));
-  a.download=fileBaseCore()+'.smbq';
+  a.download=fileBaseNameDate()+'.smbq';   // whole project (all alts & versions) — no Alt segment
   a.click(); toast('Saved '+a.download);
   try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){}
 }
@@ -2209,6 +2235,11 @@ function requireProjectFields(){
   return false;
 }
 // Export filename: project name, date, quotation version, mode — Windows-safe.
+function fileBaseNameDate(){
+  const date=projectMeta.date||new Date().toISOString().slice(0,10);
+  const name=(projectMeta.name||'BOQ').trim().replace(/\s*[–—]\s*/g,'_').replace(/\s+-\s+/g,'_');
+  return (name+'_'+date).replace(/[\\/:*?"<>|]/g,'-');
+}
 function fileBaseCore(){
   const date=projectMeta.date||new Date().toISOString().slice(0,10);
   const ver='Alt-'+activeAltKey+(activeVerNum?'-v'+activeVerNum:'');

@@ -89,27 +89,10 @@ html,body{margin:0;padding:0}
       <span style="color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis">{{ crumbView }}</span>
     </div>
     <div style="display:{{ crumbDisplay }};flex:1"></div>
-    <sc-if value="{{ dirty }}" hint-placeholder-val="{{ false }}">
-      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--warn);font-weight:600;flex-shrink:0">
-        <span style="width:7px;height:7px;border-radius:999px;background:var(--warn);animation:smbqPulse 1.6s ease-in-out infinite"></span>
-        Unsaved edits
-      </div>
-    </sc-if>
-    <span title="Alternative and version currently in the editor" style="background:color-mix(in srgb,var(--ink2) 10%,transparent);color:var(--ink2);border:1px solid color-mix(in srgb,var(--ink2) 28%,transparent);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0">{{ altVerChip }}</span>
+    <span title="Autosave status" style="{{ saveStatusStyle }}">{{ saveStatusLabel }}</span>
     <span title="Tool version" style="background:transparent;color:var(--ink2);border:1px solid var(--line);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0">v1.1.0</span>
     <span style="background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0" data-comment-anchor="c06209d124-span">{{ revLabel }}</span>
-    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-      <button onclick="{{ saveNow }}" title="Save .smbq" style="width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--ink);border:1px solid transparent;background:transparent;white-space:nowrap;flex-shrink:0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-      </button>
-      <button onclick="{{ triggerLoadClick }}" title="Load .smbq" style="width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--ink);border:1px solid transparent;background:transparent;white-space:nowrap;flex-shrink:0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-      </button>
-      <input ref="{{ loadInputRef }}" type="file" accept=".smbq,.json" style="display:none" onChange="{{ onLoadFile }}">
-      <button onclick="{{ exportExcelNow }}" title="Export Excel" style="width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--ink);border:1px solid transparent;background:transparent;white-space:nowrap;flex-shrink:0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 14 12 9 7 14"></polyline><line x1="12" y1="9" x2="12" y2="21"></line></svg>
-      </button>
-    </div>
+    <input ref="{{ loadInputRef }}" type="file" accept=".smbq,.json" style="display:none" onChange="{{ onLoadFile }}">
   </header>
 
   <!-- ===== SHELL ===== -->
@@ -730,12 +713,6 @@ html,body{margin:0;padding:0}
               </div>
               <div style="font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--accent)">{{ cmtTotalFmt }}</div>
             </div>
-            <sc-if value="{{ cmtNoBufferWarn }}" hint-placeholder-val="{{ false }}">
-              <div style="display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border:1px solid #E8CE9A;background:#FCF4E4;border-radius:8px">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#8A6519" stroke-width="2" width="15" height="15" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                <span style="font-size:12px;color:#8A6519;line-height:1.5"><strong>No buffer items in this BOQ.</strong> Consider marking insurance stock (the shield button on item rows) before saving this version.</span>
-              </div>
-            </sc-if>
             <div style="font-size:12.5px;color:var(--ink2);line-height:1.6">{{ cmtHeadline }}</div>
             <sc-if value="{{ cmtIsAlt }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:5px">
@@ -843,6 +820,25 @@ html,body{margin:0;padding:0}
           </div>
         </sc-if>
 
+
+        <!-- ===== BUFFER GATE (no buffer items before saving a version) ===== -->
+        <sc-if value="{{ isBufferGateModal }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:17px 22px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between">
+            <h2 style="margin:0;font-size:16px;font-weight:700">No buffer items</h2>
+            <button onclick="{{ closeModal }}" style="width:22px;height:22px;border-radius:4px;border:none;background:transparent;color:var(--ink2);display:grid;place-items:center;white-space:nowrap;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+          <div style="padding:24px 22px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px">
+            <span style="width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:color-mix(in srgb,var(--buffer) 14%,transparent);border:1.5px solid color-mix(in srgb,var(--buffer) 40%,transparent);color:var(--buffer)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </span>
+            <div style="font-size:16px;font-weight:800;color:var(--buffer)">This BOQ has no buffer items</div>
+            <div style="font-size:13px;color:var(--ink2);line-height:1.6;max-width:380px">Buffer items are insurance stock — counted in the quotation but excluded from the Sales Order. Consider marking spare items with the <strong style="color:var(--buffer)">shield button</strong> on the item rows before saving this version.</div>
+          </div>
+          <div style="padding:13px 22px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end;gap:8px">
+            <button onclick="{{ closeModal }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--ink);white-space:nowrap;flex-shrink:0">Back</button>
+            <button onclick="{{ continueToCommit }}" style="padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;background:var(--buffer);color:#fff;white-space:nowrap;flex-shrink:0">Continue anyway</button>
+          </div>
+        </sc-if>
 
         <!-- ===== EXPORT CHOICE ===== -->
         <sc-if value="{{ isExportChoiceModal }}" hint-placeholder-val="{{ false }}">
@@ -1529,8 +1525,10 @@ class Component extends DCLogic {
   itemsNow(){ return this.state.units.reduce((sum,u)=>sum+['kitchen','wardrobe','accessories'].reduce((ss,sec)=>ss+u.items[sec].length,0),0); }
   getActiveAlt(){ return this.state.alts.find(a=>a.key===this.state.activeAltKey) || this.state.alts[0]; }
   nextAltKey(){ return String.fromCharCode(65+this.state.alts.length); }
-  openCommitModal = ()=>{ this.setState({modal:'commit', cmtMode:'version', cmtName:'', cmtNote:'', cmtReady:false, cmtNameError:false}); };
-  openNewAltModal = ()=>{ this.setState({modal:'commit', cmtMode:'alt', cmtName:'', cmtNote:'', cmtReady:false, cmtNameError:false}); };
+  hasBufferItems(){ return this.state.units.some(u=>['kitchen','wardrobe','accessories'].some(sec=>u.items[sec].some(r=>r.buffer===true))); }
+  openCommitModal = ()=>{ this.setState(this.hasBufferItems()?{modal:'commit', cmtMode:'version', cmtName:'', cmtNote:'', cmtReady:false, cmtNameError:false}:{modal:'bufferGate', cmtMode:'version', cmtName:'', cmtNote:'', cmtReady:false, cmtNameError:false}); };
+  openNewAltModal = ()=>{ this.setState(this.hasBufferItems()?{modal:'commit', cmtMode:'alt', cmtName:'', cmtNote:'', cmtReady:false, cmtNameError:false}:{modal:'bufferGate', cmtMode:'alt', cmtName:'', cmtNote:'', cmtReady:false, cmtNameError:false}); };
+  continueToCommit = ()=>{ this.setState({modal:'commit'}); };
   confirmCommit = ()=>{
     const s=this.state;
     const entry={
@@ -1671,7 +1669,8 @@ class Component extends DCLogic {
     const plv=st.projectMeta.priceListVersion||st.priceListLatest;
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));
-    a.download=`${proj} Alt-${st.activeAltKey}${st.activeVerNum?' v'+st.activeVerNum:''} ${plv}.smbq`; a.click();
+    const dt=(st.projectMeta&&st.projectMeta.date)||new Date().toISOString().slice(0,10);
+    a.download=(((st.projectMeta&&st.projectMeta.name)||'BOQ').trim().replace(/\s*[\u2013\u2014]\s*/g,'_')+'_'+dt).replace(/[\\/:*?"<>|]/g,'-')+'.smbq'; a.click();
     this.toast('Saved .smbq — all versions & alternatives included');
   };
   triggerLoadClick = ()=>{ if(this.loadInputRef) this.loadInputRef.click(); };
@@ -1849,7 +1848,7 @@ class Component extends DCLogic {
   renderVals(){
     const s=this.state;
     if(!s.loaded){
-      return { loaded:false, themeDir:(this.props.theme==='dark'?'b':'a'), priceFontKey:this.priceFontKey(), showOverview:false, showUnit:false, toasts:[], sidebarUnits:[], overviewRows:[], altVerChip:'', raAlts:[],
+      return { loaded:false, themeDir:(this.props.theme==='dark'?'b':'a'), priceFontKey:this.priceFontKey(), showOverview:false, showUnit:false, toasts:[], sidebarUnits:[], overviewRows:[], saveStatusLabel:'Saved', saveStatusStyle:'font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0;color:var(--ink2);border:1px solid var(--line)', raAlts:[],
         shellCols:'260px 5px 1fr', sbResizerStyle:'', sidebarStyle:'background:var(--panel2);border-right:1px solid var(--line);padding:16px 12px', mobileMenuDisplay:'none', crumbDisplay:'flex', crumbProject:'—', crumbView:'Loading…', revLabel:'', dirty:false,
         sbLabelDisplay:'flex', sbAddJustify:'flex-start', collapseArrowStyle:'', navOverviewStyle:'', metaGridCols:'1fr', heroStatCols:'1fr', heroTotalStyle:'', heroSideStyle:'', statRowCols:'1fr', tabs:[], isKitchenTab:false, isWardrobeTab:false, isAccessoriesTab:false, tableEmpty:false, tableNotEmpty:false, tableRows:[], selBarVisible:false, KIT_CATS:[], WD_CATS:[], ACC_CATS:[],
       };
@@ -2177,11 +2176,13 @@ class Component extends DCLogic {
       raWorkingLabel:'Editing Alt '+activeAlt.key+(s.activeVerNum?' · v'+s.activeVerNum:' · no saved version yet')+(s.dirty?' · unsaved edits':''),
       raWorkingChipStyle:`display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);white-space:nowrap;color:${dirtyColor};background:color-mix(in srgb,${dirtyColor} 10%,transparent);border:1px solid color-mix(in srgb,${dirtyColor} 30%,transparent)`,
       openCommitModal:this.openCommitModal, openNewAltModal:this.openNewAltModal,
-      altVerChip:'Alt '+activeAlt.key+(s.activeVerNum?' · v'+s.activeVerNum:' · unsaved'),
+      saveStatusLabel: s.dirty ? 'Unsaved edits' : 'Saved',
+      saveStatusStyle: s.dirty ? 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0;color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 8%,transparent)' : 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0;color:var(--ink2);border:1px solid var(--line);background:transparent',
       statRevision:'Alt '+activeAlt.key+(s.activeVerNum?' · v'+s.activeVerNum:' · —'),
       statRevisionSub:s.dirty?'unsaved edits':(s.activeVerNum?'saved':'no versions saved yet'),
       isCommitModal:s.modal==='commit',
-      cmtNoBufferWarn: !s.units.some(u=>['kitchen','wardrobe','accessories'].some(sec=>u.items[sec].some(r=>r.buffer===true))),
+      isBufferGateModal:s.modal==='bufferGate',
+      continueToCommit:this.continueToCommit,
       cmtTitle:isAlt?'Save as New Alternative':(canOverwrite?'Update Draft Version':'Save New Version'),
       cmtTotalFmt:this.fmt(this.grandNow()),
       cmtCountsLabel:s.units.length+' unit'+(s.units.length===1?'':'s')+' · '+this.itemsNow()+' items · pricelist '+(s.projectMeta.priceListVersion||s.priceListLatest),
