@@ -591,10 +591,10 @@ html,body{margin:0;padding:0}
                       <td style="{{ row.stickyCheckStyle }}"><input type="checkbox" checked="{{ row.isSelected }}" onChange="{{ row.onToggleSelect }}"></td>
                       <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:center;color:var(--ink2)">{{ row.index }}</td>
                       <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2)">
-                        <div style="display:inline-flex;flex-direction:column;align-items:stretch;gap:3px">
+                        <div style="display:inline-flex;flex-direction:column;align-items:stretch;justify-content:center;gap:3px;min-height:{{ row.catStackMin }}">
                           <span style="display:block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--line2);color:var(--ink);text-align:center">{{ row.category }}</span>
                           <sc-if value="{{ row.isCustom }}" hint-placeholder-val="{{ false }}"><span style="display:block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--brass) 12%,transparent);color:var(--brass);text-align:center">CUSTOM</span></sc-if>
-                          <span title="Buffer / insurance item — counted in totals, excluded from SO" style="display:block;font-size:9.5px;font-weight:700;letter-spacing:.07em;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer);border:1px solid color-mix(in srgb,var(--buffer) 38%,transparent);text-align:center;visibility:{{ row.bufferTagVis }}" data-comment-anchor="76cdee575f-span">BUFFER</span>
+                          <span title="Buffer / insurance item — counted in totals, excluded from SO" style="display:block;font-size:9.5px;font-weight:700;letter-spacing:.07em;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer);border:1px solid color-mix(in srgb,var(--buffer) 38%,transparent);text-align:center;display:{{ row.bufferTagDisplay }}" data-comment-anchor="76cdee575f-span">BUFFER</span>
                         </div>
                       </td>
                       <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2)">
@@ -1908,7 +1908,8 @@ class Component extends DCLogic {
           onNotesChange: (e)=>this.updateNotes(sec,r.id,e.target.value),
           onDescChange: (e)=>this.updateDesc(sec,r.id,e.target.value),
           isBuffer,
-          bufferTagVis: isBuffer ? 'visible' : 'hidden',
+          bufferTagDisplay: isBuffer ? 'block' : 'none',
+          catStackMin: r.custom ? '67px' : '44px',
           bufferTitle: isBuffer ? 'Buffer item — counted in totals, excluded from SO. Click to unmark' : 'Mark as buffer (insurance stock: counts in totals, excluded from SO)',
           bufferBtnStyle: isBuffer ? 'background:color-mix(in srgb,var(--buffer) 16%,transparent);color:var(--buffer)' : '',
           onToggleBuffer: ()=>this.toggleRowBuffer(sec,r.id),
