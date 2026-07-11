@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Stella Mobili BOQ — MulyaOne</title>
+<title>SM BOQ Tool</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -409,6 +409,9 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
 }
 
 /* ===== Print / PDF ===== */
+/* Required project fields */
+.field label .req{color:var(--danger);font-weight:800}
+.input.field-error{border-color:var(--danger)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--danger) 20%,transparent)!important}
 /* Export choice modal option cards */
 .export-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:9px;background:var(--surface);cursor:pointer;transition:border-color .12s,background .12s}
 .export-opt:hover{border-color:var(--accent);background:var(--pu-50)}
@@ -878,8 +881,8 @@ function renderOverview(){
       </div>
       <div class="card-body">
         <div class="meta-grid">
-          <div class="field"><label>Project Name</label><input class="input compact" type="text" id="projName" placeholder="e.g. Pak Budi – Kebayoran Baru" oninput="onMetaInput()" value="${esc(projName)}"></div>
-          <div class="field"><label>Client</label><input class="input compact" type="text" id="projClient" placeholder="Client name" oninput="onMetaInput()" value="${esc(client)}"></div>
+          <div class="field"><label>Project Name <span class="req">*</span></label><input class="input compact" type="text" id="projName" placeholder="e.g. Pak Budi – Kebayoran Baru" oninput="onMetaInput()" value="${esc(projName)}"></div>
+          <div class="field"><label>Client <span class="req">*</span></label><input class="input compact" type="text" id="projClient" placeholder="Client name" oninput="onMetaInput()" value="${esc(client)}"></div>
           <div class="field"><label>PIC</label><input class="input compact" type="text" id="projPIC" placeholder="PIC name" oninput="onMetaInput()" value="${esc(pic)}"></div>
           <div class="field"><label>Date</label><input class="input compact" type="date" id="projDate" oninput="onMetaInput()" value="${date||new Date().toISOString().split('T')[0]}"></div>
           <div class="field"><label>Notes to SM Jakarta</label><input class="input compact" type="text" id="projNotes" placeholder="Revision notes, special requests..." oninput="onMetaInput()" value="${esc(notes)}"></div>
@@ -2187,8 +2190,30 @@ function switchPriceList(v){
 // incBuf=false -> Sales Order prep (SM Jakarta): buffer items left out of lists and totals entirely
 function exportRowsFor(unit, sec, incBuf){ return unit.items[sec].filter(r=>incBuf||r.buffer!==true); }
 
-function openExportModal(kind){
+// Project Name + Client are mandatory before any export (they drive the document + filename).
+function requireProjectFields(){
   syncProjectMetaFromDOM();
+  const missName=!(projectMeta.name||'').trim(), missClient=!(projectMeta.client||'').trim();
+  if(!missName&&!missClient) return true;
+  toast('Required before export: '+[missName?'Project Name':null,missClient?'Client':null].filter(Boolean).join(' & '),'warn',3500);
+  if(currentView!=='overview') showView('overview');
+  setTimeout(()=>{
+    [['projName',missName],['projClient',missClient]].forEach(([id,miss])=>{
+      const e=el(id); if(e&&miss){e.classList.add('field-error'); setTimeout(()=>e.classList.remove('field-error'),3000);}
+    });
+    const first=el(missName?'projName':'projClient'); if(first) first.focus();
+  },80);
+  return false;
+}
+// Export filename: project name, date, quotation version, mode — Windows-safe.
+function exportFileBase(incBuf){
+  const date=projectMeta.date||new Date().toISOString().slice(0,10);
+  const ver='Alt '+activeAltKey+(activeVerNum?' v'+activeVerNum:' draft');
+  return ((projectMeta.name||'BOQ').trim()+' — '+date+' — '+ver+' — '+(incBuf?'Quotation':'SO')).replace(/[\\/:*?"<>|]/g,'-');
+}
+
+function openExportModal(kind){
+  if(!requireProjectFields()) return;
   const anyBuffer=units.some(u=>unitBufferTotal(u)>0);
   if(!anyBuffer){ (kind==='excel'?exportExcel:savePDF)(true); return; }   // nothing to choose
   const fn=kind==='excel'?'exportExcel':'savePDF';
@@ -2216,7 +2241,7 @@ function openExportModal(kind){
 // ====================================================================
 async function exportExcel(incBuf=true){
   if(typeof ExcelJS==='undefined'){toast('ExcelJS not loaded — run the build','error');return;}
-  syncProjectMetaFromDOM();
+  if(!requireProjectFields()) return;
   const proj=projectMeta.name||'BOQ';
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
   const modeLabel=incBuf?'QUOTATION — buffer items included':'SALES ORDER — buffer items excluded';
@@ -2356,7 +2381,7 @@ async function exportExcel(incBuf=true){
   const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download=`${proj} ${plv} ${incBuf?'Quotation':'SO'}.xlsx`;
+  a.download=exportFileBase(incBuf)+'.xlsx';
   document.body.appendChild(a); a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
   toast(`Excel exported (${incBuf?'with buffer · quotation':'without buffer · SO'})`);
@@ -2366,10 +2391,10 @@ async function exportExcel(incBuf=true){
 // PDF — compact A4 portrait
 // ====================================================================
 function savePDF(incBuf=true){
-  syncProjectMetaFromDOM();
+  if(!requireProjectFields()) return;
   const proj=projectMeta.name||'—';
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
-  document.title=`${proj} ${plv} ${incBuf?'Quotation':'SO'}`;
+  document.title=exportFileBase(incBuf);
   document.getElementById('ph-proj').textContent=proj;
   document.getElementById('ph-meta').textContent=`BOQ · ${incBuf?'Quotation (incl. buffer)':'Sales Order (excl. buffer)'} · Alt ${activeAltKey}${activeVerNum?' · v'+activeVerNum:' · draft'} · ${projectMeta.date||''} · Showroom Price · ${plv}`;
   const uTotal=u=>['kitchen','wardrobe','accessories'].reduce((s2,sec)=>s2+exportRowsFor(u,sec,incBuf).reduce((ss,r)=>ss+r.price*r.qty,0),0);
@@ -2422,7 +2447,7 @@ function savePDF(incBuf=true){
       <span style="text-align:right"><span style="font-size:16px;font-family:var(--font-num);font-weight:800">${fmt(grand)}</span>${incBuf&&grandBuf>0?`<span style="display:block;font-size:8.5px;opacity:.85">excl. buffer ${fmt(grand-grandBuf)} · buffer ${fmt(grandBuf)}</span>`:''}</span>
     </div>`;
   ['view-overview','view-unit'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('hidden')});
-  setTimeout(()=>{window.print();setTimeout(()=>{wrap.innerHTML='';['view-overview','view-unit'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('hidden')});},800);},300);
+  setTimeout(()=>{window.print();setTimeout(()=>{wrap.innerHTML='';document.title='SM BOQ Tool';['view-overview','view-unit'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('hidden')});},800);},300);
 }
 
 // ====================================================================
