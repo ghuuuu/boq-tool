@@ -58,6 +58,12 @@ html,body{margin:0;padding:0}
 .smroot .row-actions .act-dup:hover{background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent)}
 .smroot .row-actions .act-del{color:color-mix(in srgb,var(--danger) 62%,var(--ink2))}
 .smroot .row-actions .act-del:hover{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}
+/* Export choice modal option cards */
+.smroot .export-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);cursor:pointer;transition:border-color .12s,background .12s;font-family:inherit}
+.smroot .export-opt:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.smroot .export-opt .eo-icon{width:38px;height:38px;border-radius:8px;display:grid;place-items:center;flex-shrink:0}
+.smroot .export-opt .eo-text{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ink)}
+.smroot .export-opt .eo-text span{font-size:11.5px;color:var(--ink2);line-height:1.45}
 </style>
 </helmet>
 
@@ -831,6 +837,31 @@ html,body{margin:0;padding:0}
           </div>
         </sc-if>
 
+
+        <!-- ===== EXPORT CHOICE ===== -->
+        <sc-if value="{{ isExportChoiceModal }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:17px 22px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between">
+            <h2 style="margin:0;font-size:16px;font-weight:700">{{ exportChoiceTitle }}</h2>
+            <button onclick="{{ closeModal }}" style="width:22px;height:22px;border-radius:4px;border:none;background:transparent;color:var(--ink2);display:grid;place-items:center;white-space:nowrap;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+          <div style="padding:16px 22px;display:flex;flex-direction:column;gap:10px">
+            <p style="font-size:12.5px;color:var(--ink2);margin:0">This BOQ contains buffer items. Choose what to export:</p>
+            <button class="export-opt" onclick="{{ exportWithBuffer }}">
+              <span class="eo-icon" style="background:color-mix(in srgb,var(--buffer) 14%,transparent);color:var(--buffer)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
+              <span class="eo-text"><strong>With buffer — for Quotation</strong>
+              <span>All items included. Buffer rows are marked; totals shown both incl. and excl. buffer.</span></span>
+            </button>
+            <button class="export-opt" onclick="{{ exportWithoutBuffer }}">
+              <span class="eo-icon" style="background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 8V21H3V8"></path><path d="M23 3H1v5h22V3z"></path><line x1="10" y1="12" x2="14" y2="12"></line></svg></span>
+              <span class="eo-text"><strong>Without buffer — for Sales Order</strong>
+              <span>For ordering to Stella Mobili Jakarta. Buffer items are left out of the list and totals entirely.</span></span>
+            </button>
+          </div>
+          <div style="padding:13px 22px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end">
+            <button onclick="{{ closeModal }}" style="padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--ink);white-space:nowrap;flex-shrink:0">Cancel</button>
+          </div>
+        </sc-if>
+
       </div>
     </div>
   </sc-if>
@@ -882,6 +913,7 @@ class Component extends DCLogic {
     efSec:null, efRowId:null, efSelKey:'',
     bfcSec:null, bfcEligibleIds:[], bfcFinishOptions:[], bfcFinish:'', bfcVariant:'standard',
     ctuSec:null, ctuConfirmTarget:null,
+    exportKind:null,
   };
 
   componentDidMount(){
@@ -1663,34 +1695,56 @@ class Component extends DCLogic {
     };
     reader.readAsText(file); e.target.value='';
   };
-  exportExcelNow = ()=>{
+  openExport = (kind)=>{
+    const hasBuf=this.state.units.some(u=>['kitchen','wardrobe','accessories'].some(sec=>u.items[sec].some(r=>r.buffer===true&&r.enabled!==false)));
+    if(!hasBuf){ (kind==='excel'?this.exportExcelNow:this.savePdfNow)(true); return; }
+    this.setState({modal:'exportChoice', exportKind:kind});
+  };
+  confirmExport = (inc)=>{
+    const kind=this.state.exportKind;
+    this.setState({modal:null, exportKind:null}, ()=>{ (kind==='excel'?this.exportExcelNow:this.savePdfNow)(inc); });
+  };
+  exportExcelNow = (incBuf=true)=>{
     if(typeof XLSX==='undefined'){ this.toast('XLSX not loaded','error'); return; }
     const proj=this.state.projectMeta.name||'BOQ', wb=XLSX.utils.book_new();
-    const hdr=['#','Unit','Category','Subcat','Finish','Handle','Dims (W×H×D)','Description','Unit Price (IDR)','Qty','Total (IDR)','Notes','Buffer'];
+    const modeLabel=incBuf?'QUOTATION — buffer items included':'SALES ORDER — buffer items excluded';
+    const hdr=['#','Unit','Category','Subcat','Finish','Handle','Dims (W×H×D)','Description','Unit Price (IDR)','Qty','Total (IDR)','Notes'].concat(incBuf?['Buffer']:[]);
     const allRows=[]; let rn=1;
     this.state.units.forEach(unit=>{
-      const sr=[hdr]; let n=1;
-      ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].filter(r=>r.enabled!==false).forEach(r=>{
+      const sr=[[modeLabel],[],hdr]; let n=1;
+      let uTot=0, uBuf=0;
+      ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].filter(r=>r.enabled!==false&&(incBuf||r.buffer!==true)).forEach(r=>{
         const dims=this.fmtDims(r);
-        const row=[n++,unit.name,r.category,r.subcat||'',r.finish+(r.thickness&&r.finish!=='(No Finish)'?' · '+r.thickness:''),r.variant||'',dims,r.desc,r.price,r.qty,r.price*r.qty,r.notes||'',(r.buffer===true?'YES':'')];
+        const row=[n++,unit.name,r.category,r.subcat||'',r.finish+(r.thickness&&r.finish!=='(No Finish)'?' · '+r.thickness:''),r.variant||'',dims,r.desc,r.price,r.qty,r.price*r.qty,r.notes||''].concat(incBuf?[(r.buffer===true?'YES':'')]:[]);
         sr.push(row); allRows.push([rn++,unit.name,...row.slice(1)]);
+        uTot+=r.price*r.qty; if(r.buffer===true) uBuf+=r.price*r.qty;
       }));
-      sr.push([]); sr.push(['','','','','','','','','','UNIT TOTAL →',this.unitTotal(unit),'']);
+      sr.push([]); sr.push(['','','','','','','','','','UNIT TOTAL →',uTot,'']);
+      if(incBuf&&uBuf>0){ sr.push(['','','','','','','','','','of which buffer →',uBuf,'']); sr.push(['','','','','','','','','','excl. buffer →',uTot-uBuf,'']); }
       const ws=XLSX.utils.aoa_to_sheet(sr);
       ws['!cols']=[{wch:4},{wch:18},{wch:14},{wch:22},{wch:26},{wch:10},{wch:14},{wch:42},{wch:16},{wch:6},{wch:16},{wch:28},{wch:8}];
       XLSX.utils.book_append_sheet(wb,ws,(unit.name.replace(/[\\/*?[\]]/g,'').substring(0,31)||'Unit'));
     });
-    const sum=[['PROJECT BOQ — STELLA MOBILI'],['Project',this.state.projectMeta.name,'Client',this.state.projectMeta.client,'PIC',this.state.projectMeta.pic,'Date',this.state.projectMeta.date],['Notes',this.state.projectMeta.notes],['Revision','Alt '+this.state.activeAltKey+((this.getActiveAlt()||{}).name?' — '+this.getActiveAlt().name:'')+(this.state.activeVerNum?' · v'+this.state.activeVerNum:' · unsaved working copy'),'Status',(()=>{const a=this.getActiveAlt();const l=a&&a.versions[0];return (l&&this.state.activeVerNum===l.ver)?l.status:(this.state.activeVerNum?'Older version':'Not saved yet');})(),'Note',(()=>{const a=this.getActiveAlt();const l=a&&a.versions[0];return (l&&this.state.activeVerNum===l.ver&&l.note)?l.note:'';})()],['Price List',this.state.projectMeta.priceListVersion||this.state.priceListLatest],[],['UNIT TOTALS'],['Unit','Kitchen','Wardrobe','Accessories','Total']];
-    this.state.units.forEach(u=>{ const k=this.secTotal(u,'kitchen'),w=this.secTotal(u,'wardrobe'),a=this.secTotal(u,'accessories'); sum.push([u.name,k,w,a,k+w+a]); });
-    sum.push([],['','','','','GRAND TOTAL',this.state.units.reduce((s,u)=>s+this.unitTotal(u),0)],[],['FULL ITEM LIST'],hdr,...allRows);
+    const sum=[['PROJECT BOQ — STELLA MOBILI'],[modeLabel],['Project',this.state.projectMeta.name,'Client',this.state.projectMeta.client,'PIC',this.state.projectMeta.pic,'Date',this.state.projectMeta.date],['Notes',this.state.projectMeta.notes],['Revision','Alt '+this.state.activeAltKey+((this.getActiveAlt()||{}).name?' — '+this.getActiveAlt().name:'')+(this.state.activeVerNum?' · v'+this.state.activeVerNum:' · unsaved working copy'),'Status',(()=>{const a=this.getActiveAlt();const l=a&&a.versions[0];return (l&&this.state.activeVerNum===l.ver)?l.status:(this.state.activeVerNum?'Older version':'Not saved yet');})(),'Note',(()=>{const a=this.getActiveAlt();const l=a&&a.versions[0];return (l&&this.state.activeVerNum===l.ver&&l.note)?l.note:'';})()],['Price List',this.state.projectMeta.priceListVersion||this.state.priceListLatest],[],['UNIT TOTALS'],['Unit','Kitchen','Wardrobe','Accessories','Total']];
+    let grand=0, grandBuf=0;
+    this.state.units.forEach(u=>{
+      const t=sec=>u.items[sec].filter(r=>r.enabled!==false&&(incBuf||r.buffer!==true)).reduce((s2,r)=>s2+r.price*r.qty,0);
+      const k=t('kitchen'),w=t('wardrobe'),a=t('accessories'),tot=k+w+a;
+      const b=incBuf?['kitchen','wardrobe','accessories'].reduce((s2,sec)=>s2+u.items[sec].filter(r=>r.enabled!==false&&r.buffer===true).reduce((ss,r)=>ss+r.price*r.qty,0),0):0;
+      grand+=tot; grandBuf+=b;
+      sum.push([u.name,k,w,a,tot]);
+    });
+    sum.push([],['','','','','GRAND TOTAL',grand]);
+    if(incBuf&&grandBuf>0){ sum.push(['','','','','of which buffer',grandBuf]); sum.push(['','','','','GRAND TOTAL excl. buffer',grand-grandBuf]); }
+    sum.push([],['FULL ITEM LIST'],hdr,...allRows);
     const ws2=XLSX.utils.aoa_to_sheet(sum); ws2['!cols']=[{wch:4},{wch:18},{wch:14},{wch:22},{wch:26},{wch:10},{wch:14},{wch:42},{wch:16},{wch:6},{wch:16},{wch:28},{wch:8}];
     XLSX.utils.book_append_sheet(wb,ws2,'Summary');
     wb.SheetNames=['Summary',...wb.SheetNames.filter(n=>n!=='Summary')];
     const plv=this.state.projectMeta.priceListVersion||this.state.priceListLatest;
-    XLSX.writeFile(wb,`${proj} Alt-${this.state.activeAltKey}${this.state.activeVerNum?' v'+this.state.activeVerNum:''} ${plv}.xlsx`);
+    XLSX.writeFile(wb,`${proj} Alt-${this.state.activeAltKey}${this.state.activeVerNum?' v'+this.state.activeVerNum:''} ${plv} ${incBuf?'Quotation':'SO'}.xlsx`);
     this.toast('Excel exported');
   };
-  savePdfNow = ()=>{
+  savePdfNow = (incBuf=true)=>{
     const s=this.state;
     const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const alt=this.getActiveAlt()||{key:'A',name:'',versions:[]};
@@ -1699,17 +1753,18 @@ class Component extends DCLogic {
     const revLabel='Alt '+alt.key+(alt.name?' — '+alt.name:'')+(s.activeVerNum?' · v'+s.activeVerNum:' · unsaved working copy');
     const revStatus=onLatest?latest.status:(s.activeVerNum?'Older version':'Not saved yet');
     const revNote=(onLatest&&latest.note)?latest.note:'';
-    let units=''; let grand=0;
+    let units=''; let grand=0; let grandBuf=0;
     s.units.forEach(unit=>{
-      let rows=''; let n=1;
-      ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].filter(r=>r.enabled!==false).forEach(r=>{
+      let rows=''; let n=1; let ut=0; let ubuf=0;
+      ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].filter(r=>r.enabled!==false&&(incBuf||r.buffer!==true)).forEach(r=>{
         const dims=this.fmtDims(r)||'\u2014';
         const fin=r.finish+((r.thickness&&r.finish!=='(No Finish)')?' \u00b7 '+r.thickness:'')+(r.variant?' \u00b7 '+r.variant:'');
-        rows+='<tr><td class="c">'+(n++)+'</td><td>'+esc(r.category)+(r.subcat?'<span class="sub"> \u00b7 '+esc(r.subcat)+'</span>':'')+'</td><td>'+esc(r.desc)+(r.buffer===true?' <span class="buf">BUFFER</span>':'')+(r.notes?'<div class="note">'+esc(r.notes)+'</div>':'')+'</td><td>'+esc(fin)+'</td><td class="c">'+esc(dims)+'</td><td class="r">'+this.fmtNum(r.price)+'</td><td class="c">'+r.qty+'</td><td class="r">'+this.fmtNum(r.price*r.qty)+'</td></tr>';
+        ut+=r.price*r.qty; if(r.buffer===true) ubuf+=r.price*r.qty;
+        rows+='<tr'+(incBuf&&r.buffer===true?' class="bufrow"':'')+'><td class="c">'+(n++)+'</td><td>'+esc(r.category)+(r.subcat?'<span class="sub"> \u00b7 '+esc(r.subcat)+'</span>':'')+'</td><td>'+esc(r.desc)+(r.buffer===true?' <span class="buf">BUFFER</span>':'')+(r.notes?'<div class="note">'+esc(r.notes)+'</div>':'')+'</td><td>'+esc(fin)+'</td><td class="c">'+esc(dims)+'</td><td class="r">'+this.fmtNum(r.price)+'</td><td class="c">'+r.qty+'</td><td class="r">'+this.fmtNum(r.price*r.qty)+'</td></tr>';
       }));
       if(n===1) return;
-      const ut=this.unitTotal(unit); grand+=ut;
-      units+='<h2>'+esc(unit.name)+'</h2><table><thead><tr><th class="c" style="width:24px">#</th><th style="width:15%">Category</th><th>Description</th><th style="width:18%">Finish</th><th class="c" style="width:11%">Dims (W\u00d7H\u00d7D)</th><th class="r" style="width:10%">Unit Price</th><th class="c" style="width:5%">Qty</th><th class="r" style="width:11%">Total (IDR)</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td colspan="7">'+esc(unit.name)+' \u2014 subtotal</td><td class="r">'+this.fmtNum(ut)+'</td></tr></tfoot></table>';
+      grand+=ut; grandBuf+=ubuf;
+      units+='<h2>'+esc(unit.name)+'</h2><table><thead><tr><th class="c" style="width:24px">#</th><th style="width:15%">Category</th><th>Description</th><th style="width:18%">Finish</th><th class="c" style="width:11%">Dims (W\u00d7H\u00d7D)</th><th class="r" style="width:10%">Unit Price</th><th class="c" style="width:5%">Qty</th><th class="r" style="width:11%">Total (IDR)</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td colspan="7">'+esc(unit.name)+' \u2014 subtotal'+(incBuf&&ubuf>0?' <span style="font-weight:400;font-size:9px;color:#3E648C">(incl. buffer Rp '+this.fmtNum(ubuf)+')</span>':'')+'</td><td class="r">'+this.fmtNum(ut)+'</td></tr></tfoot></table>';
     });
     if(!units){ this.toast('Nothing to export yet \u2014 add items first','warn'); return; }
     const m=s.projectMeta;
@@ -1734,6 +1789,7 @@ class Component extends DCLogic {
       +'td{padding:5px 6px;border-bottom:1px solid #EFE9DC;vertical-align:top}'
       +'.c{text-align:center}.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}'
       +'.sub{color:#7A7264}.note{color:#7A7264;font-style:italic;font-size:9.5px}'
+      +'tr.bufrow td{background:#e9eff6}'
       +'.buf{font-family:Verdana,sans-serif;font-size:6.5px;letter-spacing:.08em;font-weight:700;color:#3E648C;border:1px solid #3E648C;padding:1px 4px;border-radius:3px;vertical-align:middle;white-space:nowrap}'
       +'tfoot td{border-top:1.5px solid #26221B;border-bottom:none;font-weight:700;padding-top:6px}'
       +'.grand{display:flex;justify-content:space-between;align-items:center;background:#26221B;color:#F1ECE1;padding:12px 16px;margin-top:24px}'
@@ -1742,12 +1798,12 @@ class Component extends DCLogic {
       +'.ft{margin-top:14px;font-size:9px;color:#7A7264;font-style:italic}'
       +'thead{display:table-header-group}tr{page-break-inside:avoid}'
       +'</style></head><body>'
-      +'<div class="hd"><div class="brand">Stella Mobili</div><h1>'+esc(m.name||'Untitled Project')+'</h1><div class="doc">Bill of Quantities \u2014 '+esc(revLabel)+'</div></div>'
+      +'<div class="hd"><div class="brand">Stella Mobili</div><h1>'+esc(m.name||'Untitled Project')+'</h1><div class="doc">Bill of Quantities \u2014 '+esc(revLabel)+' \u00b7 '+(incBuf?'Quotation (incl. buffer)':'Sales Order (excl. buffer)')+'</div></div>'
       +'<div class="meta">'+metaCell('Client',m.client)+metaCell('PIC',m.pic)+metaCell('Date',m.date||today)+metaCell('Price List',plv)+metaCell('Status',revStatus)+'</div>'
       +(revNote?'<div class="rev"><b>Revision note:</b> '+esc(revNote)+'</div>':'')
       +(m.notes?'<div class="rev"><b>Project notes:</b> '+esc(m.notes)+'</div>':'')
       +units
-      +'<div class="grand"><span class="gl">Grand Total \u2014 '+s.units.length+' unit'+(s.units.length===1?'':'s')+'</span><span class="gv">Rp '+this.fmtNum(grand)+'</span></div>'
+      +'<div class="grand"><span class="gl">Grand Total \u2014 '+s.units.length+' unit'+(s.units.length===1?'':'s')+(incBuf&&grandBuf>0?' \u00b7 incl. buffer':'')+'</span><span class="gv" style="text-align:right">Rp '+this.fmtNum(grand)+(incBuf&&grandBuf>0?'<span style="display:block;font-size:9px;font-weight:400">excl. buffer Rp '+this.fmtNum(grand-grandBuf)+' \u00b7 buffer Rp '+this.fmtNum(grandBuf)+'</span>':'')+'</span></div>'
       +'<div class="ft">Generated '+today+' \u00b7 '+esc(revLabel)+' \u00b7 Price list '+esc(plv)+' \u00b7 Stella Mobili BOQ tool</div>'
       +'</body></html>';
     const f=document.createElement('iframe');
@@ -1966,7 +2022,7 @@ class Component extends DCLogic {
       toasts,
       saveNow: this.saveNow, triggerLoadClick: this.triggerLoadClick, onLoadFile: this.onLoadFile,
       loadInputRef: (el)=>{ this.loadInputRef = el; },
-      exportExcelNow: this.exportExcelNow, savePdfNow: this.savePdfNow,
+      exportExcelNow: ()=>this.openExport('excel'), savePdfNow: ()=>this.openExport('pdf'),
       toggleMobileSidebar: this.toggleMobileSidebar,
 
       shellCols: isMobile ? '1fr' : (s.sidebarCollapsed ? '56px 1fr' : s.sidebarW+'px 5px 1fr'),
@@ -2149,11 +2205,16 @@ class Component extends DCLogic {
     const isEfModal = s.modal==='editFinishSingle';
     const isBfcModal = s.modal==='bulkFinish';
     const isCtuModal = s.modal==='copyToUnit';
+    const isExportChoiceModal = s.modal==='exportChoice';
     const modalBoxStyle = `background:var(--panel2);border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 12px 36px rgba(0,0,0,.3)`;
 
     const out = {
       modalOpen, modalBoxStyle, onBackdropClick: this.onBackdropClick, closeModal: this.closeModal,
       isCustomModal, isEfModal, isBfcModal, isCtuModal,
+      isExportChoiceModal,
+      exportChoiceTitle: s.exportKind==='excel'?'Export Excel':'Save PDF',
+      exportWithBuffer: ()=>this.confirmExport(true),
+      exportWithoutBuffer: ()=>this.confirmExport(false),
       cmDesc:s.cmDesc, cmFinish:s.cmFinish, cmThickness:s.cmThickness, cmUnit:s.cmUnit, cmPrice:s.cmPrice, cmQty:s.cmQty, cmNotes:s.cmNotes,
       onCmDescChange:this.onCmDescChange, onCmFinishChange:this.onCmFinishChange, onCmThicknessChange:this.onCmThicknessChange,
       onCmUnitChange:this.onCmUnitChange, onCmPriceChange:this.onCmPriceChange, onCmQtyChange:this.onCmQtyChange, onCmNotesChange:this.onCmNotesChange,
