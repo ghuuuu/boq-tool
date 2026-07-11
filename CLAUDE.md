@@ -20,8 +20,8 @@ The PIC (Person In Charge) uses it to:
 6. Send the BOQ to Stella Mobili Jakarta for price verification
 
 **Built output:** `StellaMobili_BOM_Tool.html` — a single self-contained HTML file
-(~3.3MB, price data embedded). No server needed at runtime; opens in any browser by
-double-click. **It is a BUILD ARTIFACT — do not hand-edit it; edit the template and rebuild.**
+(~4.3MB, price data + ExcelJS embedded). No server or internet needed at runtime; opens
+in any browser by double-click. **It is a BUILD ARTIFACT — do not hand-edit it; edit the template and rebuild.**
 
 ---
 
@@ -425,7 +425,7 @@ After regenerating the `price_lists/*.json`, rebuild with `python src/build_tool
 — it injects the data into the template. Do **not** hand-edit the giant `ALL_PRICE_DATA`
 blob in the built HTML; it is generated.
 
-**Important**: The built HTML is ~3.3MB. Edit the **template** (`_Ref.html`, ~140KB) not
+**Important**: The built HTML is ~4.3MB. Edit the **template** (`_Ref.html`, ~140KB) not
 the output. Use an editor that handles large files if you must inspect the built file.
 
 ---
