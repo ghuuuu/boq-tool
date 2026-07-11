@@ -2209,7 +2209,7 @@ function requireProjectFields(){
 function exportFileBase(incBuf){
   const date=projectMeta.date||new Date().toISOString().slice(0,10);
   const ver='Alt '+activeAltKey+(activeVerNum?' v'+activeVerNum:' draft');
-  return ((projectMeta.name||'BOQ').trim()+' — '+date+' — '+ver+' — '+(incBuf?'Quotation':'SO')).replace(/[\\/:*?"<>|]/g,'-');
+  return ((projectMeta.name||'BOQ').trim()+'_'+date+'_'+ver+'_'+(incBuf?'BOQ (Buffer)':'BOQ')).replace(/[\\/:*?"<>|]/g,'-');
 }
 
 function openExportModal(kind){
