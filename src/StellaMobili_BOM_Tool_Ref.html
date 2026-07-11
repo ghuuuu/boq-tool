@@ -291,6 +291,7 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
 .tag.alt{background:#e0f2fe;color:#0369a1}
 .tag.gray{background:#f0f2f7;color:var(--ink-soft)}
 .tag.buffer{background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer);border:1px solid color-mix(in srgb,var(--buffer) 38%,transparent);letter-spacing:.05em}
+.tag.buffer.slot{visibility:hidden} /* reserved slot: keeps row height constant when buffer is toggled */
 /* Category cell: stack the category tag + CUSTOM + BUFFER pills vertically */
 .cat-stack{display:inline-flex;flex-direction:column;align-items:stretch;gap:3px}
 .cat-stack .tag{margin-left:0;text-align:center;display:block}
@@ -1526,7 +1527,7 @@ function buildTableCard(unit, sec){
       <td class="col-drag"><svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14" style="color:var(--ink-faint)"><circle cx="2" cy="2" r="1.3"/><circle cx="6" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="6" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="6" cy="12" r="1.3"/></svg></td>
       <td class="col-check"><input type="checkbox"${isSel?' checked':''} onchange="toggleRowSelect('${sec}','${r.id}',this.checked)"></td>
       <td class="col-no">${i+1}</td>
-      <td class="col-cat"><div class="cat-stack"><span class="tag gray">${esc(r.category)}</span>${r.custom?'<span class="tag custom">CUSTOM</span>':''}${r.buffer===true?'<span class="tag buffer" title="Buffer / insurance item — counted in totals, excluded from the Sales Order">BUFFER</span>':''}</div></td>
+      <td class="col-cat"><div class="cat-stack"><span class="tag gray">${esc(r.category)}</span>${r.custom?'<span class="tag custom">CUSTOM</span>':''}<span class="tag buffer${r.buffer===true?'':' slot'}" title="Buffer / insurance item — counted in totals, excluded from the Sales Order">BUFFER</span></div></td>
       <td class="col-finish">
         <div class="editable-finish" onclick="editFinish(this,'${sec}','${r.id}')" title="Click to change finish">
           <div><span class="finish-val">${esc(fd)}</span>${tbadge}</div>
