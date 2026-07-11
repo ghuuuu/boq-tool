@@ -8,7 +8,7 @@ Usage: python extract_price_data.py [version]
 import openpyxl, json, os, sys, re, glob
 from datetime import date
 
-BASE        = "C:/Projects/Stella Mobili BOM Tool"
+BASE        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PL_DIR      = f"{BASE}/price-data/Price List Ref"
 OUT_DIR     = f"{BASE}/price-data/price_lists"
 

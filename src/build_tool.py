@@ -14,7 +14,7 @@ Run: python src/build_tool.py
 """
 import json, re, os, glob
 
-ROOT     = "C:/Projects/Stella Mobili BOM Tool"
+ROOT     = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE = f"{ROOT}/src/StellaMobili_BOM_Tool_Ref.html"
 PL_DIR   = f"{ROOT}/price-data/price_lists"
 OUT_HTML = f"{ROOT}/StellaMobili_BOM_Tool.html"

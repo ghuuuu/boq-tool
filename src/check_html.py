@@ -1,4 +1,6 @@
-with open('C:/Projects/Stella Mobili BOM Tool/StellaMobili_BOM_Tool.html', encoding='utf-8') as f:
+import os
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+with open(os.path.join(ROOT, 'StellaMobili_BOM_Tool.html'), encoding='utf-8') as f:
     content = f.read()
 
 body_idx = content.find('<body>')
