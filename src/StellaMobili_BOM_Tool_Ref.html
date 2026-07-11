@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>/*__EXCELJS_INJECTION__*/</script>
 <style>
 /* ============================================================
    SM BOQ — Warm brass/cream palette · Hanken Grotesk · MulyaOne UI system
@@ -2212,64 +2212,153 @@ function openExportModal(kind){
 }
 
 // ====================================================================
-// EXCEL EXPORT
+// EXCEL EXPORT — ExcelJS (inlined at build time; styled to match the PDF)
 // ====================================================================
-function exportExcel(incBuf=true){
-  if(typeof XLSX==='undefined'){toast('XLSX not loaded','error');return;}
+async function exportExcel(incBuf=true){
+  if(typeof ExcelJS==='undefined'){toast('ExcelJS not loaded — run the build','error');return;}
   syncProjectMetaFromDOM();
-  const proj=projectMeta.name||'BOQ', wb=XLSX.utils.book_new();
+  const proj=projectMeta.name||'BOQ';
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
   const modeLabel=incBuf?'QUOTATION — buffer items included':'SALES ORDER — buffer items excluded';
-  const hdr=['#','Category','Description','Finish / Handle','Dims (W×H×D)','Unit Price (IDR)','Qty','Unit','Total (IDR)','Notes'].concat(incBuf?['Buffer']:[]);
-  const cols=[{wch:4},{wch:26},{wch:38},{wch:30},{wch:15},{wch:13},{wch:5},{wch:6},{wch:14},{wch:22}].concat(incBuf?[{wch:7}]:[]);
-  const rowOf=(r,n)=>{
-    const fin=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:'')+(r.thickness?' · '+r.thickness:''));
-    return [n,r.category+(r.subcat?' · '+r.subcat:''),r.desc,fin,fmtDims(r),r.price,r.qty,r.unit||'',r.price*r.qty,r.notes||''].concat(incBuf?[r.buffer===true?'YES':'']:[]);
-  };
-  const allRows=[]; let rn=1;
+  const PU='FF4C1D95', LAV='FFEDE9FE', BUFBG='FFE9EFF6', BUFC='FF3E648C', GRAY='FF6C7080', LINE='FFE8E8E8', WHITE='FFFFFFFF';
+  const MONEY='"Rp" #,##0';
+  const NCOLS=incBuf?11:10;
+  const hdr=['#','Category','Description','Finish / Handle','Dims (W×H×D)','Unit Price','Qty','Unit','Total','Notes'].concat(incBuf?['Buffer']:[]);
+  const widths=[4,26,38,30,16,14,5,6,15,24].concat(incBuf?[8]:[]);
+  const thinB={style:'thin',color:{argb:LINE}};
+  const solid=argb=>({type:'pattern',pattern:'solid',fgColor:{argb}});
+
+  // ---- pass 1: collect data ----
+  const unitData=[]; let grand=0, grandBuf=0;
   units.forEach(unit=>{
-    const rows=[];
-    ['kitchen','wardrobe','accessories'].forEach(sec=>exportRowsFor(unit,sec,incBuf).forEach(r=>rows.push({r,sec})));
+    const rows=[]; ['kitchen','wardrobe','accessories'].forEach(sec=>exportRowsFor(unit,sec,incBuf).forEach(r=>rows.push({r,sec})));
     if(!rows.length) return;
-    const sr=[[`${proj} — ${unit.name}`],[`${modeLabel}  ·  Price List ${plv}${projectMeta.date?'  ·  '+projectMeta.date:''}`],[],hdr];
-    let n=1, uTot=0, uBuf=0, lastSec='';
+    const uTot=rows.reduce((s2,{r})=>s2+r.price*r.qty,0);
+    const uBuf=rows.reduce((s2,{r})=>s2+(r.buffer===true?r.price*r.qty:0),0);
+    const secT={}; ['kitchen','wardrobe','accessories'].forEach(sec=>secT[sec]=rows.filter(x=>x.sec===sec).reduce((s2,{r})=>s2+r.price*r.qty,0));
+    grand+=uTot; grandBuf+=uBuf;
+    unitData.push({unit,rows,uTot,uBuf,secT});
+  });
+
+  const wb=new ExcelJS.Workbook();
+  wb.creator='Stella Mobili BOQ Tool';
+
+  const styleHeaderRow=row=>{
+    for(let i=1;i<=NCOLS;i++){const c=row.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE},size:9};c.alignment={vertical:'middle',horizontal:i===6||i===9?'right':(i===7?'center':'left')};}
+    row.height=18;
+  };
+  const addItemRow=(ws,r,n,offset)=>{
+    const fin=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:'')+(r.thickness?' · '+r.thickness:''));
+    const isBuf=incBuf&&r.buffer===true;
+    const base=[n,r.category+(r.subcat?' · '+r.subcat:''),r.desc,fin,fmtDims(r),r.price,r.qty,r.unit||'',r.price*r.qty,r.notes||''].concat(incBuf?[isBuf?'YES':'']:[]);
+    const row=ws.addRow(offset?Array(offset).fill('').concat(base):base);
+    const o=offset||0;
+    for(let i=1;i<=NCOLS+o;i++){const c=row.getCell(i);c.border={bottom:thinB};if(isBuf)c.fill=solid(BUFBG);}
+    row.getCell(1+o).font={size:9,color:{argb:GRAY}};
+    row.getCell(3+o).font={bold:true,size:10};
+    row.getCell(6+o).numFmt=MONEY;
+    row.getCell(7+o).alignment={horizontal:'center'};
+    row.getCell(9+o).numFmt=MONEY; row.getCell(9+o).font={bold:true,color:{argb:PU},size:10};
+    row.getCell(10+o).font={italic:true,size:9,color:{argb:GRAY}};
+    if(incBuf){const c=row.getCell(11+o);c.font={bold:true,size:8,color:{argb:BUFC}};c.alignment={horizontal:'center'};}
+  };
+  const addSecRow=(ws,sec,ncols)=>{
+    const row=ws.addRow([sec.toUpperCase()]);
+    ws.mergeCells(row.number,1,row.number,ncols);
+    row.getCell(1).fill=solid(LAV);
+    row.getCell(1).font={bold:true,size:8,color:{argb:PU}};
+    row.height=14;
+  };
+  const addTotalRow=(ws,label,val,kind)=>{
+    const row=ws.addRow(['','','','','','','',label,val]);
+    row.getCell(8).alignment={horizontal:'right'};
+    row.getCell(9).numFmt=MONEY;
+    if(kind==='grand'){[8,9].forEach(i=>{const c=row.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE}};});row.height=20;}
+    else if(kind==='buf'){[8,9].forEach(i=>row.getCell(i).font={size:9,color:{argb:BUFC}});}
+    else{row.getCell(8).font={bold:true};row.getCell(9).font={bold:true,color:{argb:PU}};}
+  };
+
+  // ---- Summary sheet (first) ----
+  const sw=wb.addWorksheet('Summary');
+  sw.columns=[{width:4},{width:20},{width:26},{width:38},{width:30},{width:16},{width:14},{width:5},{width:6},{width:15},{width:24}].concat(incBuf?[{width:8}]:[]);
+  const st=sw.addRow(['','PROJECT BOQ — STELLA MOBILI']); sw.mergeCells(st.number,2,st.number,7); st.getCell(2).font={bold:true,size:15,color:{argb:PU}};
+  const sm=sw.addRow(['',modeLabel]); sw.mergeCells(sm.number,2,sm.number,7); sm.getCell(2).font={italic:true,size:10,color:{argb:GRAY}};
+  sw.addRow([]);
+  [['','Project',projectMeta.name,'Client',projectMeta.client],
+   ['','PIC',projectMeta.pic,'Date',projectMeta.date],
+   ['','Alt / Version','Alt '+activeAltKey+(activeVerNum?' · v'+activeVerNum:' · draft'),'Price List',plv],
+   ['','Notes',projectMeta.notes]].forEach(vals=>{
+    const row=sw.addRow(vals);
+    [2,4].forEach(i=>row.getCell(i).font={bold:true,size:9,color:{argb:GRAY}});
+  });
+  sw.addRow([]);
+  const uhVals=['','Unit','Kitchen','Wardrobe','Accessories','Total'].concat(incBuf?['of which Buffer']:[]);
+  const uh=sw.addRow(uhVals);
+  for(let i=2;i<=uhVals.length;i++){const c=uh.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE},size:9};if(i>2)c.alignment={horizontal:'right'};}
+  uh.height=18;
+  unitData.forEach(({unit,uTot,uBuf,secT})=>{
+    const row=sw.addRow(['',unit.name,secT.kitchen,secT.wardrobe,secT.accessories,uTot].concat(incBuf?[uBuf||'']:[]));
+    for(let i=3;i<=(incBuf?7:6);i++){row.getCell(i).numFmt=MONEY;row.getCell(i).alignment={horizontal:'right'};}
+    row.getCell(6).font={bold:true};
+    for(let i=2;i<=(incBuf?7:6);i++)row.getCell(i).border={bottom:thinB};
+    if(incBuf&&uBuf)row.getCell(7).font={size:9,color:{argb:BUFC}};
+  });
+  sw.addRow([]);
+  const g=sw.addRow(['','','','','GRAND TOTAL',grand]);
+  [5,6].forEach(i=>{const c=g.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE}};});
+  g.getCell(6).numFmt=MONEY;g.getCell(6).alignment={horizontal:'right'};g.getCell(5).alignment={horizontal:'right'};g.height=20;
+  if(incBuf&&grandBuf>0){
+    const b1=sw.addRow(['','','','','of which buffer',grandBuf]);b1.getCell(6).numFmt=MONEY;[5,6].forEach(i=>{b1.getCell(i).font={size:9,color:{argb:BUFC}};b1.getCell(i).alignment={horizontal:'right'};});
+    const b2=sw.addRow(['','','','','GRAND TOTAL excl. buffer',grand-grandBuf]);b2.getCell(6).numFmt=MONEY;[5,6].forEach(i=>{b2.getCell(i).font={bold:true,size:10,color:{argb:BUFC}};b2.getCell(i).alignment={horizontal:'right'};});
+  }
+  sw.addRow([]);
+  const fl=sw.addRow(['','FULL ITEM LIST']);fl.getCell(2).font={bold:true,size:11,color:{argb:PU}};
+  const fh=sw.addRow(['#','Unit',...hdr.slice(1)]);
+  for(let i=1;i<=NCOLS+1;i++){const c=fh.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE},size:9};c.alignment={horizontal:i===7||i===10?'right':(i===8?'center':'left')};}
+  fh.height=18;
+  let rn=1;
+  unitData.forEach(({unit,rows})=>rows.forEach(({r})=>{
+    const fin=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:'')+(r.thickness?' · '+r.thickness:''));
+    const isBuf=incBuf&&r.buffer===true;
+    const row=sw.addRow([rn++,unit.name,r.category+(r.subcat?' · '+r.subcat:''),r.desc,fin,fmtDims(r),r.price,r.qty,r.unit||'',r.price*r.qty,r.notes||''].concat(incBuf?[isBuf?'YES':'']:[]));
+    for(let i=1;i<=NCOLS+1;i++){const c=row.getCell(i);c.border={bottom:thinB};if(isBuf)c.fill=solid(BUFBG);}
+    row.getCell(1).font={size:9,color:{argb:GRAY}};
+    row.getCell(4).font={bold:true,size:10};
+    row.getCell(7).numFmt=MONEY;
+    row.getCell(8).alignment={horizontal:'center'};
+    row.getCell(10).numFmt=MONEY;row.getCell(10).font={bold:true,color:{argb:PU},size:10};
+    row.getCell(11).font={italic:true,size:9,color:{argb:GRAY}};
+    if(incBuf){const c=row.getCell(12);c.font={bold:true,size:8,color:{argb:BUFC}};c.alignment={horizontal:'center'};}
+  }));
+
+  // ---- per-unit sheets ----
+  unitData.forEach(({unit,rows,uTot,uBuf})=>{
+    const ws=wb.addWorksheet((unit.name.replace(/[\\/*?[\]:]/g,'').substring(0,31)||'Unit'));
+    ws.columns=widths.map(w=>({width:w}));
+    const r1=ws.addRow([`${proj} — ${unit.name}`]); ws.mergeCells(r1.number,1,r1.number,NCOLS); r1.getCell(1).font={bold:true,size:14};
+    const r2=ws.addRow([`${modeLabel}  ·  Price List ${plv}${projectMeta.date?'  ·  '+projectMeta.date:''}`]);
+    ws.mergeCells(r2.number,1,r2.number,NCOLS); r2.getCell(1).font={italic:true,size:9,color:{argb:GRAY}};
+    ws.addRow([]);
+    styleHeaderRow(ws.addRow(hdr));
+    ws.views=[{state:'frozen',ySplit:4}];
+    let n=1,lastSec='';
     rows.forEach(({r,sec})=>{
-      if(sec!==lastSec){ sr.push([sec.toUpperCase()]); lastSec=sec; }
-      const row=rowOf(r,n++); sr.push(row);
-      allRows.push([rn++,unit.name,...row.slice(1)]);
-      uTot+=r.price*r.qty; if(r.buffer===true) uBuf+=r.price*r.qty;
+      if(sec!==lastSec){addSecRow(ws,sec,NCOLS);lastSec=sec;}
+      addItemRow(ws,r,n++,0);
     });
-    sr.push([]);
-    sr.push(['','','','','','','','UNIT TOTAL →',uTot]);
-    if(incBuf&&uBuf>0){ sr.push(['','','','','','','','of which buffer →',uBuf]); sr.push(['','','','','','','','excl. buffer →',uTot-uBuf]); }
-    const ws=XLSX.utils.aoa_to_sheet(sr); ws['!cols']=cols;
-    XLSX.utils.book_append_sheet(wb,ws,(unit.name.replace(/[\\/*?[\]]/g,'').substring(0,31)||'Unit'));
+    ws.addRow([]);
+    addTotalRow(ws,'UNIT TOTAL',uTot,'grand');
+    if(incBuf&&uBuf>0){ addTotalRow(ws,'of which buffer',uBuf,'buf'); addTotalRow(ws,'excl. buffer',uTot-uBuf,'buf'); }
   });
-  let grand=0, grandBuf=0;
-  const sum=[['PROJECT BOQ — STELLA MOBILI'],[modeLabel],[],
-    ['Project',projectMeta.name,'','Client',projectMeta.client],
-    ['PIC',projectMeta.pic,'','Date',projectMeta.date],
-    ['Alt / Version','Alt '+activeAltKey+(activeVerNum?' · v'+activeVerNum:' · draft'),'','Price List',plv],
-    ['Notes',projectMeta.notes],[],
-    ['UNIT TOTALS'],
-    ['Unit','Kitchen','Wardrobe','Accessories','Total'].concat(incBuf?['of which Buffer']:[])];
-  units.forEach(u=>{
-    const t=sec=>exportRowsFor(u,sec,incBuf).reduce((s2,r)=>s2+r.price*r.qty,0);
-    const k=t('kitchen'),w=t('wardrobe'),a=t('accessories'),tot=k+w+a;
-    if(!tot) return;
-    const b=incBuf?unitBufferTotal(u):0;
-    grand+=tot; grandBuf+=b;
-    sum.push([u.name,k,w,a,tot].concat(incBuf?[b||'']:[]));
-  });
-  sum.push([]);
-  sum.push(['','','','GRAND TOTAL',grand]);
-  if(incBuf&&grandBuf>0){ sum.push(['','','','of which buffer',grandBuf]); sum.push(['','','','GRAND TOTAL excl. buffer',grand-grandBuf]); }
-  sum.push([],['FULL ITEM LIST'],['#','Unit',...hdr.slice(1)],...allRows);
-  const ws2=XLSX.utils.aoa_to_sheet(sum);
-  ws2['!cols']=[{wch:4},{wch:18},{wch:26},{wch:38},{wch:30},{wch:15},{wch:13},{wch:5},{wch:6},{wch:14},{wch:22}].concat(incBuf?[{wch:7}]:[]);
-  XLSX.utils.book_append_sheet(wb,ws2,'Summary');
-  wb.SheetNames=['Summary',...wb.SheetNames.filter(nm=>nm!=='Summary')];
-  XLSX.writeFile(wb,`${proj} ${plv} ${incBuf?'Quotation':'SO'}.xlsx`);
+
+  // ---- download ----
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${proj} ${plv} ${incBuf?'Quotation':'SO'}.xlsx`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
   toast(`Excel exported (${incBuf?'with buffer · quotation':'without buffer · SO'})`);
 }
 
