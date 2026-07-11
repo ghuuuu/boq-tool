@@ -20,8 +20,8 @@ The PIC (Person In Charge) uses it to:
 6. Send the BOQ to Stella Mobili Jakarta for price verification
 
 **Built output:** `StellaMobili_BOM_Tool.html` — a single self-contained HTML file
-(~4.3MB, price data + ExcelJS embedded). No server or internet needed at runtime; opens
-in any browser by double-click. **It is a BUILD ARTIFACT — do not hand-edit it; edit the template and rebuild.**
+(~6.4MB, price data + ExcelJS + pdfmake embedded). No server or internet needed at
+runtime; opens in any browser by double-click. **It is a BUILD ARTIFACT — do not hand-edit it; edit the template and rebuild.**
 
 ---
 
@@ -77,6 +77,7 @@ The entire app is **one HTML file**. Structure inside the file:
 <head>
   Google Fonts (Newsreader + Hanken Grotesk + IBM Plex Mono)
   <script> ExcelJS (inlined at build time — offline xlsx export)
+  <script> pdfmake + Roboto fonts (inlined at build time — offline direct PDF download)
   <style> — all CSS
 </head>
 <body>
@@ -117,7 +118,7 @@ library, same layout patterns. The only difference is the color palette.
 > VALUES now map onto the warm palette, so all existing CSS class rules re-skin
 > automatically. New semantic tokens (`--accent`, `--brass`, `--panel`, `--sidebar`,
 > `--ink2`, etc.) were added alongside them.
-> **Note:** the PDF/print export (`savePDF`) still uses the legacy purple `#4c1d95`
+> **Note:** the PDF export (`savePDF`, pdfmake) still uses the legacy purple `#4c1d95`
 > for the MULYA letterhead — a separate branding decision (see Branding Rules).
 
 ```css
@@ -370,7 +371,7 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 | `loadFile(input)` | Parse .smbq, restore full state |
 | `openExportModal(kind)` | Buffer-mode chooser (with buffer=quotation / without=SO); skipped when no buffer items |
 | `exportExcel(incBuf)` | ExcelJS (inlined at build) — styled Summary + per-unit sheets; async, offline |
-| `savePDF(incBuf)` | Compact A4-portrait print DOM, buffer rows blue-tinted (incBuf), window.print() |
+| `savePDF(incBuf)` / `buildPdfDoc(incBuf)` | pdfmake (inlined at build) — direct .pdf download, A4 portrait, MULYA letterhead + full project details, buffer rows tinted; no print dialog |
 | `showModal(html)` | Mount modal HTML into #modal-mount |
 | `closeModal()` | Clear #modal-mount |
 | `toast(msg, type, dur)` | Animated toast notification |
@@ -427,7 +428,7 @@ After regenerating the `price_lists/*.json`, rebuild with `python src/build_tool
 — it injects the data into the template. Do **not** hand-edit the giant `ALL_PRICE_DATA`
 blob in the built HTML; it is generated.
 
-**Important**: The built HTML is ~4.3MB. Edit the **template** (`_Ref.html`, ~140KB) not
+**Important**: The built HTML is ~6.4MB. Edit the **template** (`_Ref.html`, ~140KB) not
 the output. Use an editor that handles large files if you must inspect the built file.
 
 ---
@@ -481,8 +482,8 @@ From MulyaOne design spec:
 **Color rule (updated 2026-07)**: The on-screen SM UI now uses the **warm brass/cream**
 palette (`--accent #8A5A3B`, `--brass #A6803E`) synced from Claude Design — see the Color
 Palette section above. The legacy purple (`#4c1d95` family) is **retained only in the
-PDF/print export** (MULYA letterhead) pending a separate branding decision on whether the
-printed document should also move to brass. Spectral BOM still uses blue — never mix the two.
+PDF export** (pdfmake MULYA letterhead) pending a separate branding decision on whether
+the document should also move to brass. Spectral BOM still uses blue — never mix the two.
 
 ---
 

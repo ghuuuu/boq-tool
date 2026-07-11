@@ -200,11 +200,11 @@ html,body{margin:0;padding:0}
                 <input value="{{ ovClient }}" onChange="{{ onClientChange }}" placeholder="Client name" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
               </div>
               <div style="display:flex;flex-direction:column;gap:5px">
-                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">PIC</label>
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">PIC <span style="color:var(--danger);font-weight:800">*</span></label>
                 <input value="{{ ovPic }}" onChange="{{ onPicChange }}" placeholder="Person in charge" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
               </div>
               <div style="display:flex;flex-direction:column;gap:5px">
-                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Date</label>
+                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Date <span style="color:var(--danger);font-weight:800">*</span></label>
                 <input type="date" value="{{ ovDate }}" onChange="{{ onDateChange }}" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
               </div>
               <div style="display:flex;flex-direction:column;gap:5px">
@@ -730,6 +730,12 @@ html,body{margin:0;padding:0}
               </div>
               <div style="font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--accent)">{{ cmtTotalFmt }}</div>
             </div>
+            <sc-if value="{{ cmtNoBufferWarn }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border:1px solid #E8CE9A;background:#FCF4E4;border-radius:8px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#8A6519" stroke-width="2" width="15" height="15" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <span style="font-size:12px;color:#8A6519;line-height:1.5"><strong>No buffer items in this BOQ.</strong> Consider marking insurance stock (the shield button on item rows) before saving this version.</span>
+              </div>
+            </sc-if>
             <div style="font-size:12.5px;color:var(--ink2);line-height:1.6">{{ cmtHeadline }}</div>
             <sc-if value="{{ cmtIsAlt }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:5px">
@@ -956,9 +962,9 @@ class Component extends DCLogic {
   fmtNum(n){ return Math.round(n||0).toLocaleString('id-ID'); }
   getPD(){ return this.state.priceData ? (this.state.priceData[this.state.projectMeta.priceListVersion] || this.state.priceData[this.state.priceListLatest]) : {kitchen:{},wardrobe:{},accessories:{}}; }
   getUnit(id){ return this.state.units.find(u=>u.id===(id||this.state.activeUnitId)); }
-  unitTotal(u){ return ['kitchen','wardrobe','accessories'].reduce((s,sec)=>s+u.items[sec].filter(r=>r.enabled!==false).reduce((ss,r)=>ss+r.price*r.qty,0),0); }
-  secTotal(u,sec){ return u.items[sec].filter(r=>r.enabled!==false).reduce((s,r)=>s+r.price*r.qty,0); }
-  secBufferTotal(u,sec){ return u.items[sec].filter(r=>r.enabled!==false&&r.buffer===true).reduce((s,r)=>s+r.price*r.qty,0); }
+  unitTotal(u){ return ['kitchen','wardrobe','accessories'].reduce((s,sec)=>s+u.items[sec].reduce((ss,r)=>ss+r.price*r.qty,0),0); }
+  secTotal(u,sec){ return u.items[sec].reduce((s,r)=>s+r.price*r.qty,0); }
+  secBufferTotal(u,sec){ return u.items[sec].filter(r=>r.buffer===true).reduce((s,r)=>s+r.price*r.qty,0); }
   unitBufferTotal(u){ return ['kitchen','wardrobe','accessories'].reduce((s,sec)=>s+this.secBufferTotal(u,sec),0); }
   markDirty(){ if(!this.state.dirty) this.setState({dirty:true}); }
   uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
@@ -1285,13 +1291,6 @@ class Component extends DCLogic {
       if(idx>=0){ const clone={...u.items[sec][idx], id:this.uid()}; u.items[sec].splice(idx+1,0,clone); }
     });
     this.toast('Row duplicated');
-  }
-  toggleRowEnabled(sec,id){
-    this.mutateUnits(units=>{
-      const u=units.find(u=>u.id===this.state.activeUnitId);
-      const r=u.items[sec].find(r=>r.id===id);
-      if(r) r.enabled = r.enabled===false ? true : false;
-    });
   }
   toggleRowBuffer(sec,id){
     this.mutateUnits(units=>{
@@ -1697,13 +1696,13 @@ class Component extends DCLogic {
   };
   openExport = (kind)=>{
     const m=this.state.projectMeta;
-    const missN=!(m.name||'').trim(), missC=!(m.client||'').trim();
-    if(missN||missC){
-      this.toast('Required before export: '+[missN?'Project Name':null,missC?'Client':null].filter(Boolean).join(' & '),'warn');
+    const miss=[['name','Project Name'],['client','Client'],['pic','PIC'],['date','Date']].filter(([k])=>!(m[k]||'').trim()).map(([,l])=>l);
+    if(miss.length){
+      this.toast('Required before export: '+miss.join(', '),'warn');
       this.setState({currentView:'overview'});
       return;
     }
-    const hasBuf=this.state.units.some(u=>['kitchen','wardrobe','accessories'].some(sec=>u.items[sec].some(r=>r.buffer===true&&r.enabled!==false)));
+    const hasBuf=this.state.units.some(u=>['kitchen','wardrobe','accessories'].some(sec=>u.items[sec].some(r=>r.buffer===true)));
     if(!hasBuf){ (kind==='excel'?this.exportExcelNow:this.savePdfNow)(true); return; }
     this.setState({modal:'exportChoice', exportKind:kind});
   };
@@ -1727,7 +1726,7 @@ class Component extends DCLogic {
     this.state.units.forEach(unit=>{
       const sr=[[modeLabel],[],hdr]; let n=1;
       let uTot=0, uBuf=0;
-      ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].filter(r=>r.enabled!==false&&(incBuf||r.buffer!==true)).forEach(r=>{
+      ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].filter(r=>incBuf||r.buffer!==true).forEach(r=>{
         const dims=this.fmtDims(r);
         const row=[n++,unit.name,r.category,r.subcat||'',r.finish+(r.thickness&&r.finish!=='(No Finish)'?' · '+r.thickness:''),r.variant||'',dims,r.desc,r.price,r.qty,r.price*r.qty,r.notes||''].concat(incBuf?[(r.buffer===true?'YES':'')]:[]);
         sr.push(row); allRows.push([rn++,unit.name,...row.slice(1)]);
@@ -1742,9 +1741,9 @@ class Component extends DCLogic {
     const sum=[['PROJECT BOQ — STELLA MOBILI'],[modeLabel],['Project',this.state.projectMeta.name,'Client',this.state.projectMeta.client,'PIC',this.state.projectMeta.pic,'Date',this.state.projectMeta.date],['Notes',this.state.projectMeta.notes],['Revision','Alt '+this.state.activeAltKey+((this.getActiveAlt()||{}).name?' — '+this.getActiveAlt().name:'')+(this.state.activeVerNum?' · v'+this.state.activeVerNum:' · unsaved working copy'),'Status',(()=>{const a=this.getActiveAlt();const l=a&&a.versions[0];return (l&&this.state.activeVerNum===l.ver)?l.status:(this.state.activeVerNum?'Older version':'Not saved yet');})(),'Note',(()=>{const a=this.getActiveAlt();const l=a&&a.versions[0];return (l&&this.state.activeVerNum===l.ver&&l.note)?l.note:'';})()],['Price List',this.state.projectMeta.priceListVersion||this.state.priceListLatest],[],['UNIT TOTALS'],['Unit','Kitchen','Wardrobe','Accessories','Total']];
     let grand=0, grandBuf=0;
     this.state.units.forEach(u=>{
-      const t=sec=>u.items[sec].filter(r=>r.enabled!==false&&(incBuf||r.buffer!==true)).reduce((s2,r)=>s2+r.price*r.qty,0);
+      const t=sec=>u.items[sec].filter(r=>incBuf||r.buffer!==true).reduce((s2,r)=>s2+r.price*r.qty,0);
       const k=t('kitchen'),w=t('wardrobe'),a=t('accessories'),tot=k+w+a;
-      const b=incBuf?['kitchen','wardrobe','accessories'].reduce((s2,sec)=>s2+u.items[sec].filter(r=>r.enabled!==false&&r.buffer===true).reduce((ss,r)=>ss+r.price*r.qty,0),0):0;
+      const b=incBuf?['kitchen','wardrobe','accessories'].reduce((s2,sec)=>s2+u.items[sec].filter(r=>r.buffer===true).reduce((ss,r)=>ss+r.price*r.qty,0),0):0;
       grand+=tot; grandBuf+=b;
       sum.push([u.name,k,w,a,tot]);
     });
@@ -1770,7 +1769,7 @@ class Component extends DCLogic {
     let units=''; let grand=0; let grandBuf=0;
     s.units.forEach(unit=>{
       let rows=''; let n=1; let ut=0; let ubuf=0;
-      ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].filter(r=>r.enabled!==false&&(incBuf||r.buffer!==true)).forEach(r=>{
+      ['kitchen','wardrobe','accessories'].forEach(sec=>unit.items[sec].filter(r=>incBuf||r.buffer!==true).forEach(r=>{
         const dims=this.fmtDims(r)||'\u2014';
         const fin=r.finish+((r.thickness&&r.finish!=='(No Finish)')?' \u00b7 '+r.thickness:'')+(r.variant?' \u00b7 '+r.variant:'');
         ut+=r.price*r.qty; if(r.buffer===true) ubuf+=r.price*r.qty;
@@ -1948,12 +1947,11 @@ class Component extends DCLogic {
       selCount = Object.keys(selMap).length;
       tableRows = rows.map((r,i)=>{
         const isSelected = !!selMap[r.id];
-        const isEnabled = r.enabled !== false;
         const isBuffer = r.buffer === true;
         const isDragOver = s.dragOverRowId===r.id && s.dragRowSec===sec;
         let trStyle = `background:${isSelected?'color-mix(in srgb,var(--accent) 10%,transparent)':'var(--panel2)'};`;
         trStyle += isDragOver ? (s.dragOverRowPos==='above'?'box-shadow:inset 0 2px 0 var(--accent);':'box-shadow:inset 0 -2px 0 var(--accent);') : '';
-        trStyle += s.dragRowId===r.id ? 'opacity:.35;' : (!isEnabled ? 'opacity:.4;' : '');
+        trStyle += s.dragRowId===r.id ? 'opacity:.35;' : '';
         const fd = r.finish==='(No Finish)' ? 'N/A' : (r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
         const dims = this.fmtDims(r);
         return {
@@ -1961,16 +1959,12 @@ class Component extends DCLogic {
           finishDisplay: fd, hasThickness: !!(r.thickness && r.finish!=='(No Finish)'), thickness:r.thickness,
           desc:r.desc, hasSubcat: !!r.subcat, subcat:r.subcat, hasDims: !!dims, dims,
           priceLabel: this.fmt(r.price), qty:r.qty,
-          totalLabel: isEnabled ? this.fmt(r.price*r.qty) : '—',
+          totalLabel: this.fmt(r.price*r.qty),
           notes:r.notes||'',
           isSelected, trStyle,
           stickyCheckStyle: `padding:10px 4px;border-bottom:1px solid var(--line2);text-align:center;position:sticky;left:0;background:${isSelected?'color-mix(in srgb,var(--accent) 10%,transparent)':'var(--panel2)'};z-index:1`,
           stickyDescStyle: `padding:10px 10px;border-bottom:1px solid var(--line2);position:sticky;left:32px;background:${isSelected?'color-mix(in srgb,var(--accent) 10%,transparent)':'var(--panel2)'};z-index:1;min-width:160px;max-width:240px`,
           pencilStyle: 'opacity:.6;flex-shrink:0',
-          toggleBtnStyle: isEnabled
-            ? 'border:1px solid color-mix(in srgb,var(--accent) 42%,transparent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent)'
-            : 'border:1px solid var(--line);background:var(--panel);color:var(--ink2)',
-          toggleTitle: isEnabled ? 'Disable item (hides from total & PDF)' : 'Re-enable item',
           onEditFinish: ()=>this.editFinish(sec,r.id),
           onQtyChange: (e)=>this.updateQty(sec,r.id,e.target.value),
           onQtyUp: ()=>this.stepRowQty(sec,r.id,1),
@@ -1985,7 +1979,6 @@ class Component extends DCLogic {
           onToggleBuffer: ()=>this.toggleRowBuffer(sec,r.id),
           onDuplicate: ()=>this.duplicateRow(sec,r.id),
           onRemove: ()=>this.removeRow(sec,r.id),
-          onToggleEnabled: ()=>this.toggleRowEnabled(sec,r.id),
           onToggleSelect: (e)=>this.toggleRowSelect(sec,r.id,e.target.checked),
           onDragStart: (e)=>this.rowDragStart(sec,r.id,e),
           onDragOver: (e)=>this.rowDragOver(sec,r.id,e),
@@ -2188,6 +2181,7 @@ class Component extends DCLogic {
       statRevision:'Alt '+activeAlt.key+(s.activeVerNum?' · v'+s.activeVerNum:' · —'),
       statRevisionSub:s.dirty?'unsaved edits':(s.activeVerNum?'saved':'no versions saved yet'),
       isCommitModal:s.modal==='commit',
+      cmtNoBufferWarn: !s.units.some(u=>['kitchen','wardrobe','accessories'].some(sec=>u.items[sec].some(r=>r.buffer===true))),
       cmtTitle:isAlt?'Save as New Alternative':(canOverwrite?'Update Draft Version':'Save New Version'),
       cmtTotalFmt:this.fmt(this.grandNow()),
       cmtCountsLabel:s.units.length+' unit'+(s.units.length===1?'':'s')+' · '+this.itemsNow()+' items · pricelist '+(s.projectMeta.priceListVersion||s.priceListLatest),
