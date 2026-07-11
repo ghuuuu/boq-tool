@@ -1715,7 +1715,7 @@ class Component extends DCLogic {
     const s=this.state, m=s.projectMeta;
     const date=m.date||new Date().toISOString().slice(0,10);
     const ver='Alt '+s.activeAltKey+(s.activeVerNum?' v'+s.activeVerNum:' draft');
-    return ((m.name||'BOQ').trim()+' \u2014 '+date+' \u2014 '+ver+' \u2014 '+(incBuf?'Quotation':'SO')).replace(/[\\/:*?"<>|]/g,'-');
+    return ((m.name||'BOQ').trim()+'_'+date+'_'+ver+'_'+(incBuf?'BOQ (Buffer)':'BOQ')).replace(/[\\/:*?"<>|]/g,'-');
   }
   exportExcelNow = (incBuf=true)=>{
     if(typeof XLSX==='undefined'){ this.toast('XLSX not loaded','error'); return; }
