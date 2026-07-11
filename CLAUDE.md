@@ -523,14 +523,18 @@ claude.ai/design) holds an interactive design mock of this tool:
   (`data-dir="b"`) that intentionally does NOT exist in the tool.
 - `uploads/StellaMobili_BOM_Tool.html` — reference copy of the current built tool.
 
-**This repo is the source of truth.** The canvas is vendored at `docs/design/canvas/`
-(same three files, git-versioned). Sync workflow after a UI change to the tool:
-1. Port the change into `docs/design/canvas/Stella Mobili BOQ.dc.html` (edit locally,
-   preview via the `design-canvas` entry in `.claude/launch.json` — it runs standalone).
-2. Push via the DesignSync tool: `finalize_plan` + `write_files` to the projectId above
-   (write `Stella Mobili BOQ.dc.html` from the vendored copy; also refresh
-   `uploads/StellaMobili_BOM_Tool.html` from the repo root after a rebuild).
-3. Commit the vendored copy so git history matches what's on claude.ai.
+**How the user works:** the user edits the design ONLY through the Claude Design UI on
+claude.ai — never the local files. The vendored copy at `docs/design/canvas/` (same three
+files, git-versioned) is a backup snapshot the user never opens; Claude Code maintains it.
+
+Sync workflow (Claude Code does all of this on request — "sync the design project"):
+- **After the user edits in Claude Design** → `get_file` the canvas, refresh
+  `docs/design/canvas/`, commit. (Keeps a restorable last-known-good in git.)
+- **After a UI change to the tool** → port the change into the canvas (edit the vendored
+  copy, preview via the `design-canvas` entry in `.claude/launch.json` — it runs
+  standalone), then `finalize_plan` + `write_files` to the projectId above, then commit.
+- **After a rebuild** → optionally refresh `uploads/StellaMobili_BOM_Tool.html` in the
+  design project from the repo root, so the design side has a current reference build.
 
 Last full sync: 2026-07-11 (DB browser removed, tool-version chip added, qty steppers ported).
 
