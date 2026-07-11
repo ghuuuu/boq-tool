@@ -35,7 +35,8 @@ price-data/price_lists/            # Price data, one JSON per section per versio
     wardrobe_v26.06.02.json         wardrobe_<ver>.json
     accessories_v26.06.02.json      accessories_<ver>.json
     index.json                      { latest, versions[] } registry
-src/build_tool.py           # Build: inject price_lists into the template
+src/build_tool.py           # Build: inject price_lists + vendor/exceljs into the template
+src/vendor/exceljs.min.js   # ExcelJS 4.4.0 (inlined into the build; keeps Excel export offline)
 src/check_html.py           # Sanity-check the built HTML (topbar/shell/sidebar/script present)
 src/extract_price_data.py   # (source) Excel -> price_lists JSON extraction
 price-data/Price List Ref/*.xlsx   # Source price-list Excels (read-only reference)
@@ -51,8 +52,9 @@ const ALL_PRICE_DATA = { "<ver>": { kitchen:{...}, wardrobe:{...}, accessories:{
 const PRICE_LIST_VERSIONS = ["v26.06.02", ...];
 const PRICE_LIST_LATEST = "v26.06.02";
 ```
-Then writes `StellaMobili_BOM_Tool.html`. The data is **embedded at build time**, so the
-built file needs no server. (The template alone won't run standalone — the marker is a
+Then writes `StellaMobili_BOM_Tool.html`, also replacing `/*__EXCELJS_INJECTION__*/` with
+`src/vendor/exceljs.min.js` (styled + offline Excel export — no CDN). The data and the
+library are **embedded at build time**, so the built file needs no server or internet. (The template alone won't run standalone — the marker is a
 placeholder, not real data. Always run the tool from the built output.)
 
 ### To make changes
@@ -74,7 +76,7 @@ The entire app is **one HTML file**. Structure inside the file:
 ```
 <head>
   Google Fonts (Newsreader + Hanken Grotesk + IBM Plex Mono)
-  SheetJS CDN (xlsx export)
+  <script> ExcelJS (inlined at build time — offline xlsx export)
   <style> — all CSS
 </head>
 <body>
@@ -364,8 +366,9 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 | `copyToUnit(sec, targetId)` | Copy selected rows from current unit to target unit |
 | `saveFile()` | Download .smbq, increment revision |
 | `loadFile(input)` | Parse .smbq, restore full state |
-| `exportExcel()` | SheetJS — one sheet per unit + Summary sheet |
-| `savePDF()` | Build print DOM, trigger window.print() |
+| `openExportModal(kind)` | Buffer-mode chooser (with buffer=quotation / without=SO); skipped when no buffer items |
+| `exportExcel(incBuf)` | ExcelJS (inlined at build) — styled Summary + per-unit sheets; async, offline |
+| `savePDF(incBuf)` | Compact A4-portrait print DOM, buffer rows blue-tinted (incBuf), window.print() |
 | `showModal(html)` | Mount modal HTML into #modal-mount |
 | `closeModal()` | Clear #modal-mount |
 | `toast(msg, type, dur)` | Animated toast notification |

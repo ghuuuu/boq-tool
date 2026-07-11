@@ -68,6 +68,19 @@ if template.count(MARKER) != 1:
 
 output = template.replace(MARKER, injection)
 
+# ── 3b. Inline ExcelJS so the built tool works fully offline ───────────────
+EXCELJS_MARKER = "/*__EXCELJS_INJECTION__*/"
+EXCELJS_PATH   = f"{ROOT}/src/vendor/exceljs.min.js"
+if output.count(EXCELJS_MARKER) != 1:
+    raise RuntimeError(
+        f"Expected exactly 1 ExcelJS marker {EXCELJS_MARKER!r} in {TEMPLATE}, "
+        f"found {output.count(EXCELJS_MARKER)}"
+    )
+with open(EXCELJS_PATH, encoding="utf-8") as f:
+    exceljs_src = f.read()
+output = output.replace(EXCELJS_MARKER, exceljs_src)
+print(f"ExcelJS inlined: {len(exceljs_src)/1024:.0f} KB (offline Excel export)")
+
 with open(OUT_HTML, "w", encoding="utf-8") as f:
     f.write(output)
 
