@@ -32,6 +32,8 @@ check('ExcelJS injected', '/*! ExcelJS' in c)
 check('ExcelJS marker replaced', '/*__EXCELJS_INJECTION__*/' not in c)
 check('no external scripts (offline-safe)', '<script src=' not in c)
 check('version constants present', 'const PRICE_LIST_LATEST' in c and 'const PRICE_LIST_VERSIONS' in c)
+check('brand assets injected', 'const BOQ_LOGOS={stella:' in c and 'LibreFranklin-Regular.ttf' in c)
+check('brand-assets marker replaced', '/*__BRAND_ASSETS_INJECTION__*/' not in c)
 
 # App shell intact
 check('topbar', '<header class="topbar">' in c)

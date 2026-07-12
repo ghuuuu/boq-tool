@@ -581,8 +581,8 @@ html,body{margin:0;padding:0}
                       <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:center;color:var(--ink2)">{{ row.index }}</td>
                       <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2)">
                         <div style="display:inline-flex;flex-direction:column;align-items:stretch;justify-content:center;gap:3px;min-height:{{ row.catStackMin }}">
-                          <span style="display:block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--line2);color:var(--ink);text-align:center">{{ row.category }}</span>
-                          <sc-if value="{{ row.isCustom }}" hint-placeholder-val="{{ false }}"><span style="display:block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--brass) 12%,transparent);color:var(--brass);text-align:center">CUSTOM</span></sc-if>
+                          <sc-if value="{{ row.isNotCustom }}" hint-placeholder-val="{{ true }}"><span style="display:block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--line2);color:var(--ink);text-align:center">{{ row.category }}</span></sc-if>
+                          <sc-if value="{{ row.isCustom }}" hint-placeholder-val="{{ false }}"><span style="display:block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:#fdf0ff;color:#7a1c8b;text-align:center">CUSTOM</span></sc-if>
                           <span title="Buffer / insurance item — counted in totals, excluded from SO" style="display:block;font-size:9.5px;font-weight:700;letter-spacing:.07em;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer);border:1px solid color-mix(in srgb,var(--buffer) 38%,transparent);text-align:center;display:{{ row.bufferTagDisplay }}" data-comment-anchor="76cdee575f-span">BUFFER</span>
                         </div>
                       </td>
@@ -1954,7 +1954,7 @@ class Component extends DCLogic {
         const fd = r.finish==='(No Finish)' ? 'N/A' : (r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
         const dims = this.fmtDims(r);
         return {
-          id:r.id, index:i+1, category:r.category, isCustom:r.custom,
+          id:r.id, index:i+1, category:r.category, isCustom:r.custom, isNotCustom:!r.custom,
           finishDisplay: fd, hasThickness: !!(r.thickness && r.finish!=='(No Finish)'), thickness:r.thickness,
           desc:r.desc, hasSubcat: !!r.subcat, subcat:r.subcat, hasDims: !!dims, dims,
           priceLabel: this.fmt(r.price), qty:r.qty,
@@ -1972,7 +1972,7 @@ class Component extends DCLogic {
           onDescChange: (e)=>this.updateDesc(sec,r.id,e.target.value),
           isBuffer,
           bufferTagDisplay: isBuffer ? 'block' : 'none',
-          catStackMin: r.custom ? '67px' : '44px',
+          catStackMin: '44px',
           bufferTitle: isBuffer ? 'Buffer item — counted in totals, excluded from SO. Click to unmark' : 'Mark as buffer (insurance stock: counts in totals, excluded from SO)',
           bufferBtnStyle: isBuffer ? 'background:color-mix(in srgb,var(--buffer) 16%,transparent);color:var(--buffer)' : '',
           onToggleBuffer: ()=>this.toggleRowBuffer(sec,r.id),
