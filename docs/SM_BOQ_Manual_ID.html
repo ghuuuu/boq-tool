@@ -482,7 +482,7 @@
 <h1>8 · Menyimpan &amp; Memuat</h1>
 
 <h2>Menyimpan</h2>
-<p>Klik <strong>Save .smbq</strong> di header Overview. Browser akan mengunduh file bernama <code>{Nama Proyek}_{Tanggal}_Alt-{A}.smbq</code> (mis. <code>Pak Budi_Kebayoran Baru_2026-07-11_Alt-A.smbq</code>; versi yang sudah di-commit mendapat tambahan <code>-v2</code> dst.). Ini menyimpan <strong>seluruh proyek</strong> ke satu file di komputer Anda — setiap unit, item, dan semua versi &amp; alternatif tersimpan Anda.</p>
+<p>Klik <strong>Save .smbq</strong> di header Overview. Browser akan menyimpan file bernama <code>{Nama Proyek}_{Tanggal}.smbq</code> (mis. <code>Pak Budi_Kebayoran Baru_2026-07-11.smbq</code>). Ini menyimpan <strong>seluruh proyek</strong> ke satu file di komputer Anda — setiap unit, item, dan semua versi &amp; alternatif tersimpan Anda.</p>
 
 <div class="tip">
   <strong>Perlindungan dari crash:</strong> alat ini menyimpan otomatis (autosave) kondisi kerja Anda ke penyimpanan lokal browser (di komputer ini, di browser ini — bukan berupa file) beberapa detik setelah setiap perubahan, dan memberi peringatan sebelum tab ditutup. Jika browser tertutup tak terduga, buka kembali alat ini — akan muncul tawaran untuk <strong>memulihkan pekerjaan yang belum tersimpan</strong>. Ini jaring pengaman, bukan pengganti menyimpan file <code>.smbq</code>.
@@ -510,6 +510,9 @@
   <strong>Nama Proyek dan Client wajib diisi</strong> sebelum ekspor apa pun. Jika salah satunya kosong, alat akan berpindah ke Overview dan menandai kolom yang kosong dengan warna merah.
 </div>
 
+<h2>Memilih apa yang diekspor</h2>
+<p>Begitu proyek memiliki versi tersimpan atau lebih dari satu alternatif, popup ekspor dimulai dengan pemilih <strong>"What to export"</strong>: satu baris per alternatif, masing-masing dengan checkbox dan dropdown versi. Secara default alternatif yang sedang aktif tercentang dengan isi <strong>terbaru</strong> terpilih (working copy jika ada edit yang belum disimpan, jika tidak versi tersimpan terbaru). Anda bisa memilih versi lebih lama, mencentang alternatif lain, atau memakai <strong>Select all</strong>. Semua yang dicentang masuk ke <strong>satu dokumen</strong>: PDF mendapat pembatas berjudul per alternatif (masing-masing mulai di halaman baru) dengan grand total sendiri, dan Excel mendapat sheet Summary dan unit per alternatif (<code>Summary A</code>, <code>A · Kitchen 1</code>, …).</p>
+
 <h2>Pertanyaan buffer</h2>
 <p>Jika BOQ Anda berisi <strong>item buffer</strong> (stok cadangan, ditandai dengan ikon perisai), setiap ekspor akan bertanya terlebih dahulu dokumen mana yang Anda inginkan:</p>
 <ul>
@@ -519,10 +522,13 @@
 <p>Jika BOQ tidak memiliki item buffer, pertanyaan ini dilewati dan ekspor langsung berjalan.</p>
 
 <h2>Ekspor ke Excel <span class="badge gold">EXCEL</span></h2>
-<p>Klik <strong>Export Excel</strong> di header Overview. Alat menghasilkan file <code>.xlsx</code> yang sudah tertata rapi — header berwarna, band per seksi, baris buffer berwarna biru, dan format angka Rp — dengan satu sheet per unit ditambah sheet <strong>Summary</strong> (informasi proyek, total per unit, dan daftar item lengkap). Nama file: <code>{Nama Proyek}_{Tanggal}_Alt-{A}_BOQ(Buffer).xlsx</code>. Ekspor Excel bekerja sepenuhnya <strong>offline</strong> — tidak perlu internet.</p>
+<p>Klik <strong>Export Excel</strong> di header Overview. Alat menghasilkan file <code>.xlsx</code> dalam format dokumen resmi — logo Stella Mobili dan MULYA di bagian atas setiap sheet, band detail proyek, gaya minimal tinta &amp; brass, band per seksi, baris buffer berwarna biru, dan format angka Rp — dengan satu sheet per unit ditambah sheet <strong>Summary</strong> (total per unit dan daftar item lengkap). Nama file: <code>{Nama Proyek}_{Tanggal}_BOQ(Buffer).xlsx</code> — alternatif/versi tercantum di dalam dokumen, bukan di nama file. Ekspor Excel bekerja sepenuhnya <strong>offline</strong> — tidak perlu internet.</p>
 
 <h2>Simpan ke PDF</h2>
-<p>Klik <strong>Save PDF</strong> di header Overview. Alat membuat PDF-nya sendiri dan <strong>langsung mengunduhnya</strong> — tanpa dialog print, tanpa pengaturan printer, dan bekerja offline. Dokumennya A4 portrait dengan kop MULYA, detail proyek lengkap (proyek, client, PIC, tanggal, versi, price list, catatan), satu tabel per unit, baris buffer berwarna biru (pada versi dengan buffer), grand total, dan nomor halaman. Nama file: <code>{Nama Proyek}_{Tanggal}_Alt-{A}_BOQ(Buffer).pdf</code>.</p>
+<p>Klik <strong>Save PDF</strong> di header Overview. Popup ekspor menyediakan pilihan format halaman — <strong>A4 Portrait</strong> (item dua baris, catatan ringkas) atau <strong>A4 Landscape</strong> (item satu baris, kolom catatan lebar). Alat membuat PDF-nya sendiri dan langsung menyimpannya — tanpa dialog print, tanpa pengaturan printer, dan bekerja offline. Dokumennya mengikuti format BOQ resmi: logo Stella Mobili di kiri atas, logo MULYA di kanan atas, band detail proyek, satu seksi per unit dengan judul serif elegan, baris buffer berwarna biru dengan tanda BUFFER (pada versi dengan buffer), blok grand total, dan nomor halaman. Nama file: <code>{Nama Proyek}_{Tanggal}_BOQ(Buffer).pdf</code>.</p>
+
+<h2>Memilih lokasi penyimpanan file</h2>
+<p>Saat alat dibuka dengan <strong>klik dua kali file HTML</strong>, browser menyimpan hasil ekspor langsung ke folder <strong>Downloads</strong> (browser tidak mengizinkan dialog pilih lokasi untuk halaman yang dibuka dari file). Agar selalu ditanya lokasi penyimpanan, aktifkan sekali pengaturan browser ini: <strong>Chrome → Settings → Downloads → "Ask where to save each file before downloading"</strong>. Setelah itu, setiap penyimpanan PDF, Excel, dan .smbq akan membuka dialog Save As Windows seperti biasa.</p>
 
 <!-- ═══════════════════════════════════════ BAB 10 ═══════════════════════════════════════ -->
 <h1 class="chapter">10 · Tips &amp; Trik</h1>

@@ -482,7 +482,7 @@
 <h1>8 · Saving &amp; Loading</h1>
 
 <h2>Saving</h2>
-<p>Click <strong>Save .smbq</strong> in the Overview header. The browser downloads a file named <code>{Project Name}_{Date}_Alt-{A}.smbq</code> (e.g. <code>Pak Budi_Kebayoran Baru_2026-07-11_Alt-A.smbq</code>; a committed version adds <code>-v2</code> etc.). This saves the <strong>whole project</strong> to one file on your computer — every unit, item, and all your saved versions &amp; alternatives.</p>
+<p>Click <strong>Save .smbq</strong> in the Overview header. The browser saves a file named <code>{Project Name}_{Date}.smbq</code> (e.g. <code>Pak Budi_Kebayoran Baru_2026-07-11.smbq</code>). This saves the <strong>whole project</strong> to one file on your computer — every unit, item, and all your saved versions &amp; alternatives.</p>
 
 <div class="tip">
   <strong>Crash protection:</strong> the tool auto-saves your working state into the browser's local storage (on this computer, in this browser — not a file) a few seconds after every edit, and warns you before closing the tab. If the browser ever closes unexpectedly, reopen the tool — it will offer to <strong>restore your unsaved work</strong>. This is a safety net, not a replacement for saving your <code>.smbq</code> file.
@@ -510,6 +510,9 @@
   <strong>Project Name and Client are required</strong> before any export. If either is empty, the tool jumps to Overview and highlights the missing field in red.
 </div>
 
+<h2>Choosing what to export</h2>
+<p>As soon as the project has saved versions or more than one alternative, the export popup starts with a <strong>"What to export" picker</strong>: one row per alternative, each with a checkbox and a version dropdown. By default your current alternative is ticked with its <strong>latest</strong> content selected (the working copy if you have unsaved edits, otherwise the latest saved version). You can switch any row to an earlier version, tick extra alternatives, or use <strong>Select all</strong>. Everything you tick goes into <strong>one document</strong>: the PDF gets a titled divider per alternative (each starting on its own page) with its own grand total, and Excel gets a Summary and unit sheets per alternative (<code>Summary A</code>, <code>A · Kitchen 1</code>, …).</p>
+
 <h2>The buffer question</h2>
 <p>If your BOQ contains <strong>buffer items</strong> (insurance stock, marked with the shield), every export first asks which document you want:</p>
 <ul>
@@ -519,10 +522,13 @@
 <p>If the BOQ has no buffer items, the question is skipped and the export runs directly.</p>
 
 <h2>Export to Excel <span class="badge gold">EXCEL</span></h2>
-<p>Click <strong>Export Excel</strong> in the Overview header. The tool generates a styled <code>.xlsx</code> file — colored headers, section bands, blue-tinted buffer rows, and Rp number formats — with one sheet per unit plus a <strong>Summary</strong> sheet (project info, unit totals, and the full item list). File name: <code>{Project Name}_{Date}_Alt-{A}_BOQ(Buffer).xlsx</code>. Excel export works fully <strong>offline</strong> — no internet needed.</p>
+<p>Click <strong>Export Excel</strong> in the Overview header. The tool generates a styled <code>.xlsx</code> file in the branded document format — the Stella Mobili and MULYA logos at the top of every sheet, a project detail band, minimal ink-and-brass styling, section bands, blue-tinted buffer rows, and Rp number formats — with one sheet per unit plus a <strong>Summary</strong> sheet (unit totals and the full item list). File name: <code>{Project Name}_{Date}_BOQ(Buffer).xlsx</code> — the alternative/version is stated inside the document, not in the filename. Excel export works fully <strong>offline</strong> — no internet needed.</p>
 
 <h2>Save to PDF</h2>
-<p>Click <strong>Save PDF</strong> in the Overview header. The tool generates the PDF itself and <strong>downloads it directly</strong> — no print dialog, no printer settings, works offline. The document is A4 portrait with the MULYA letterhead, full project details (project, client, PIC, date, version, price list, notes), one table per unit, blue-tinted buffer rows (in the with-buffer version), grand totals, and page numbers. Filename: <code>{Project Name}_{Date}_Alt-{A}_BOQ(Buffer).pdf</code>.</p>
+<p>Click <strong>Save PDF</strong> in the Overview header. The export popup lets you choose the page format — <strong>A4 Portrait</strong> (two-line items, compact notes) or <strong>A4 Landscape</strong> (one-line items, wide notes column). The tool generates the PDF itself and saves it directly — no print dialog, no printer settings, works offline. The document follows the branded BOQ format: Stella Mobili logo top-left, MULYA logo top-right, project detail band, one section per unit with elegant serif titles, blue-tinted buffer rows with a BUFFER tag (in the with-buffer version), grand total block, and page numbers. Filename: <code>{Project Name}_{Date}_BOQ(Buffer).pdf</code>.</p>
+
+<h2>Choosing where files are saved</h2>
+<p>When the tool is opened by <strong>double-clicking the HTML file</strong>, the browser saves exports straight to your <strong>Downloads</strong> folder (browsers do not allow a location dialog for double-clicked pages). To be asked for a folder on every export, turn on this one-time browser setting: <strong>Chrome → Settings → Downloads → "Ask where to save each file before downloading"</strong>. After that, every PDF, Excel, and .smbq save opens the normal Windows Save As dialog.</p>
 
 <!-- ═══════════════════════════════════════ CHAPTER 10 ═══════════════════════════════════════ -->
 <h1 class="chapter">10 · Tips &amp; Tricks</h1>

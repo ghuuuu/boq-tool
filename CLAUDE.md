@@ -35,8 +35,12 @@ price-data/price_lists/            # Price data, one JSON per section per versio
     wardrobe_v26.06.02.json         wardrobe_<ver>.json
     accessories_v26.06.02.json      accessories_<ver>.json
     index.json                      { latest, versions[] } registry
-src/build_tool.py           # Build: inject price_lists + vendor/exceljs into the template
+src/build_tool.py           # Build: inject price_lists + vendored libs + brand assets into the template
 src/vendor/exceljs.min.js   # ExcelJS 4.4.0 (inlined into the build; keeps Excel export offline)
+src/vendor/pdfmake.min.js + vfs_fonts.js   # pdfmake 0.2.10 + Roboto (offline PDF download)
+src/vendor/fonts/*.ttf      # Libre Franklin 400/600 + Libre Caslon Text 400/700 (PDF export fonts, OFL)
+src/assets/*.svg + *.png    # Real brand logos (from Gerald's AI files, 2026-07-12): SVG = vector, used in the PDF; PNG (1230–1434px wide, rasterized from the SVGs) = Excel. Both injected as BOQ_LOGOS{stella,mulya,stellaSvg,mulyaSvg}
+docs/design/boq-format/     # BOQ-FORMAT-SPEC.md + pdfmake-skeleton.js + reference-mock (export print design)
 src/check_html.py           # Sanity-check the built HTML (topbar/shell/sidebar/script present)
 src/extract_price_data.py   # (source) Excel -> price_lists JSON extraction
 price-data/Price List Ref/*.xlsx   # Source price-list Excels (read-only reference)
@@ -52,9 +56,11 @@ const ALL_PRICE_DATA = { "<ver>": { kitchen:{...}, wardrobe:{...}, accessories:{
 const PRICE_LIST_VERSIONS = ["v26.06.02", ...];
 const PRICE_LIST_LATEST = "v26.06.02";
 ```
-Then writes `StellaMobili_BOM_Tool.html`, also replacing `/*__EXCELJS_INJECTION__*/` with
-`src/vendor/exceljs.min.js` (styled + offline Excel export — no CDN). The data and the
-library are **embedded at build time**, so the built file needs no server or internet. (The template alone won't run standalone — the marker is a
+Then writes `StellaMobili_BOM_Tool.html`, also replacing `/*__EXCELJS_INJECTION__*/`
+(ExcelJS), `/*__PDFMAKE_INJECTION__*/` (pdfmake + Roboto vfs), and
+`/*__BRAND_ASSETS_INJECTION__*/` (`BOQ_LOGOS` data-URLs + the four Libre TTFs added to
+`pdfMake.vfs`/`pdfMake.fonts`). Data, libraries, fonts, and logos are all **embedded at
+build time**, so the built file needs no server or internet. (The template alone won't run standalone — the marker is a
 placeholder, not real data. Always run the tool from the built output.)
 
 ### To make changes
@@ -118,8 +124,10 @@ library, same layout patterns. The only difference is the color palette.
 > VALUES now map onto the warm palette, so all existing CSS class rules re-skin
 > automatically. New semantic tokens (`--accent`, `--brass`, `--panel`, `--sidebar`,
 > `--ink2`, etc.) were added alongside them.
-> **Note:** the PDF export (`savePDF`, pdfmake) still uses the legacy purple `#4c1d95`
-> for the MULYA letterhead — a separate branding decision (see Branding Rules).
+> **Note (updated 2026-07-12):** the Excel + PDF exports follow their own dedicated
+> print design — `docs/design/boq-format/BOQ-FORMAT-SPEC.md` (ink `#1F1812`, brass
+> `#8C6830`, hairline `#E6E1D8`, Libre Caslon + Libre Franklin, real logos). The
+> on-screen tokens below apply to the UI only. No legacy purple remains anywhere.
 
 ```css
 /* Semantic tokens (design language) */
@@ -365,13 +373,16 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 | `editFinish(cell, sec, id)` | In-place finish editor (replaces cell with <select>) |
 | `showCopyToUnit(sec)` | Show unit picker modal for copying selected rows |
 | `copyToUnit(sec, targetId)` | Copy selected rows from current unit to target unit |
-| `saveFile()` | Download .smbq (named via `fileBaseCore()`); clears the localStorage autosave |
+| `saveFile()` | Save .smbq (named via `fileBaseNameDate()`); clears the localStorage autosave |
+| `pickSaveHandle(fname)` / `writePicked(pick,blob)` | Two-phase native Save As (showSaveFilePicker): dialog opens FIRST on the click, file written after generation. Used by saveFile/exportExcel/savePDF. **`file://` pages have no picker API** (Chrome limitation) → silent fallback to instant download; the manuals point users to Chrome's "Ask where to save each file" setting |
 | `autosaveNow()` / `applyLoadedState(st)` | Unsaved-work protection: state autosaved to `localStorage.smboq_autosave` every 30s while dirty + on beforeunload (which also warns); on startup a modal offers restore/discard. `applyLoadedState` is shared by loadFile and the restore |
-| `fileBaseCore()` / `exportFileBase(incBuf)` | Filename builder: `{Name}_{date}_Alt-K[-vN]` (+ `_BOQ(Buffer)`/`_BOQ` for exports); dashes in name collapse to `_` |
+| `fileBaseNameDate()` / `exportFileBase(incBuf,sets)` | Filename builder: `{Name}_{date}` + `_BOQ(Buffer)`/`_BOQ` — NO Alt/version segment (the picker decides content; the document states its version). Dashes in name collapse to `_` |
+| `setUnits(altKey,ver)` / `setLabel(s)` / `defaultSets()` / `setsHaveBuffer(sets)` | Export **sets**: `{altKey, ver}` where ver is a saved version number or `'working'` (live calc, active alt only). setUnits resolves the units array (snapshot vs live) |
+| `openExportModal(kind)` / `getExportSets()` / `confirmExport(kind,incBuf)` | Export picker: per-alternative checkbox + version dropdown (default: active alt, working copy when dirty else latest version), Select all, A4 orientation (PDF), buffer chooser. Multi-set export = ONE document: PDF gets an "Alternative K — name" divider per set (each on a new page) + per-set grand totals; Excel gets `Summary K` + `K · Unit` sheets per set |
 | `loadFile(input)` | Parse .smbq, restore full state |
 | `openExportModal(kind)` | Buffer-mode chooser (with buffer=quotation / without=SO); skipped when no buffer items |
-| `exportExcel(incBuf)` | ExcelJS (inlined at build) — styled Summary + per-unit sheets; async, offline |
-| `savePDF(incBuf)` / `buildPdfDoc(incBuf)` | pdfmake (inlined at build) — direct .pdf download, A4 portrait, MULYA letterhead + full project details, buffer rows tinted; no print dialog |
+| `exportExcel(incBuf)` | ExcelJS (inlined at build) — Summary + per-unit sheets styled to BOQ-FORMAT-SPEC (dual-logo header rows 1–5, ink/brass/hairline); NB `addBrandHeader` adds logos LAST (an ExcelJS image anchor counts as a row and would shift addRow) |
+| `savePDF(incBuf)` / `buildPdfDoc(incBuf)` | pdfmake (inlined at build) — direct .pdf download, A4 portrait per `docs/design/boq-format/BOQ-FORMAT-SPEC.md`: dual-logo letterhead, Libre Caslon/Franklin, meta band, per-unit sections, buffer rows tinted; no print dialog |
 | `showModal(html)` | Mount modal HTML into #modal-mount |
 | `closeModal()` | Clear #modal-mount |
 | `toast(msg, type, dur)` | Animated toast notification |
@@ -476,14 +487,19 @@ From MulyaOne design spec:
 - Company: PT. Mitra Usaha Lancar Jaya
 - Address: Jl. Tegalsari 37
 - Tagline: More Value · More Possibilities
-- PDF header: MULYA (large, bold) + Stella Mobili (gold, right-aligned)
+- Document header (per BOQ-FORMAT-SPEC): brand logo (Stella Mobili) top-LEFT with the
+  doc line under it; MULYA logo constant top-RIGHT with the company line under it.
+  The top-left slot is per-brand (7 brands); MULYA always sits top-right.
 - Document numbering format: `BOQ-SM-YY-###-v{n}`
 
-**Color rule (updated 2026-07)**: The on-screen SM UI now uses the **warm brass/cream**
-palette (`--accent #8A5A3B`, `--brass #A6803E`) synced from Claude Design — see the Color
-Palette section above. The legacy purple (`#4c1d95` family) is **retained only in the
-PDF export** (pdfmake MULYA letterhead) pending a separate branding decision on whether
-the document should also move to brass. Spectral BOM still uses blue — never mix the two.
+**Color rule (updated 2026-07-12)**: The on-screen SM UI uses the **warm brass/cream**
+palette (`--accent #8A5A3B`, `--brass #A6803E`) — see the Color Palette section above.
+The **Excel/PDF exports** follow the dedicated print spec
+`docs/design/boq-format/BOQ-FORMAT-SPEC.md`: ink `#1F1812`, muted gray `#7A7166`, brass
+accent `#8C6830`, hairlines `#E6E1D8`, buffer blue `#3E648C`/`#E9EFF6`; fonts Libre
+Caslon Text (display) + Libre Franklin (body, PDF only); **both logos** on every
+document — brand logo (Stella Mobili) top-LEFT, MULYA constant top-RIGHT. The legacy
+purple (`#4c1d95` family) is fully retired. Spectral BOM still uses blue — never mix.
 
 ---
 

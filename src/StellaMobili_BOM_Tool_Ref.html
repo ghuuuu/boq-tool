@@ -120,6 +120,8 @@ input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
 .sb-unit-name{flex:1;min-width:0;background:transparent;border:none;color:inherit;font-family:inherit;font-size:14px;font-weight:inherit;outline:none;cursor:pointer;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
 .sb-unit-name:focus{border-bottom:1px solid currentColor;cursor:text}
 .sb-del{opacity:.9;width:20px;height:20px;display:grid;place-items:center;border-radius:4px;flex-shrink:0;transition:opacity .15s,background .12s;border:none;background:transparent;cursor:pointer;padding:0}
+.sb-edit{color:color-mix(in srgb,var(--ink) 40%,var(--ink-faint))}
+.sb-edit:hover{background:color-mix(in srgb,var(--ink) 10%,transparent);color:var(--ink)}
 .sb-clone{color:color-mix(in srgb,var(--accent) 70%,var(--ink-faint))}
 .sb-clone:hover{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
 .sb-delx{color:color-mix(in srgb,var(--danger) 62%,var(--ink-faint))}
@@ -569,6 +571,7 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
 
 <script>
 /*__PRICE_DATA_INJECTION__*/
+/*__BRAND_ASSETS_INJECTION__*/
 
 // ====================================================================
 // STATE
@@ -582,7 +585,8 @@ let customModalSection = 'kitchen';
 let projectMeta = {name:'',client:'',pic:'',date:'',notes:'',priceListVersion:''};
 // Revisions & Alternatives + dirty tracking
 let alts = [{key:'A', name:'Initial scheme', versions:[]}];
-let _autosaveDebounce=null, _lastAutosaveAt=null;   // save-status chip + debounced autosave
+let _autosaveDebounce=null, _lastAutosaveAt=null;
+let _expOrient='portrait';   // PDF page orientation chosen in the export modal   // save-status chip + debounced autosave
 let activeAltKey = 'A', activeVerNum = null, dirty = false;
 let selectedRows = {kitchen:new Set(),wardrobe:new Set(),accessories:new Set()};
 let dragUnit = null, dragRow = {sec:null, id:null};
@@ -777,7 +781,10 @@ function renderSidebarUnits(){
         <svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14"><circle cx="2" cy="2" r="1.3"/><circle cx="6" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="6" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="6" cy="12" r="1.3"/></svg>
       </span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" flex-shrink="0"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <input class="sb-unit-name" type="text" value="${esc(u.name)}" onclick="event.stopPropagation()" onchange="renameUnit('${u.id}',this.value)" title="Click to rename">
+      <span class="sb-unit-name" id="sbname-${u.id}">${esc(u.name)}</span>
+      <button class="sb-del sb-edit" onclick="event.stopPropagation();editUnitName('${u.id}')" title="Rename unit" style="margin-right:2px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+      </button>
       <button class="sb-del sb-clone" onclick="event.stopPropagation();cloneUnit('${u.id}')" title="Clone unit" style="margin-right:2px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
       </button>
@@ -832,6 +839,20 @@ function cloneUnit(id){
   toast('Cloned: '+cloned.name);
 }
 function renameUnit(id,val){const u=units.find(u=>u.id===id);if(u){u.name=val;markDirty();renderSidebarUnits();if(currentView!=='unit') renderOverview();}}
+// Pencil button in the sidebar: swap the name <span> for an input, commit on Enter/blur.
+// (The name itself is NOT editable on click — clicking the row opens the unit.)
+function editUnitName(id){
+  const u=units.find(x=>x.id===id); if(!u) return;
+  const span=document.getElementById('sbname-'+id); if(!span) return;
+  const inp=document.createElement('input');
+  inp.type='text'; inp.value=u.name; inp.className='sb-unit-name';
+  inp.onclick=e=>e.stopPropagation();
+  let done=false;
+  const commit=()=>{ if(done) return; done=true; renameUnit(id,(inp.value||'').trim()||u.name); };
+  inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') commit(); if(e.key==='Escape'){ done=true; renderSidebarUnits(); } };
+  inp.onblur=commit;
+  span.replaceWith(inp); inp.focus(); inp.select();
+}
 function getUnit(id){return units.find(u=>u.id===(id||activeUnitId))}
 function unitTotal(u){return['kitchen','wardrobe','accessories'].reduce((s,sec)=>s+u.items[sec].reduce((ss,r)=>ss+r.price*r.qty,0),0)}
 function secTotal(u,sec){return u.items[sec].reduce((s,r)=>s+r.price*r.qty,0)}
@@ -1537,7 +1558,7 @@ function buildTableCard(unit, sec){
       <td class="col-drag"><svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14" style="color:var(--ink-faint)"><circle cx="2" cy="2" r="1.3"/><circle cx="6" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="6" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="6" cy="12" r="1.3"/></svg></td>
       <td class="col-check"><input type="checkbox"${isSel?' checked':''} onchange="toggleRowSelect('${sec}','${r.id}',this.checked)"></td>
       <td class="col-no">${i+1}</td>
-      <td class="col-cat"><div class="cat-stack" style="min-height:${r.custom?70:46}px"><span class="tag gray">${esc(r.category)}</span>${r.custom?'<span class="tag custom">CUSTOM</span>':''}${r.buffer===true?'<span class="tag buffer" title="Buffer / insurance item — counted in totals, excluded from the Sales Order">BUFFER</span>':''}</div></td>
+      <td class="col-cat"><div class="cat-stack" style="min-height:46px">${r.custom?'<span class="tag custom">CUSTOM</span>':`<span class="tag gray">${esc(r.category)}</span>`}${r.buffer===true?'<span class="tag buffer" title="Buffer / insurance item — counted in totals, excluded from the Sales Order">BUFFER</span>':''}</div></td>
       <td class="col-finish">
         <div class="editable-finish" onclick="editFinish(this,'${sec}','${r.id}')" title="Click to change finish">
           <div><span class="finish-val">${esc(fd)}</span>${tbadge}</div>
@@ -2061,7 +2082,22 @@ function deleteAlt(key){
   updateRevPill(); updateDirtyIndicator(); updateAltVerChip();
   renderSidebarUnits(); showView('overview'); toast('Deleted '+label);
 }
-function renameAlt(key,val){ const a=alts.find(a=>a.key===key); if(a){ a.name=val; } }
+function renameAlt(key,val){ const a=alts.find(a=>a.key===key); if(a){ a.name=val; markDirty(); if(currentView==='overview') renderOverview(); } }
+// Pencil button on an alternative row: swap the name <span> for an input (the row
+// itself stays clickable to switch alternatives).
+function editAltName(key){
+  const a=alts.find(x=>x.key===key); if(!a) return;
+  const span=document.getElementById('altname-'+key); if(!span) return;
+  const inp=document.createElement('input');
+  inp.type='text'; inp.value=a.name;
+  inp.style.cssText='min-width:140px;max-width:260px;background:var(--panel2);border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:6px;font-size:13.5px;font-weight:700;color:var(--ink);font-family:inherit;outline:none;padding:2px 8px';
+  inp.onclick=e=>e.stopPropagation();
+  let done=false;
+  const commit=()=>{ if(done) return; done=true; renameAlt(key,(inp.value||'').trim()||a.name); };
+  inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') commit(); if(e.key==='Escape'){ done=true; if(currentView==='overview') renderOverview(); } };
+  inp.onblur=commit;
+  span.replaceWith(inp); inp.focus(); inp.select();
+}
 function selectAlt(key){
   if(key===activeAltKey) return;
   const alt=alts.find(a=>a.key===key); if(!alt) return;
@@ -2099,7 +2135,9 @@ function renderRevisionsPanel(){
     return `<div style="${rowStyle}" ${isActive?'':`onclick="selectAlt('${a.key}')"`} title="${isActive?'':'Click to switch to this alternative'}">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span style="${badgeStyle}">ALT ${a.key}</span>
-        <input value="${escAttr(a.name)}" onclick="event.stopPropagation()" onchange="renameAlt('${a.key}',this.value)" title="Click to rename this alternative" style="flex:1;min-width:140px;background:transparent;border:none;font-size:13.5px;font-weight:700;color:var(--ink);font-family:inherit;outline:none;padding:0;cursor:text">
+        <span id="altname-${a.key}" style="font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${esc(a.name)}</span>
+        <button class="sb-del sb-edit" onclick="event.stopPropagation();editAltName('${a.key}')" title="Rename this alternative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+        <span style="flex:1"></span>
         <span style="${pill(latest?stColor(latest.status):'var(--ink-faint)')}">${latest?esc(latest.status):'Not saved yet'}</span>
         <span class="mono" style="font-weight:700;font-size:13px;color:var(--accent)">${latest?fmt(latest.total):'—'}</span>
       </div>
@@ -2140,15 +2178,53 @@ function getState(){
   return{version:3, revisionNumber, project:projectMeta, units, unitCounter,
     alts, activeAltKey, activeVerNum, savedAt:new Date().toISOString()};
 }
-function saveFile(){
-  syncProjectMetaFromDOM();
-  const s=getState();
-  const proj=(projectMeta.name||'BOQ').trim();
-  const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
+// --- Native "Save As" dialog (showSaveFilePicker, Chrome/Edge) -------------
+// The picker MUST be opened immediately on the user's click (browsers only honor
+// it within the user-activation window), so saving is two-phase:
+//   pickSaveHandle(filename)  → open the dialog FIRST, returns {mode, handle}
+//   writePicked(pick, blob)   → later, write the generated file into the handle
+// mode: 'picker' (dialog OK), 'cancelled' (user closed it), 'fallback' (no API /
+// blocked, e.g. file:// pages — writePicked does a plain download instead).
+async function pickSaveHandle(filename){
+  if(!window.showSaveFilePicker) return {mode:'fallback',filename};
+  const ext=filename.slice(filename.lastIndexOf('.'));
+  const types={
+    '.pdf':[{description:'PDF document',accept:{'application/pdf':['.pdf']}}],
+    '.xlsx':[{description:'Excel workbook',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}],
+    '.smbq':[{description:'SM BOQ project',accept:{'application/json':['.smbq']}}],
+  };
+  try{
+    const handle=await window.showSaveFilePicker({suggestedName:filename,types:types[ext]});
+    return {mode:'picker',handle,filename};
+  }catch(e){
+    if(e&&e.name==='AbortError') return {mode:'cancelled',filename};
+    return {mode:'fallback',filename};   // SecurityError etc. → plain download
+  }
+}
+async function writePicked(pick, blob){
+  if(pick.mode==='cancelled') return false;
+  if(pick.mode==='picker'){
+    const w=await pick.handle.createWritable(); await w.write(blob); await w.close();
+    return true;
+  }
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));
-  a.download=fileBaseNameDate()+'.smbq';   // whole project (all alts & versions) — no Alt segment
-  a.click(); toast('Saved '+a.download);
+  a.href=URL.createObjectURL(blob); a.download=pick.filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+  return true;
+}
+// Back-compat one-shot helper (dialog + write in one call)
+async function saveBlobAs(blob, filename){
+  return writePicked(await pickSaveHandle(filename), blob);
+}
+async function saveFile(){
+  syncProjectMetaFromDOM();
+  const fname=fileBaseNameDate()+'.smbq';   // whole project (all alts & versions) — no Alt segment
+  const pick=await pickSaveHandle(fname);   // dialog first, while the click is fresh
+  if(pick.mode==='cancelled'){ toast('Save cancelled','warn'); return; }
+  const s=getState();
+  await writePicked(pick, new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));
+  toast('Saved '+fname);
   try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){}
 }
 // Restore a full saved state (used by loadFile and the autosave recovery).
@@ -2243,79 +2319,192 @@ function fileBaseNameDate(){
   const name=(projectMeta.name||'BOQ').trim().replace(/\s*[–—]\s*/g,'_').replace(/\s+-\s+/g,'_');
   return (name+'_'+date).replace(/[\\/:*?"<>|]/g,'-');
 }
-function fileBaseCore(){
-  const date=projectMeta.date||new Date().toISOString().slice(0,10);
-  const ver='Alt-'+activeAltKey+(activeVerNum?'-v'+activeVerNum:'');
-  const name=(projectMeta.name||'BOQ').trim().replace(/\s*[–—]\s*/g,'_').replace(/\s+-\s+/g,'_');
-  return (name+'_'+date+'_'+ver).replace(/[\\/:*?"<>|]/g,'-');
-}
 function anyBufferItems(){ return units.some(u=>unitBufferTotal(u)>0); }
-// "(Buffer)" only appears when buffer items are actually included in the document.
-function exportFileBase(incBuf){ return fileBaseCore()+'_'+((incBuf&&anyBufferItems())?'BOQ(Buffer)':'BOQ'); }
 
+// ==== Export sets (version/alternative picker) ==============================
+// A "set" is {altKey, ver} where ver is a saved version number or 'working'
+// (the live calculation — only offered for the active alternative).
+function setUnits(altKey,ver){
+  if(ver==='working') return units;
+  const a=alts.find(x=>x.key===altKey); const v=a&&a.versions.find(x=>x.ver===ver);
+  return (v&&v.snapshot&&v.snapshot.units)||[];
+}
+function setLabel(s){
+  return 'Alt '+s.altKey+(s.ver==='working'?' · current':' · v'+s.ver);
+}
+function defaultSets(){ return [{altKey:activeAltKey, ver:'working'}]; }
+function setsHaveBuffer(sets){ return (sets||defaultSets()).some(s=>setUnits(s.altKey,s.ver).some(u=>unitBufferTotal(u)>0)); }
+function setsVersionLabel(sets){
+  if(!sets||sets.length<=1) return setLabel((sets||defaultSets())[0]);
+  return sets.map(s=>s.altKey+(s.ver==='working'?'·cur':'·v'+s.ver)).join(' + ');
+}
+// "(Buffer)" only appears when buffer items are actually included in the document.
+// NB: the filename intentionally carries NO Alt/version segment — the picker decides
+// the content and the document itself states the version(s).
+function exportFileBase(incBuf, sets){
+  return fileBaseNameDate()+'_'+((incBuf&&setsHaveBuffer(sets))?'BOQ(Buffer)':'BOQ');
+}
 
 function openExportModal(kind){
   if(!requireProjectFields()) return;
-  const anyBuffer=units.some(u=>unitBufferTotal(u)>0);
-  if(!anyBuffer){ (kind==='excel'?exportExcel:savePDF)(true); return; }   // nothing to choose
-  const fn=kind==='excel'?'exportExcel':'savePDF';
-  const title=kind==='excel'?'Export Excel':'Save PDF';
-  showModal(`
-    <div class="modal-head"><h2>${title}</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-    <div class="modal-body" style="gap:10px">
+  _expOrient='portrait';
+  const isPdf=kind==='pdf';
+  const title=isPdf?'Save PDF':'Export Excel';
+  // Sets picker: shown as soon as there is anything to choose (saved versions or >1 alt)
+  const anyVersions=alts.some(a=>a.versions.length>0);
+  const showPicker=alts.length>1||anyVersions;
+  let setsRows='';
+  if(showPicker){
+    setsRows='<div style="display:flex;flex-direction:column;gap:6px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--ink-faint)">WHAT TO EXPORT</span><button class="btn btn-xs ghost" onclick="expSelectAll()">Select all</button></div>'
+      +alts.map(a=>{
+        const isActive=a.key===activeAltKey;
+        const opts=[];
+        if(isActive) opts.push(['working','Current working copy'+(dirty?' (unsaved edits)':'')]);
+        a.versions.forEach((v,i)=>opts.push([String(v.ver),'v'+v.ver+(i===0?' (latest)':'')+(v.status&&v.status!=='Superseded'?' — '+v.status:'')]));
+        const disabled=opts.length===0;
+        const defVer=isActive?((dirty||!a.versions.length)?'working':String(a.versions[0].ver)):(a.versions.length?String(a.versions[0].ver):'');
+        return `<label style="display:flex;align-items:center;gap:9px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer${disabled?';opacity:.45':''}">
+          <input type="checkbox" class="exp-alt" data-alt="${escAttr(a.key)}"${isActive&&!disabled?' checked':''}${disabled?' disabled':''}>
+          <span style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Alt ${escAttr(a.key)}<span style="font-weight:400;color:var(--ink-faint)"> — ${esc(a.name)}</span></span>
+          ${disabled?'<span style="font-size:11px;color:var(--ink-faint);flex-shrink:0">no saved versions</span>'
+            :`<select class="select compact exp-ver" data-alt="${escAttr(a.key)}" style="width:auto;max-width:215px;flex-shrink:0">${opts.map(o=>`<option value="${escAttr(o[0])}"${o[0]===defVer?' selected':''}>${esc(o[1])}</option>`).join('')}</select>`}
+        </label>`;
+      }).join('')
+      +'</div>';
+  }
+  const orientRow=isPdf?`
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--ink-faint)">PAGE</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm primary" id="orient-portrait" onclick="setExpOrient('portrait')">A4 Portrait</button>
+          <button class="btn btn-sm ghost" id="orient-landscape" onclick="setExpOrient('landscape')">A4 Landscape</button>
+        </div>
+        <span style="font-size:11px;color:var(--ink-faint)" id="orient-hint">two-line items · compact notes</span>
+      </div>`:'';
+  // Buffer question is offered when ANY exportable content (live or snapshot) has buffer items
+  const anyBufferPossible=anyBufferItems()||alts.some(a=>a.versions.some(v=>((v.snapshot&&v.snapshot.units)||[]).some(u=>unitBufferTotal(u)>0)));
+  if(!showPicker&&!anyBufferPossible&&!isPdf){ exportExcel(true, defaultSets()); return; }   // nothing to choose
+  const bufferSection=anyBufferPossible?`
       <p style="font-size:12.5px;color:var(--ink-faint);margin:0">This BOQ contains buffer items. Choose what to export:</p>
-      <button class="export-opt" onclick="closeModal();${fn}(true)">
+      <button class="export-opt" onclick="confirmExport('${kind}',true)">
         <span class="eo-icon" style="background:color-mix(in srgb,var(--buffer) 14%,transparent);color:var(--buffer)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
         <span class="eo-text"><strong>With buffer — for Quotation</strong>
-        <span>All items included. Buffer rows are marked${kind==='pdf'?' (blue-tinted rows)':''}; totals shown both incl. and excl. buffer.</span></span>
+        <span>All items included. Buffer rows are marked${isPdf?' (blue-tinted rows)':''}; totals shown both incl. and excl. buffer.</span></span>
       </button>
-      <button class="export-opt" onclick="closeModal();${fn}(false)">
+      <button class="export-opt" onclick="confirmExport('${kind}',false)">
         <span class="eo-icon" style="background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 8V21H3V8"/><path d="M23 3H1v5h22V3z"/><line x1="10" y1="12" x2="14" y2="12"/></svg></span>
         <span class="eo-text"><strong>Without buffer — for Sales Order</strong>
         <span>For ordering to Stella Mobili Jakarta. Buffer items are left out of the list and totals entirely.</span></span>
-      </button>
-    </div>
-    <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Cancel</button></div>`);
+      </button>`:'';
+  const foot=anyBufferPossible
+    ?'<button class="btn ghost" onclick="closeModal()">Cancel</button>'
+    :`<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="confirmExport('${kind}',true)">${isPdf?'Download PDF':'Export Excel'}</button>`;
+  showModal(`
+    <div class="modal-head"><h2>${title}</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-body" style="gap:12px">${setsRows}${orientRow}${bufferSection?'<div style="border-top:1px solid var(--line-soft)"></div>'+bufferSection:''}</div>
+    <div class="modal-foot">${foot}</div>`);
+}
+function getExportSets(){
+  const rows=[...document.querySelectorAll('.exp-alt')];
+  if(!rows.length) return defaultSets();   // picker hidden → working copy of the active alt
+  const sets=[];
+  rows.forEach(cb=>{
+    if(!cb.checked||cb.disabled) return;
+    const k=cb.dataset.alt;
+    const sel=document.querySelector('.exp-ver[data-alt="'+k+'"]');
+    const v=sel?sel.value:'working';
+    sets.push({altKey:k, ver:v==='working'?'working':parseInt(v,10)});
+  });
+  return sets.length?sets:null;
+}
+function expSelectAll(){ document.querySelectorAll('.exp-alt:not(:disabled)').forEach(cb=>{cb.checked=true;}); }
+function confirmExport(kind,incBuf){
+  const sets=getExportSets();
+  if(!sets){ toast('Select at least one alternative to export','warn'); return; }
+  const orient=_expOrient;
+  closeModal();
+  if(kind==='pdf') savePDF(incBuf,orient,sets); else exportExcel(incBuf,sets);
+}
+function setExpOrient(o){
+  _expOrient=o;
+  const p=document.getElementById('orient-portrait'), l=document.getElementById('orient-landscape'), h=document.getElementById('orient-hint');
+  if(p){p.className='btn btn-sm '+(o==='portrait'?'primary':'ghost');}
+  if(l){l.className='btn btn-sm '+(o==='landscape'?'primary':'ghost');}
+  if(h){h.textContent=o==='portrait'?'two-line items · compact notes':'one-line items · wide notes';}
 }
 
 // ====================================================================
 // EXCEL EXPORT — ExcelJS (inlined at build time; styled to match the PDF)
 // ====================================================================
-async function exportExcel(incBuf=true){
+async function exportExcel(incBuf=true, sets=null){
   if(typeof ExcelJS==='undefined'){toast('ExcelJS not loaded — run the build','error');return;}
   if(!requireProjectFields()) return;
   try{
-  const proj=projectMeta.name||'BOQ';
+  sets=(sets&&sets.length)?sets:defaultSets();
+  // Save-As dialog FIRST (while the click is fresh), generation after
+  const pick=await pickSaveHandle(exportFileBase(incBuf,sets)+'.xlsx');
+  if(pick.mode==='cancelled'){ toast('Export cancelled','warn'); return; }
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
-  const hasBuf=anyBufferItems(), showBufCol=incBuf&&hasBuf;
-  const modeLabel=!hasBuf?'BILL OF QUANTITIES':(incBuf?'QUOTATION — buffer items included':'SALES ORDER — buffer items excluded');
-  const PU='FF4C1D95', LAV='FFEDE9FE', BUFBG='FFE9EFF6', BUFC='FF3E648C', GRAY='FF6C7080', LINE='FFE8E8E8', WHITE='FFFFFFFF';
+  const hasBuf=setsHaveBuffer(sets), showBufCol=incBuf&&hasBuf;
+  const multi=sets.length>1;
+  const docLine='BILL OF QUANTITIES'+(hasBuf?(incBuf?' — INCL. BUFFER':' — EXCL. BUFFER'):'');
+  // Palette per docs/design/boq-format/BOQ-FORMAT-SPEC.md (matches the PDF export)
+  const INK='FF1F1812', GRAY='FF7A7166', BRASS='FF8C6830', HAIR='FFE6E1D8', BUFFILL='FFE9EFF6', BUFC='FF3E648C';
   const MONEY='"Rp" #,##0';
   const NCOLS=showBufCol?11:10;
   const hdr=['#','Category','Description','Finish / Handle','Dims (W×H×D)','Unit Price','Qty','Unit','Total','Notes'].concat(showBufCol?['Buffer']:[]);
-  const widths=[4,26,38,30,16,14,5,6,15,24].concat(showBufCol?[8]:[]);
-  const thinB={style:'thin',color:{argb:LINE}};
+  const widths=[4,26,46,23,16,14,5,6,17,24].concat(showBufCol?[8]:[]);   // desc widened, finish narrowed; Total col 17 fits the 11pt unit-total figure
+  const hairB={style:'thin',color:{argb:HAIR}};
+  const bufHairB={style:'thin',color:{argb:'FFD8E2EE'}};
+  const inkB={style:'medium',color:{argb:INK}};
   const solid=argb=>({type:'pattern',pattern:'solid',fgColor:{argb}});
-
-  // ---- pass 1: collect data ----
-  const unitData=[]; let grand=0, grandBuf=0;
-  units.forEach(unit=>{
-    const rows=[]; ['kitchen','wardrobe','accessories'].forEach(sec=>exportRowsFor(unit,sec,incBuf).forEach(r=>rows.push({r,sec})));
-    if(!rows.length) return;
-    const uTot=rows.reduce((s2,{r})=>s2+r.price*r.qty,0);
-    const uBuf=rows.reduce((s2,{r})=>s2+(r.buffer===true?r.price*r.qty:0),0);
-    const secT={}; ['kitchen','wardrobe','accessories'].forEach(sec=>secT[sec]=rows.filter(x=>x.sec===sec).reduce((s2,{r})=>s2+r.price*r.qty,0));
-    grand+=uTot; grandBuf+=uBuf;
-    unitData.push({unit,rows,uTot,uBuf,secT});
-  });
 
   const wb=new ExcelJS.Workbook();
   wb.creator='Stella Mobili BOQ Tool';
-  const usedSheetNames=new Set(['summary']);   // Excel sheet names are case-insensitive
+  const usedSheetNames=new Set();   // Excel sheet names are case-insensitive
+  const stellaImg=wb.addImage({base64:BOQ_LOGOS.stella,extension:'png'});
+  const mulyaImg=wb.addImage({base64:BOQ_LOGOS.mulya,extension:'png'});
 
+  // Brand header (rows 1–5): logos, doc line + company, meta band — mirrors the PDF header
+  const addBrandHeader=(ws,ncols,verLabel)=>{
+    const r1=ws.addRow([]); r1.height=40;
+    const r2=ws.addRow([docLine]); r2.height=14;
+    ws.mergeCells(r2.number,1,r2.number,6);
+    r2.getCell(1).font={bold:true,size:8,color:{argb:BRASS}};
+    ws.mergeCells(r2.number,7,r2.number,ncols);
+    const cc=r2.getCell(7); cc.value='PT. MITRA USAHA LANCAR JAYA · JL. TEGALSARI 37';
+    cc.font={bold:true,size:8,color:{argb:BRASS}}; cc.alignment={horizontal:'right'};
+    for(let i=1;i<=ncols;i++) r2.getCell(i).border={bottom:inkB};
+    const labels=['PROJECT','CLIENT','PIC','DATE','VERSION','PRICE LIST'];
+    const values=[projectMeta.name,projectMeta.client,projectMeta.pic,projectMeta.date,verLabel,plv];
+    const r3=ws.addRow(['',...labels]);
+    labels.forEach((_,k)=>{r3.getCell(k+2).font={bold:true,size:7,color:{argb:BRASS}};});
+    const r4=ws.addRow(['',...values.map(v=>v||'—')]);
+    values.forEach((_,k)=>{r4.getCell(k+2).font={size:10,color:{argb:INK}};});
+    for(let i=1;i<=ncols;i++) r4.getCell(i).border={bottom:hairB};
+    ws.addRow([]);
+    // NB: addImage LAST — an image anchor counts as a row in ExcelJS, so adding it
+    // before the rows would shift every subsequent addRow down by one.
+    ws.addImage(stellaImg,{tl:{col:0,row:0},ext:{width:162,height:46}});   // 121.92/34.58 aspect
+    // MULYA right-aligned to the table's right edge: walk columns from the right and
+    // anchor with NATIVE EMU offsets (fractional tl.col is unreliable — ExcelJS converts
+    // fractions against a fixed default column width, not the actual one).
+    // Column chars → px ≈ w*7+5 (Calibri 11); 1px = 9525 EMU.
+    const MW_IMG=113;   // 85.04/34.58 aspect at 46px height
+    let rem=MW_IMG;
+    for(let i=ncols;i>=1;i--){
+      const wpx=Math.round((ws.getColumn(i).width||8.43)*7+5);
+      if(wpx>=rem){
+        ws.addImage(mulyaImg,{tl:{nativeCol:i-1,nativeColOff:(wpx-rem)*9525,nativeRow:0,nativeRowOff:0},ext:{width:MW_IMG,height:46}});
+        break;
+      }
+      rem-=wpx;
+    }
+  };
   const styleHeaderRow=row=>{
-    for(let i=1;i<=NCOLS;i++){const c=row.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE},size:9};c.alignment={vertical:'middle',horizontal:i===6||i===9?'right':(i===7?'center':'left')};}
-    row.height=18;
+    for(let i=1;i<=NCOLS;i++){const c=row.getCell(i);c.font={bold:true,size:7,color:{argb:GRAY}};c.alignment={vertical:'middle',horizontal:i===6||i===9?'right':(i===7?'center':'left')};c.border={bottom:inkB};}
+    row.height=16;
   };
   const addItemRow=(ws,r,n,offset)=>{
     const fin=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:'')+(r.thickness?' · '+r.thickness:''));
@@ -2323,118 +2512,137 @@ async function exportExcel(incBuf=true){
     const base=[n,r.category+(r.subcat?' · '+r.subcat:''),r.desc,fin,fmtDims(r),r.price,r.qty,r.unit||'',r.price*r.qty,r.notes||''].concat(showBufCol?[isBuf?'YES':'']:[]);
     const row=ws.addRow(offset?Array(offset).fill('').concat(base):base);
     const o=offset||0;
-    for(let i=1;i<=NCOLS+o;i++){const c=row.getCell(i);c.border={bottom:thinB};if(isBuf)c.fill=solid(BUFBG);}
+    for(let i=1;i<=NCOLS+o;i++){const c=row.getCell(i);c.border={bottom:isBuf?bufHairB:hairB};if(isBuf)c.fill=solid(BUFFILL);}
     row.getCell(1+o).font={size:9,color:{argb:GRAY}};
-    row.getCell(3+o).font={bold:true,size:10};
+    row.getCell(3+o).font={bold:true,size:10,color:{argb:INK}};
     row.getCell(6+o).numFmt=MONEY;
     row.getCell(7+o).alignment={horizontal:'center'};
-    row.getCell(9+o).numFmt=MONEY; row.getCell(9+o).font={bold:true,color:{argb:PU},size:10};
-    row.getCell(10+o).font={italic:true,size:9,color:{argb:GRAY}};
+    row.getCell(9+o).numFmt=MONEY; row.getCell(9+o).font={bold:true,color:{argb:BRASS},size:10};
+    row.getCell(10+o).font={size:9,color:{argb:GRAY}};
     if(showBufCol){const c=row.getCell(11+o);c.font={bold:true,size:8,color:{argb:BUFC}};c.alignment={horizontal:'center'};}
   };
   const addSecRow=(ws,sec,ncols)=>{
     const row=ws.addRow([sec.toUpperCase()]);
     ws.mergeCells(row.number,1,row.number,ncols);
-    row.getCell(1).fill=solid(LAV);
-    row.getCell(1).font={bold:true,size:8,color:{argb:PU}};
+    row.getCell(1).font={bold:true,size:8,color:{argb:GRAY}};
     row.height=14;
   };
   const addTotalRow=(ws,label,val,kind)=>{
     const row=ws.addRow(['','','','','','','',label,val]);
     row.getCell(8).alignment={horizontal:'right'};
     row.getCell(9).numFmt=MONEY;
-    if(kind==='grand'){[8,9].forEach(i=>{const c=row.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE}};});row.height=20;}
+    if(kind==='grand'){[8,9].forEach(i=>{const c=row.getCell(i);c.border={top:inkB};c.font={bold:true,size:11,color:{argb:INK}};});row.height=20;}
     else if(kind==='buf'){[8,9].forEach(i=>row.getCell(i).font={size:9,color:{argb:BUFC}});}
-    else{row.getCell(8).font={bold:true};row.getCell(9).font={bold:true,color:{argb:PU}};}
+    else{row.getCell(8).font={bold:true,color:{argb:INK}};row.getCell(9).font={bold:true,color:{argb:BRASS}};}
+  };
+  const claimSheetName=base=>{
+    let name=base, k=2;
+    while(usedSheetNames.has(name.toLowerCase())) name=base+' ('+(k++)+')';
+    usedSheetNames.add(name.toLowerCase());
+    return name;
   };
 
-  // ---- Summary sheet (first) ----
-  const sw=wb.addWorksheet('Summary');
-  sw.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.35,right:0.35,top:0.5,bottom:0.5,header:0.2,footer:0.2}};
-  sw.columns=[{width:4},{width:20},{width:26},{width:38},{width:30},{width:16},{width:14},{width:5},{width:6},{width:15},{width:24}].concat(showBufCol?[{width:8}]:[]);
-  const st=sw.addRow(['','PROJECT BOQ — STELLA MOBILI']); sw.mergeCells(st.number,2,st.number,7); st.getCell(2).font={bold:true,size:15,color:{argb:PU}};
-  const sm=sw.addRow(['',modeLabel]); sw.mergeCells(sm.number,2,sm.number,7); sm.getCell(2).font={italic:true,size:10,color:{argb:GRAY}};
-  sw.addRow([]);
-  [['','Project',projectMeta.name,'Client',projectMeta.client],
-   ['','PIC',projectMeta.pic,'Date',projectMeta.date],
-   ['','Alt / Version','Alt '+activeAltKey+(activeVerNum?' · v'+activeVerNum:' · draft'),'Price List',plv],
-   ['','Notes',projectMeta.notes]].forEach(vals=>{
-    const row=sw.addRow(vals);
-    [2,4].forEach(i=>row.getCell(i).font={bold:true,size:9,color:{argb:GRAY}});
-  });
-  sw.addRow([]);
-  const uhVals=['','Unit','Kitchen','Wardrobe','Accessories','Total'].concat(showBufCol?['of which Buffer']:[]);
-  const uh=sw.addRow(uhVals);
-  for(let i=2;i<=uhVals.length;i++){const c=uh.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE},size:9};if(i>2)c.alignment={horizontal:'right'};}
-  uh.height=18;
-  unitData.forEach(({unit,uTot,uBuf,secT})=>{
-    const row=sw.addRow(['',unit.name,secT.kitchen,secT.wardrobe,secT.accessories,uTot].concat(showBufCol?[uBuf||'']:[]));
-    for(let i=3;i<=(showBufCol?7:6);i++){row.getCell(i).numFmt=MONEY;row.getCell(i).alignment={horizontal:'right'};}
-    row.getCell(6).font={bold:true};
-    for(let i=2;i<=(showBufCol?7:6);i++)row.getCell(i).border={bottom:thinB};
-    if(showBufCol&&uBuf)row.getCell(7).font={size:9,color:{argb:BUFC}};
-  });
-  sw.addRow([]);
-  const g=sw.addRow(['','','','','GRAND TOTAL',grand]);
-  [5,6].forEach(i=>{const c=g.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE}};});
-  g.getCell(6).numFmt=MONEY;g.getCell(6).alignment={horizontal:'right'};g.getCell(5).alignment={horizontal:'right'};g.height=20;
-  if(incBuf&&grandBuf>0){
-    const b1=sw.addRow(['','','','','of which buffer',grandBuf]);b1.getCell(6).numFmt=MONEY;[5,6].forEach(i=>{b1.getCell(i).font={size:9,color:{argb:BUFC}};b1.getCell(i).alignment={horizontal:'right'};});
-    const b2=sw.addRow(['','','','','GRAND TOTAL excl. buffer',grand-grandBuf]);b2.getCell(6).numFmt=MONEY;[5,6].forEach(i=>{b2.getCell(i).font={bold:true,size:10,color:{argb:BUFC}};b2.getCell(i).alignment={horizontal:'right'};});
-  }
-  sw.addRow([]);
-  const fl=sw.addRow(['','FULL ITEM LIST']);fl.getCell(2).font={bold:true,size:11,color:{argb:PU}};
-  const fh=sw.addRow(['#','Unit',...hdr.slice(1)]);
-  for(let i=1;i<=NCOLS+1;i++){const c=fh.getCell(i);c.fill=solid(PU);c.font={bold:true,color:{argb:WHITE},size:9};c.alignment={horizontal:i===7||i===10?'right':(i===8?'center':'left')};}
-  fh.height=18;
-  let rn=1;
-  unitData.forEach(({unit,rows})=>rows.forEach(({r})=>{
-    const fin=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:'')+(r.thickness?' · '+r.thickness:''));
-    const isBuf=incBuf&&r.buffer===true;
-    const row=sw.addRow([rn++,unit.name,r.category+(r.subcat?' · '+r.subcat:''),r.desc,fin,fmtDims(r),r.price,r.qty,r.unit||'',r.price*r.qty,r.notes||''].concat(showBufCol?[isBuf?'YES':'']:[]));
-    for(let i=1;i<=NCOLS+1;i++){const c=row.getCell(i);c.border={bottom:thinB};if(isBuf)c.fill=solid(BUFBG);}
-    row.getCell(1).font={size:9,color:{argb:GRAY}};
-    row.getCell(4).font={bold:true,size:10};
-    row.getCell(7).numFmt=MONEY;
-    row.getCell(8).alignment={horizontal:'center'};
-    row.getCell(10).numFmt=MONEY;row.getCell(10).font={bold:true,color:{argb:PU},size:10};
-    row.getCell(11).font={italic:true,size:9,color:{argb:GRAY}};
-    if(showBufCol){const c=row.getCell(12);c.font={bold:true,size:8,color:{argb:BUFC}};c.alignment={horizontal:'center'};}
-  }));
+  // ---- one Summary + unit sheets per selected set ----
+  sets.forEach(set=>{
+    const sUnits=setUnits(set.altKey,set.ver);
+    const verLabel=setLabel(set);
+    const prefix=multi?set.altKey+' · ':'';
 
-  // ---- per-unit sheets ----
-  unitData.forEach(({unit,rows,uTot,uBuf})=>{
-    const base=(unit.name.replace(/[\\/*?[\]:]/g,'').substring(0,28)||'Unit');
-    let sheetName=base, k=2;
-    while(usedSheetNames.has(sheetName.toLowerCase())) sheetName=base+' ('+(k++)+')';
-    usedSheetNames.add(sheetName.toLowerCase());
-    const ws=wb.addWorksheet(sheetName);
-    ws.columns=widths.map(w=>({width:w}));
-    const r1=ws.addRow([`${proj} — ${unit.name}`]); ws.mergeCells(r1.number,1,r1.number,NCOLS); r1.getCell(1).font={bold:true,size:14};
-    const r2=ws.addRow([`${modeLabel}  ·  Price List ${plv}${projectMeta.date?'  ·  '+projectMeta.date:''}`]);
-    ws.mergeCells(r2.number,1,r2.number,NCOLS); r2.getCell(1).font={italic:true,size:9,color:{argb:GRAY}};
-    ws.addRow([]);
-    styleHeaderRow(ws.addRow(hdr));
-    ws.views=[{state:'frozen',ySplit:4}];
-    ws.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.35,right:0.35,top:0.5,bottom:0.5,header:0.2,footer:0.2},printTitlesRow:'4:4'};
-    let n=1,lastSec='';
-    rows.forEach(({r,sec})=>{
-      if(sec!==lastSec){addSecRow(ws,sec,NCOLS);lastSec=sec;}
-      addItemRow(ws,r,n++,0);
+    // pass 1: collect data for this set
+    const unitData=[]; let grand=0, grandBuf=0;
+    sUnits.forEach(unit=>{
+      const rows=[]; ['kitchen','wardrobe','accessories'].forEach(sec=>exportRowsFor(unit,sec,incBuf).forEach(r=>rows.push({r,sec})));
+      if(!rows.length) return;
+      const uTot=rows.reduce((s2,{r})=>s2+r.price*r.qty,0);
+      const uBuf=rows.reduce((s2,{r})=>s2+(r.buffer===true?r.price*r.qty:0),0);
+      const secT={}; ['kitchen','wardrobe','accessories'].forEach(sec=>secT[sec]=rows.filter(x=>x.sec===sec).reduce((s2,{r})=>s2+r.price*r.qty,0));
+      grand+=uTot; grandBuf+=uBuf;
+      unitData.push({unit,rows,uTot,uBuf,secT});
     });
-    ws.addRow([]);
-    addTotalRow(ws,'UNIT TOTAL',uTot,'grand');
-    if(incBuf&&uBuf>0){ addTotalRow(ws,'of which buffer',uBuf,'buf'); addTotalRow(ws,'excl. buffer',uTot-uBuf,'buf'); }
+
+    // Summary sheet for the set
+    const SNC=showBufCol?12:11;
+    const sw=wb.addWorksheet(claimSheetName(multi?'Summary '+set.altKey:'Summary'));
+    sw.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.35,right:0.35,top:0.5,bottom:0.5,header:0.2,footer:0.2}};
+    sw.columns=[{width:4},{width:20},{width:26},{width:46},{width:23},{width:20},{width:14},{width:5},{width:6},{width:15},{width:24}].concat(showBufCol?[{width:8}]:[]);   // col6 = 20: fits the 14pt grand-total figure
+    addBrandHeader(sw,SNC,verLabel);
+    if(projectMeta.notes){
+      const nr=sw.addRow(['','NOTES',projectMeta.notes]);
+      nr.getCell(2).font={bold:true,size:7,color:{argb:BRASS}};
+      nr.getCell(3).font={size:9,color:{argb:GRAY}};
+      sw.addRow([]);
+    }
+    const uhVals=['','Unit','Kitchen','Wardrobe','Accessories','Total'].concat(showBufCol?['Buffer']:[]);
+    const uh=sw.addRow(uhVals.map((v,i)=>i>0?String(v).toUpperCase():v));
+    for(let i=2;i<=uhVals.length;i++){const c=uh.getCell(i);c.font={bold:true,size:7,color:{argb:GRAY}};c.border={bottom:inkB};if(i>2)c.alignment={horizontal:'right'};}
+    uh.height=16;
+    unitData.forEach(({unit,uTot,uBuf,secT})=>{
+      const row=sw.addRow(['',unit.name,secT.kitchen,secT.wardrobe,secT.accessories,uTot].concat(showBufCol?[uBuf||'']:[]));
+      for(let i=3;i<=(showBufCol?7:6);i++){row.getCell(i).numFmt=MONEY;row.getCell(i).alignment={horizontal:'right'};}
+      row.getCell(2).font={size:10,color:{argb:INK}};
+      row.getCell(6).font={bold:true,size:10,color:{argb:BRASS}};
+      for(let i=2;i<=(showBufCol?7:6);i++)row.getCell(i).border={bottom:hairB};
+      if(showBufCol&&uBuf)row.getCell(7).font={size:9,color:{argb:BUFC}};
+    });
+    const g=sw.addRow(['','','','','GRAND TOTAL',grand]);
+    [5,6].forEach(i=>{const c=g.getCell(i);c.border={top:inkB};});
+    g.getCell(5).font={bold:true,size:9,color:{argb:INK}};g.getCell(5).alignment={horizontal:'right'};
+    g.getCell(6).numFmt=MONEY;g.getCell(6).font={bold:true,size:14,color:{argb:INK}};g.getCell(6).alignment={horizontal:'right'};g.height=22;
+    if(incBuf&&grandBuf>0){
+      const b1=sw.addRow(['','','','','Buffer',grandBuf]);b1.getCell(6).numFmt=MONEY;[5,6].forEach(i=>{b1.getCell(i).font={size:9,color:{argb:BUFC}};b1.getCell(i).alignment={horizontal:'right'};});
+      const b2=sw.addRow(['','','','','GRAND TOTAL excl. buffer',grand-grandBuf]);b2.getCell(6).numFmt=MONEY;[5,6].forEach(i=>{b2.getCell(i).font={bold:true,size:10,color:{argb:BUFC}};b2.getCell(i).alignment={horizontal:'right'};});
+    }
+    sw.addRow([]);
+    const fl=sw.addRow(['','FULL ITEM LIST']);fl.getCell(2).font={name:'Libre Caslon Text',size:12,color:{argb:INK}};
+    const fh=sw.addRow(['#','Unit',...hdr.slice(1)]);
+    for(let i=1;i<=NCOLS+1;i++){const c=fh.getCell(i);c.font={bold:true,size:7,color:{argb:GRAY}};c.border={bottom:inkB};c.alignment={horizontal:i===7||i===10?'right':(i===8?'center':'left')};}
+    fh.height=16;
+    let rn=1;
+    unitData.forEach(({unit,rows})=>rows.forEach(({r})=>{
+      const fin=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:'')+(r.thickness?' · '+r.thickness:''));
+      const isBuf=incBuf&&r.buffer===true;
+      const row=sw.addRow([rn++,unit.name,r.category+(r.subcat?' · '+r.subcat:''),r.desc,fin,fmtDims(r),r.price,r.qty,r.unit||'',r.price*r.qty,r.notes||''].concat(showBufCol?[isBuf?'YES':'']:[]));
+      for(let i=1;i<=NCOLS+1;i++){const c=row.getCell(i);c.border={bottom:isBuf?bufHairB:hairB};if(isBuf)c.fill=solid(BUFFILL);}
+      row.getCell(1).font={size:9,color:{argb:GRAY}};
+      row.getCell(4).font={bold:true,size:10,color:{argb:INK}};
+      row.getCell(7).numFmt=MONEY;
+      row.getCell(8).alignment={horizontal:'center'};
+      row.getCell(10).numFmt=MONEY;row.getCell(10).font={bold:true,color:{argb:BRASS},size:10};
+      row.getCell(11).font={size:9,color:{argb:GRAY}};
+      if(showBufCol){const c=row.getCell(12);c.font={bold:true,size:8,color:{argb:BUFC}};c.alignment={horizontal:'center'};}
+    }));
+
+    // per-unit sheets for the set
+    unitData.forEach(({unit,rows,uTot,uBuf})=>{
+      const base=prefix+(unit.name.replace(/[\\/*?[\]:]/g,'').substring(0,multi?24:28)||'Unit');
+      const ws=wb.addWorksheet(claimSheetName(base));
+      ws.columns=widths.map(w=>({width:w}));
+      addBrandHeader(ws,NCOLS,verLabel);
+      const tr=ws.addRow([unit.name]);
+      tr.getCell(1).font={name:'Libre Caslon Text',size:13,color:{argb:INK}};
+      ws.mergeCells(tr.number,1,tr.number,NCOLS-2);
+      ws.mergeCells(tr.number,NCOLS-1,tr.number,NCOLS);
+      const tt=tr.getCell(NCOLS-1); tt.value=uTot; tt.numFmt=MONEY;
+      tt.font={bold:true,size:11,color:{argb:BRASS}}; tt.alignment={horizontal:'right',vertical:'middle'};
+      tr.height=20;
+      styleHeaderRow(ws.addRow(hdr));
+      ws.views=[{state:'frozen',ySplit:7}];
+      ws.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.35,right:0.35,top:0.5,bottom:0.5,header:0.2,footer:0.2},printTitlesRow:'7:7'};
+      let n=1,lastSec='';
+      rows.forEach(({r,sec})=>{
+        if(sec!==lastSec){addSecRow(ws,sec,NCOLS);lastSec=sec;}
+        addItemRow(ws,r,n++,0);
+      });
+      ws.addRow([]);
+      addTotalRow(ws,'UNIT TOTAL',uTot,'grand');
+      if(incBuf&&uBuf>0){ addTotalRow(ws,'Buffer',uBuf,'buf'); addTotalRow(ws,'excl. buffer',uTot-uBuf,'buf'); }
+    });
   });
 
-  // ---- download ----
+  // ---- write into the location picked at the start ----
   const buf=await wb.xlsx.writeBuffer();
   const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=exportFileBase(incBuf)+'.xlsx';
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+  await writePicked(pick, blob);
   toast('Excel exported'+(hasBuf?` (${incBuf?'with buffer':'without buffer'})`:''));
   }catch(err){ toast('Excel export failed: '+err.message,'error',5000); }
 }
@@ -2442,96 +2650,185 @@ async function exportExcel(incBuf=true){
 // ====================================================================
 // PDF — pdfmake (inlined at build): direct .pdf download, A4 portrait
 // ====================================================================
-function buildPdfDoc(incBuf){
+function buildPdfDoc(incBuf, orient, sets){
+  sets=(sets&&sets.length)?sets:defaultSets();
+  const land=orient==='landscape';
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
-  const PU='#4c1d95', GOLD='#c8a96e', GRAY='#6c7080', BUFC='#3e648c', BUFBG='#e9eff6', LAV='#ede9fe', SECBG='#f6f4fb';
+  // Palette + metrics per docs/design/boq-format/BOQ-FORMAT-SPEC.md (handoff 2026-07-12)
+  const INK='#1F1812', GRAY='#7A7166', BRASS='#8C6830', HAIR='#E6E1D8', BUFFILL='#E9EFF6', BUFHAIR='#D8E2EE', BUFC='#3E648C', BUFBORDER='#9FB4CC';
+  const CW=land?776:529;   // A4 content width in pt (page − 2×33 margins)
+  const LOGO_H=land?31.5:34.5;
+  const hasBuf=setsHaveBuffer(sets);
+  const multi=sets.length>1;
+  const verLabel=setsVersionLabel(sets);
+  const docLine='BILL OF QUANTITIES'+(hasBuf?(incBuf?' — INCL. BUFFER':' — EXCL. BUFFER'):'');
   const uTotal=u=>['kitchen','wardrobe','accessories'].reduce((s2,sec)=>s2+exportRowsFor(u,sec,incBuf).reduce((ss,r)=>ss+r.price*r.qty,0),0);
-  const grand=units.reduce((s2,u)=>s2+uTotal(u),0);
-  const grandBuf=incBuf?units.reduce((s2,u)=>s2+unitBufferTotal(u),0):0;
-  const verLabel='Alt '+activeAltKey+(activeVerNum?' · v'+activeVerNum:' · draft');
   const content=[];
-  // MULYA letterhead (branding rules: Mulya primary, Stella Mobili sub-brand)
-  content.push({columns:[
-    {width:'*',stack:[
-      {text:'MULYA',color:PU,bold:true,fontSize:20,characterSpacing:2},
-      {text:'PT. Mitra Usaha Lancar Jaya · Jl. Tegalsari 37 · More Value · More Possibilities',color:GRAY,fontSize:7,margin:[0,2,0,0]},
-    ]},
-    {width:'auto',stack:[
-      {text:'Stella Mobili',color:GOLD,bold:true,fontSize:12,alignment:'right'},
-      {text:'Bill of Quantities'+(anyBufferItems()?(incBuf?' · Quotation (incl. buffer)':' · Sales Order (excl. buffer)'):''),color:GRAY,fontSize:7.5,alignment:'right',margin:[0,3,0,0]},
-    ]}
+
+  const metaCell=(l,v)=>({stack:[
+    {text:l.toUpperCase(),fontSize:5.6,bold:true,color:BRASS,characterSpacing:0.9},
+    {text:String(v||'—'),fontSize:8.25,color:INK,margin:[0,1.5,0,0]},
   ]});
-  content.push({canvas:[{type:'line',x1:0,y1:0,x2:523,y2:0,lineWidth:1.5,lineColor:PU}],margin:[0,6,0,10]});
-  // project details
-  const metaCell=(l,v)=>({stack:[{text:l.toUpperCase(),fontSize:6.5,color:GRAY,bold:true,characterSpacing:0.6},{text:String(v||'—'),fontSize:9,margin:[0,2,0,0]}]});
-  content.push({columns:[
-    Object.assign({width:'*'},metaCell('Project',projectMeta.name)),
-    Object.assign({width:'*'},metaCell('Client',projectMeta.client)),
-    Object.assign({width:'auto'},metaCell('PIC',projectMeta.pic)),
-    Object.assign({width:'auto'},metaCell('Date',projectMeta.date)),
-    Object.assign({width:'auto'},metaCell('Version',verLabel)),
-    Object.assign({width:'auto'},metaCell('Price List',plv)),
-  ],columnGap:16,margin:[0,0,0,projectMeta.notes?4:12]});
-  if(projectMeta.notes) content.push({text:[{text:'Notes:  ',bold:true,fontSize:8,color:GRAY},{text:projectMeta.notes,fontSize:8,italics:true,color:GRAY}],margin:[0,0,0,12]});
-  // units
-  const W=[13,'*',68,86,56,24,62,50];
-  units.forEach(u=>{
-    const rows=[]; ['kitchen','wardrobe','accessories'].forEach(sec=>exportRowsFor(u,sec,incBuf).forEach(r=>rows.push({r,sec})));
-    if(!rows.length) return;
-    const ub=incBuf?unitBufferTotal(u):0;
-    content.push({table:{widths:['*','auto'],body:[[
-      {text:u.name,color:'#ffffff',bold:true,fontSize:10,fillColor:PU,margin:[8,4,0,4]},
-      {text:fmt(uTotal(u))+(ub>0?'   (excl. buffer '+fmt(uTotal(u)-ub)+')':''),color:'#ffffff',bold:true,fontSize:9,alignment:'right',fillColor:PU,margin:[0,5,8,4]}
-    ]]},layout:'noBorders'});
-    const body=[['#','Description','Category','Finish','Unit Price','Qty','Total','Notes'].map((h,i)=>({text:h.toUpperCase(),fontSize:6.5,bold:true,color:PU,fillColor:LAV,alignment:i===4||i===6?'right':(i===5?'center':'left'),margin:[i===0?3:0,2,0,2]}))];
-    let lastSec='', n=0;
-    rows.forEach(({r,sec})=>{
-      if(sec!==lastSec){
-        const secCell={text:sec.toUpperCase(),colSpan:8,fontSize:6.5,bold:true,color:GRAY,fillColor:SECBG,characterSpacing:0.5,margin:[3,1,0,1]};
-        body.push([secCell,{},{},{},{},{},{},{}]); lastSec=sec; n=0;
-      }
-      n++;
-      const isBuf=incBuf&&r.buffer===true, fill=isBuf?BUFBG:null;
-      const fd=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
-      const dims=fmtDims(r);
-      const descStack=[{text:[{text:r.desc,bold:true}].concat(isBuf?[{text:'   BUFFER',color:BUFC,bold:true,fontSize:6}]:[])}];
-      if(dims) descStack.push({text:dims,fontSize:6.5,color:GRAY,margin:[0,1,0,0]});
-      const catStack=[{text:r.category}]; if(r.subcat) catStack.push({text:r.subcat,fontSize:6.5,color:GRAY});
-      body.push([
-        {text:String(n),color:GRAY,fillColor:fill,margin:[3,1,0,1]},
-        {stack:descStack,fillColor:fill,margin:[0,1,0,1]},
-        {stack:catStack,fillColor:fill,margin:[0,1,0,1]},
-        {text:fd+(r.thickness?' · '+r.thickness:''),color:'#444444',fillColor:fill,margin:[0,1,0,1]},
-        {text:fmt(r.price),alignment:'right',fillColor:fill,margin:[0,1,0,1]},
-        {text:String(r.qty),alignment:'center',fillColor:fill,margin:[0,1,0,1]},
-        {text:fmt(r.price*r.qty),alignment:'right',bold:true,color:PU,fillColor:fill,margin:[0,1,0,1]},
-        {text:r.notes||'',italics:true,fontSize:6.5,color:GRAY,fillColor:fill,margin:[0,1,0,1]},
-      ]);
+  const metaCells=()=>[
+    metaCell('Project',projectMeta.name), metaCell('Client',projectMeta.client),
+    metaCell('PIC',projectMeta.pic), metaCell('Date',projectMeta.date),
+    metaCell('Version',verLabel), metaCell('Price list',plv),
+  ];
+
+  // ---- header: brand logo left, MULYA constant top-right (branding rules) ----
+  // logos as vector SVG (crisp at any print size); aspect ratios from the SVG viewBoxes
+  const leftStack={width:land?'auto':'*',stack:[
+    {svg:BOQ_LOGOS.stellaSvg,height:LOGO_H,width:LOGO_H*(121.92/34.58)},
+    {text:docLine,fontSize:6,color:BRASS,characterSpacing:0.6,margin:[0,6.75,0,0]},
+  ]};
+  const rightStack={width:'auto',stack:[
+    {svg:BOQ_LOGOS.mulyaSvg,height:LOGO_H,width:LOGO_H*(85.04/34.58),alignment:'right'},
+    {text:'PT. MITRA USAHA LANCAR JAYA · JL. TEGALSARI 37',fontSize:6,color:BRASS,characterSpacing:0.6,alignment:'right',margin:[0,6.75,0,0]},
+  ]};
+  if(land){
+    // landscape: the six meta cells sit inline between the logos (spec)
+    content.push({columns:[leftStack,
+      {width:'*',margin:[20,22,10,0],columns:metaCells().map(c=>Object.assign({width:'auto'},c)),columnGap:19.5},
+      rightStack]});
+  }else{
+    content.push({columns:[leftStack,rightStack]});
+  }
+  content.push({canvas:[{type:'line',x1:0,y1:7.5,x2:CW,y2:7.5,lineWidth:1.1,lineColor:INK}]});
+  if(!land){
+    // portrait: meta band on its own row under the header rule
+    const MW=(CW-5*10.5)/5.4;   // spread ≈ mock grid 1.1fr 1.1fr 0.7fr 0.9fr 0.8fr 0.8fr
+    const mw=[MW*1.1,MW*1.1,MW*0.7,MW*0.9,MW*0.8,'*'];
+    content.push({margin:[0,6.75,0,0],columnGap:10.5,columns:metaCells().map((c,i)=>Object.assign({width:mw[i]},c))});
+    content.push({canvas:[{type:'line',x1:0,y1:6.75,x2:CW,y2:6.75,lineWidth:0.4,lineColor:HAIR}]});
+  }
+  if(projectMeta.notes) content.push({text:[{text:'NOTES   ',fontSize:5.6,bold:true,color:BRASS,characterSpacing:0.9},{text:projectMeta.notes,fontSize:7.1,color:GRAY}],margin:[0,5,0,0]});
+
+  // ---- per-set rendering ----
+  const th=(t,al)=>({text:t.toUpperCase(),fontSize:5.6,bold:true,color:GRAY,characterSpacing:0.8,alignment:al||'left',margin:[0,3,0,2]});
+  const COLS=land?[18,'*',105,72,61.5,18,69,78.75]:[15,'*',52.5,65,52.5,16.5,60,66];   // spec widths (pt); finish narrowed in favor of the '*' description column (user request 2026-07-12)
+  const PADX=land?4.5:3.75;
+  // BUFFER tag as a bordered pill (1-cell table; fresh node per row — pdfmake mutates nodes)
+  const pill=()=>({width:'auto',margin:[4,0.5,0,0],table:{body:[[{text:'BUFFER',fontSize:5.25,bold:true,color:BUFC,characterSpacing:0.75}]]},layout:{hLineWidth:()=>0.5,vLineWidth:()=>0.5,hLineColor:()=>BUFBORDER,vLineColor:()=>BUFBORDER,paddingLeft:()=>3,paddingRight:()=>2.25,paddingTop:()=>1,paddingBottom:()=>1}});
+
+  sets.forEach((set,si)=>{
+    const sUnits=setUnits(set.altKey,set.ver);
+    const alt=alts.find(a=>a.key===set.altKey);
+    const grand=sUnits.reduce((s2,u)=>s2+uTotal(u),0);
+    const grandBuf=incBuf?sUnits.reduce((s2,u)=>s2+unitBufferTotal(u),0):0;
+
+    if(multi){
+      // alternative divider: each selected set starts on its own page
+      content.push(Object.assign(si>0?{pageBreak:'before'}:{},{margin:[0,10,0,2],stack:[
+        {canvas:[{type:'line',x1:0,y1:0,x2:CW,y2:0,lineWidth:1.5,lineColor:INK}]},
+        {margin:[0,6,0,0],columns:[
+          {text:'Alternative '+set.altKey+(alt&&alt.name?' — '+alt.name:''),font:'LibreCaslon',fontSize:13,color:INK,width:'*'},
+          {text:setLabel(set).toUpperCase(),fontSize:7,bold:true,color:BRASS,characterSpacing:0.8,alignment:'right',margin:[0,5,0,0],width:'auto'},
+        ]},
+      ]}));
+    }
+
+    sUnits.forEach(u=>{
+      const rows=[]; ['kitchen','wardrobe','accessories'].forEach(sec=>exportRowsFor(u,sec,incBuf).forEach(r=>rows.push({r,sec})));
+      if(!rows.length) return;
+      const uTot=uTotal(u), ub=incBuf?unitBufferTotal(u):0;
+      // section header: Caslon title — hairline filler — optional excl-buffer note — brass total
+      content.push({margin:[0,6,0,0],headlineLevel:1,columns:[
+        {text:u.name,font:'LibreCaslon',fontSize:11.25,color:INK,width:'auto',noWrap:true},
+        // stretchy hairline filler: borderless 1-cell table whose bottom rule spans the '*' column
+        {width:'*',margin:[9,0,9,0],table:{widths:['*'],body:[[{text:'',fontSize:1}]]},layout:{hLineWidth:i=>i===1?0.4:0,hLineColor:()=>HAIR,vLineWidth:()=>0,paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>7,paddingBottom:()=>0}},
+        ...(ub>0?[{text:'(excl. buffer '+fmt(uTot-ub)+')',fontSize:6.4,color:GRAY,width:'auto',noWrap:true,margin:[0,3,6,0]}]:[]),
+        {text:fmt(uTot),fontSize:8.6,bold:true,color:BRASS,width:'auto',noWrap:true,margin:[0,2,0,0]},
+      ]});
+      const body=[[th('#'),th('Description'),th('Category'),th('Finish'),th('Unit price','right'),th('Qty','center'),th('Total','right'),th('Notes')]];
+      let lastSec='', n=0;
+      rows.forEach(({r,sec})=>{
+        if(sec!==lastSec){
+          body.push([{text:sec.toUpperCase(),colSpan:8,fontSize:5.6,bold:true,color:GRAY,characterSpacing:0.8,margin:[0,2,0,0]},{},{},{},{},{},{},{}]);
+          lastSec=sec; n=0;
+        }
+        n++;
+        const isBuf=incBuf&&r.buffer===true;
+        const fd=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
+        const dims=fmtDims(r);
+        let descCell, catCell;
+        if(land){
+          // one-line rows: name + dims share the line; category + sub-category too
+          const nameText={width:'auto',text:[{text:r.desc,bold:true,color:INK}].concat(dims?[{text:'   '+dims,fontSize:6.4,color:GRAY,bold:false}]:[]),fontSize:7.5,lineHeight:1.15};
+          descCell=isBuf?{columns:[nameText,pill()],columnGap:0}:{text:nameText.text,fontSize:7.5,lineHeight:1.15};
+          catCell={text:[{text:r.category}].concat(r.subcat?[{text:'  ·  '+r.subcat,fontSize:6.4,color:GRAY}]:[]),fontSize:7.5,color:INK};
+        }else{
+          const nameLine=isBuf
+            ?{columns:[{width:'auto',text:r.desc,fontSize:7.9,bold:true,color:INK,lineHeight:1.15},pill()],columnGap:0}
+            :{text:r.desc,fontSize:7.9,bold:true,color:INK,lineHeight:1.15};
+          descCell={stack:[nameLine].concat(dims?[{text:dims,fontSize:6.4,color:GRAY,margin:[0,0.75,0,0]}]:[])};
+          catCell={stack:[{text:r.category,fontSize:7.5,color:INK}].concat(r.subcat?[{text:r.subcat,fontSize:6.4,color:GRAY}]:[])};
+        }
+        const row=[
+          {text:String(n),fontSize:7.1,color:GRAY},
+          descCell,
+          catCell,
+          {text:fd+(r.thickness?' · '+r.thickness:''),fontSize:7.5,color:INK},
+          {text:fmt(r.price),fontSize:7.5,color:INK,alignment:'right'},
+          {text:String(r.qty),fontSize:7.5,color:INK,alignment:'center'},
+          {text:fmt(r.price*r.qty),fontSize:7.5,bold:true,color:BRASS,alignment:'right'},
+          {text:r.notes||'',fontSize:7.1,color:GRAY,lineHeight:1.2},
+        ];
+        row.__buffer=isBuf;   // read by fillColor/hLineColor in the layout below
+        body.push(row);
+      });
+      content.push({margin:[0,2,0,0],table:{headerRows:1,widths:COLS,body,dontBreakRows:true},layout:{
+        hLineWidth:i=>(i===1?0.75:(i===0?0:0.4)),
+        hLineColor:(i,node)=>{ if(i===1) return INK; const row=node.table.body[i-1]; return row&&row.__buffer?BUFHAIR:HAIR; },
+        vLineWidth:()=>0,
+        fillColor:(i,node)=>(i>0&&node.table.body[i].__buffer?BUFFILL:null),
+        paddingLeft:()=>PADX,paddingRight:()=>PADX,paddingTop:()=>2.25,paddingBottom:()=>2.25,
+      }});
     });
-    content.push({table:{headerRows:1,widths:W,body,dontBreakRows:true},layout:{hLineWidth:()=>0.5,hLineColor:()=>'#e8e8e8',vLineWidth:()=>0,paddingLeft:()=>2,paddingRight:()=>2,paddingTop:()=>1.5,paddingBottom:()=>1.5},margin:[0,0,0,12]});
+
+    // ---- grand total block for the set (unbreakable: rule + figure + sub-line together) ----
+    const gtLabel=(multi?'ALT '+set.altKey+' — ':'')+'GRAND TOTAL · SHOWROOM PRICE · EXCL. PPN'+(hasBuf?(incBuf?' · INCL. BUFFER':' · EXCL. BUFFER'):'');
+    content.push({unbreakable:true,stack:[
+      {canvas:[{type:'line',x1:0,y1:7.5,x2:CW,y2:7.5,lineWidth:1.5,lineColor:INK}],margin:[0,4,0,5]},
+      {columns:[
+        {text:gtLabel,fontSize:6,bold:true,color:INK,characterSpacing:1.35,margin:[0,6,0,0],width:'*'},
+        {width:'auto',stack:[
+          {text:fmt(grand),font:'LibreCaslon',fontSize:15.75,color:INK,alignment:'right'},
+          ...(incBuf&&grandBuf>0?[{text:'excl. buffer '+fmt(grand-grandBuf)+' · buffer '+fmt(grandBuf),fontSize:6.4,color:GRAY,alignment:'right',margin:[0,1.5,0,0]}]:[]),
+        ]}
+      ]}
+    ]});
   });
-  // grand total
-  content.push({table:{widths:['*','auto'],body:[[
-    {text:'GRAND TOTAL · ALL UNITS · SHOWROOM PRICE · EXCL. PPN'+(incBuf&&grandBuf>0?' · INCL. BUFFER':''),color:LAV,fontSize:7,characterSpacing:0.8,fillColor:PU,margin:[8,7,0,7]},
-    {stack:[{text:fmt(grand),color:'#ffffff',bold:true,fontSize:13,alignment:'right'}].concat(incBuf&&grandBuf>0?[{text:'excl. buffer '+fmt(grand-grandBuf)+' · buffer '+fmt(grandBuf),color:LAV,fontSize:6.5,alignment:'right',margin:[0,1,0,0]}]:[]),fillColor:PU,margin:[0,5,8,5]}
-  ]]},layout:'noBorders',margin:[0,2,0,0]});
+
   return {
-    pageSize:'A4', pageOrientation:'portrait', pageMargins:[36,36,36,44],
+    pageSize:'A4', pageOrientation:land?'landscape':'portrait', pageMargins:[33,land?18:16,33,28],
+    // orphan control: a unit headline stranded at the bottom of a page moves to the next
+    // (following.length===0 misses tables that tentatively start on the page, so also
+    //  break when the headline lands in the last 10% of the page height)
+    pageBreakBefore:(node,following)=>node.headlineLevel===1&&(following.length===0||(node.startPosition&&node.startPosition.verticalRatio>0.9)),
+    defaultStyle:{font:'LibreFranklin',fontSize:7.5,color:INK},
     content,
-    defaultStyle:{fontSize:7.5},
-    footer:(cur,total)=>({columns:[
-      {text:(projectMeta.name||'')+' · '+verLabel+' · '+plv,fontSize:6.5,color:GRAY,margin:[36,12,0,0]},
-      {text:cur+' / '+total,alignment:'right',fontSize:6.5,color:GRAY,margin:[0,12,36,0]}
+    footer:(cur,total)=>({margin:[33,6,33,0],stack:[
+      {canvas:[{type:'line',x1:0,y1:0,x2:CW,y2:0,lineWidth:0.4,lineColor:HAIR}]},
+      {margin:[0,5,0,0],columns:[
+        {text:(projectMeta.name||'')+' · '+verLabel+' · '+plv,fontSize:6,color:GRAY,characterSpacing:0.45},
+        {text:cur+' / '+total,fontSize:6,color:GRAY,alignment:'right'},
+      ]},
     ]}),
     info:{title:(projectMeta.name||'BOQ')+' — BOQ', author:'Stella Mobili BOQ Tool'},
   };
 }
-function savePDF(incBuf=true){
+async function savePDF(incBuf=true, orient='portrait', sets=null){
   if(typeof pdfMake==='undefined'){toast('pdfMake not loaded — run the build','error');return;}
   if(!requireProjectFields()) return;
   try{
-    pdfMake.createPdf(buildPdfDoc(incBuf)).download(exportFileBase(incBuf)+'.pdf');
-    toast('PDF downloaded'+(anyBufferItems()?` (${incBuf?'with buffer':'without buffer'})`:''));
+    sets=(sets&&sets.length)?sets:defaultSets();
+    // Save-As dialog FIRST (while the click is fresh), generation after
+    const pick=await pickSaveHandle(exportFileBase(incBuf,sets)+'.pdf');
+    if(pick.mode==='cancelled'){ toast('Save cancelled','warn'); return; }
+    pdfMake.createPdf(buildPdfDoc(incBuf, orient, sets)).getBlob(async blob=>{
+      await writePicked(pick, blob);
+      toast('PDF saved'+(setsHaveBuffer(sets)?` (${incBuf?'with buffer':'without buffer'})`:''));
+    });
   }catch(err){ toast('PDF export failed: '+err.message,'error',5000); }
 }
 
