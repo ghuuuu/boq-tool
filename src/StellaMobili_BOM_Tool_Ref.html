@@ -510,7 +510,7 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
   </div>
   <div class="topbar-actions">
     <span class="rev-pill save-status saved" id="saveStatus" title="Autosave status">Saved</span>
-    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.3.0</span>
+    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.3.1</span>
     <span class="rev-pill" id="revPill" title="Price list version">Pricelist</span>
     <input type="file" id="loadInput" accept=".smbq,.json" style="display:none" onchange="loadFile(this)">
   </div>
@@ -2339,10 +2339,16 @@ function setsVersionLabel(sets){
   return sets.map(s=>s.altKey+(s.ver==='working'?'·cur':'·v'+s.ver)).join(' + ');
 }
 // "(Buffer)" only appears when buffer items are actually included in the document.
-// NB: the filename intentionally carries NO Alt/version segment — the picker decides
-// the content and the document itself states the version(s).
+// Alt segment: when the export covers only SOME of the alternatives, name them
+// (e.g. _Alt_A-B-C_). When every alternative is included, omit it — the filename stays
+// clean and the document itself states the version(s).
 function exportFileBase(incBuf, sets){
-  return fileBaseNameDate()+'_'+((incBuf&&setsHaveBuffer(sets))?'BOQ(Buffer)':'BOQ');
+  sets=(sets&&sets.length)?sets:defaultSets();
+  const buf=(incBuf&&setsHaveBuffer(sets))?'BOQ(Buffer)':'BOQ';
+  const keys=[...new Set(sets.map(s=>s.altKey))].sort();
+  const allKeys=alts.map(a=>a.key).sort();
+  const altSeg=(keys.length && keys.length<allKeys.length)?'Alt_'+keys.join('-')+'_':'';
+  return fileBaseNameDate()+'_'+altSeg+buf;
 }
 
 function openExportModal(kind){
@@ -2669,39 +2675,47 @@ function buildPdfDoc(incBuf, orient, sets){
     {text:l.toUpperCase(),fontSize:5.6,bold:true,color:BRASS,characterSpacing:0.9},
     {text:String(v||'—'),fontSize:8.25,color:INK,margin:[0,1.5,0,0]},
   ]});
-  const metaCells=()=>[
+  // vlabel overrides the Version cell — in a multi-set export each alternative's letterhead
+  // shows ITS OWN version (e.g. "Alt B v1"), not the combined label.
+  const metaCells=(vlabel)=>[
     metaCell('Project',projectMeta.name), metaCell('Client',projectMeta.client),
     metaCell('PIC',projectMeta.pic), metaCell('Date',projectMeta.date),
-    metaCell('Version',verLabel), metaCell('Price list',plv),
+    metaCell('Version',vlabel||verLabel), metaCell('Price list',plv),
   ];
 
   // ---- header: brand logo left, MULYA constant top-right (branding rules) ----
-  // logos as vector SVG (crisp at any print size); aspect ratios from the SVG viewBoxes
-  const leftStack={width:land?'auto':'*',stack:[
-    {svg:BOQ_LOGOS.stellaSvg,height:LOGO_H,width:LOGO_H*(121.92/34.58)},
-    {text:docLine,fontSize:6,color:BRASS,characterSpacing:0.6,margin:[0,6.75,0,0]},
-  ]};
-  const rightStack={width:'auto',stack:[
-    {svg:BOQ_LOGOS.mulyaSvg,height:LOGO_H,width:LOGO_H*(85.04/34.58),alignment:'right'},
-    {text:'PT. MITRA USAHA LANCAR JAYA · JL. TEGALSARI 37',fontSize:6,color:BRASS,characterSpacing:0.6,alignment:'right',margin:[0,6.75,0,0]},
-  ]};
-  if(land){
-    // landscape: the six meta cells sit inline between the logos (spec)
-    content.push({columns:[leftStack,
-      {width:'*',margin:[20,22,10,0],columns:metaCells().map(c=>Object.assign({width:'auto'},c)),columnGap:19.5},
-      rightStack]});
-  }else{
-    content.push({columns:[leftStack,rightStack]});
+  // logos as vector SVG (crisp at any print size); aspect ratios from the SVG viewBoxes.
+  // Built fresh each call (pdfmake mutates nodes) so the full letterhead can repeat atop
+  // each alternative in a multi-set export — every alternative reads as a standalone BOQ.
+  function pushLetterhead(brk,vlabel){
+    const leftStack={width:land?'auto':'*',stack:[
+      {svg:BOQ_LOGOS.stellaSvg,height:LOGO_H,width:LOGO_H*(121.92/34.58)},
+      {text:docLine,fontSize:6,color:BRASS,characterSpacing:0.6,margin:[0,6.75,0,0]},
+    ]};
+    const rightStack={width:'auto',stack:[
+      {svg:BOQ_LOGOS.mulyaSvg,height:LOGO_H,width:LOGO_H*(85.04/34.58),alignment:'right'},
+      {text:'PT. MITRA USAHA LANCAR JAYA · JL. TEGALSARI 37',fontSize:6,color:BRASS,characterSpacing:0.6,alignment:'right',margin:[0,6.75,0,0]},
+    ]};
+    const head=land
+      // landscape: the six meta cells sit inline between the logos (spec)
+      ?{columns:[leftStack,
+        {width:'*',margin:[20,22,10,0],columns:metaCells(vlabel).map(c=>Object.assign({width:'auto'},c)),columnGap:19.5},
+        rightStack]}
+      :{columns:[leftStack,rightStack]};
+    if(brk) head.pageBreak='before';
+    content.push(head);
+    content.push({canvas:[{type:'line',x1:0,y1:7.5,x2:CW,y2:7.5,lineWidth:1.1,lineColor:INK}]});
+    if(!land){
+      // portrait: meta band on its own row under the header rule
+      const MW=(CW-5*10.5)/5.4;   // spread ≈ mock grid 1.1fr 1.1fr 0.7fr 0.9fr 0.8fr 0.8fr
+      const mw=[MW*1.1,MW*1.1,MW*0.7,MW*0.9,MW*0.8,'*'];
+      content.push({margin:[0,6.75,0,0],columnGap:10.5,columns:metaCells(vlabel).map((c,i)=>Object.assign({width:mw[i]},c))});
+      content.push({canvas:[{type:'line',x1:0,y1:6.75,x2:CW,y2:6.75,lineWidth:0.4,lineColor:HAIR}]});
+    }
+    if(projectMeta.notes) content.push({text:[{text:'NOTES   ',fontSize:5.6,bold:true,color:BRASS,characterSpacing:0.9},{text:projectMeta.notes,fontSize:7.1,color:GRAY}],margin:[0,5,0,0]});
   }
-  content.push({canvas:[{type:'line',x1:0,y1:7.5,x2:CW,y2:7.5,lineWidth:1.1,lineColor:INK}]});
-  if(!land){
-    // portrait: meta band on its own row under the header rule
-    const MW=(CW-5*10.5)/5.4;   // spread ≈ mock grid 1.1fr 1.1fr 0.7fr 0.9fr 0.8fr 0.8fr
-    const mw=[MW*1.1,MW*1.1,MW*0.7,MW*0.9,MW*0.8,'*'];
-    content.push({margin:[0,6.75,0,0],columnGap:10.5,columns:metaCells().map((c,i)=>Object.assign({width:mw[i]},c))});
-    content.push({canvas:[{type:'line',x1:0,y1:6.75,x2:CW,y2:6.75,lineWidth:0.4,lineColor:HAIR}]});
-  }
-  if(projectMeta.notes) content.push({text:[{text:'NOTES   ',fontSize:5.6,bold:true,color:BRASS,characterSpacing:0.9},{text:projectMeta.notes,fontSize:7.1,color:GRAY}],margin:[0,5,0,0]});
+  // single-set export: one letterhead at the very top. Multi-set: one atop each alternative (in the loop).
+  if(!multi) pushLetterhead(false);
 
   // ---- per-set rendering ----
   const th=(t,al)=>({text:t.toUpperCase(),fontSize:5.6,bold:true,color:GRAY,characterSpacing:0.8,alignment:al||'left',margin:[0,3,0,2]});
@@ -2717,14 +2731,19 @@ function buildPdfDoc(incBuf, orient, sets){
     const grandBuf=incBuf?sUnits.reduce((s2,u)=>s2+unitBufferTotal(u),0):0;
 
     if(multi){
-      // alternative divider: each selected set starts on its own page
-      content.push(Object.assign(si>0?{pageBreak:'before'}:{},{margin:[0,10,0,2],stack:[
-        {canvas:[{type:'line',x1:0,y1:0,x2:CW,y2:0,lineWidth:1.5,lineColor:INK}]},
-        {margin:[0,6,0,0],columns:[
+      // Each selected set is its own BOQ: repeat the full letterhead (logos + project meta)
+      // atop each alternative — starting on a fresh page — so every one reads with full context.
+      // The letterhead's Version cell shows THIS alternative's own version (e.g. "Alt B v1").
+      const aLabel='Alt '+set.altKey+(set.ver==='working'?' · working':' v'+set.ver);
+      pushLetterhead(si>0,aLabel);
+      // Alternative title bar (no heavy rule) with a compact "Alt A v2" label, underlined by a hairline.
+      content.push({margin:[0,5,0,2],stack:[
+        {columns:[
           {text:'Alternative '+set.altKey+(alt&&alt.name?' — '+alt.name:''),font:'LibreCaslon',fontSize:13,color:INK,width:'*'},
-          {text:setLabel(set).toUpperCase(),fontSize:7,bold:true,color:BRASS,characterSpacing:0.8,alignment:'right',margin:[0,5,0,0],width:'auto'},
+          {text:aLabel.toUpperCase(),fontSize:7.5,bold:true,color:BRASS,characterSpacing:0.8,alignment:'right',margin:[0,4,0,0],width:'auto'},
         ]},
-      ]}));
+        {canvas:[{type:'line',x1:0,y1:6,x2:CW,y2:6,lineWidth:0.4,lineColor:HAIR}]},
+      ]});
     }
 
     sUnits.forEach(u=>{
