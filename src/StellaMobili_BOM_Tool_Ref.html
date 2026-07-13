@@ -241,7 +241,7 @@ input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
 .handle-btn:disabled{opacity:.4;cursor:not-allowed}
 
 /* ===== Meta grid ===== */
-.meta-grid{display:grid;grid-template-columns:2fr 1.5fr 1fr 1fr 2fr;gap:14px}
+.meta-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(90px,0.7fr);gap:14px}
 
 /* ===== Tabs ===== */
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto;scrollbar-width:none}
@@ -534,7 +534,7 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
   </div>
   <div class="topbar-actions">
     <span class="rev-pill save-status saved" id="saveStatus" title="Autosave status">Saved</span>
-    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.5.0</span>
+    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.5.1</span>
     <span class="rev-pill" id="revPill" title="Price list version">Pricelist</span>
     <input type="file" id="loadInput" accept=".smbq,.json" style="display:none" onchange="loadFile(this)">
   </div>
@@ -2312,11 +2312,11 @@ function renderRevisionsPanel(){
     const verChips=a.versions.slice().reverse().map(v=>{
       const isLoaded=isActive&&activeVerNum===v.ver, isLatest=latest&&v.ver===latest.ver;
       const chip=`padding:3px 11px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-num);font-variant-numeric:tabular-nums;cursor:pointer;white-space:nowrap;flex-shrink:0;border:1px solid ${isLoaded?'var(--accent)':(isLatest?'color-mix(in srgb,var(--accent) 42%,transparent)':'var(--line)')};background:${isLoaded?'var(--accent)':'transparent'};color:${isLoaded?'var(--on-accent)':(isLatest?'var(--accent)':'var(--ink-faint)')}`;
-      const title='Alt '+a.key+' · v'+v.ver+' · '+v.status+' · '+v.date+' · '+fmt(v.total)+(v.note?' — '+v.note:'');
-      const dstyle='font-size:10.5px;color:var(--ink-faint);cursor:pointer;font-family:var(--font-num);font-variant-numeric:tabular-nums;border-bottom:1px dashed var(--line);flex-shrink:0';
-      return `<span style="display:inline-flex;align-items:center;gap:5px;flex-shrink:0">
+      const title='Alt '+a.key+' · v'+v.ver+' · '+v.status+' · '+fmtDate(v.date)+' · '+fmt(v.total)+(v.note?' — '+v.note:'');
+      const dstyle='font-size:12.5px;color:var(--accent);cursor:pointer;font-family:var(--font-num);font-variant-numeric:tabular-nums;border-bottom:1px dashed var(--accent);padding-bottom:1px;flex-shrink:0';
+      return `<span style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0">
         <button style="${chip}" title="${escAttr(title)}" onclick="event.stopPropagation();loadVersion('${a.key}',${v.ver})">v${v.ver}</button>
-        <span id="vdate-${a.key}-${v.ver}" style="${dstyle}" title="Click to change this version's date" onclick="event.stopPropagation();editVersionDate('${a.key}',${v.ver})">${esc(v.date||'—')}</span>
+        <span id="vdate-${a.key}-${v.ver}" style="${dstyle}" title="Click to edit this version's date" onclick="event.stopPropagation();editVersionDate('${a.key}',${v.ver})">${esc(fmtDate(v.date)||'—')}</span>
       </span>`;
     }).join('');
     const metaLine=latest?('latest v'+latest.ver+(latest.note?' — '+esc(latest.note):'')):'no versions yet — use "Save as v1"';
@@ -2362,8 +2362,8 @@ function renderRevisionsPanel(){
 function editVersionDate(altKey,ver){
   const span=document.getElementById('vdate-'+altKey+'-'+ver); if(!span) return;
   const a=alts.find(x=>x.key===altKey); const v=a&&a.versions.find(x=>x.ver===ver); if(!v) return;
-  const inp=document.createElement('input'); inp.type='date'; inp.value=v.date||''; inp.className='input compact';
-  inp.style.cssText='width:142px;font-size:11px;padding:2px 6px';
+  const inp=document.createElement('input'); inp.type='date'; inp.value=v.date||'';
+  inp.style.cssText='font-size:12.5px;font-family:var(--font-num);width:128px;height:24px;box-sizing:border-box;padding:1px 6px;border:1px solid var(--accent);border-radius:5px;background:#fff;color:var(--ink)';
   inp.onclick=e=>e.stopPropagation();
   let done=false;
   const commit=()=>{ if(done) return; done=true; if(inp.value&&inp.value!==v.date) setVersionDate(altKey,ver,inp.value); else renderOverview(); };
@@ -2375,7 +2375,7 @@ function setVersionDate(altKey,ver,val){
   if(!val) return;
   const a=alts.find(x=>x.key===altKey); const v=a&&a.versions.find(x=>x.ver===ver); if(!v) return;
   v.date=val; fileUnsaved=true; autosaveNow(); renderOverview();
-  toast('Alt '+altKey+' · v'+ver+' dated '+val);
+  toast('Alt '+altKey+' · v'+ver+' dated '+fmtDate(val));
 }
 
 // ====================================================================
@@ -2538,7 +2538,7 @@ function requireProjectFields(){
 // Export filename: project name, date, quotation version, mode — Windows-safe.
 // dateStr defaults to today (used for .smbq saves + working-copy exports).
 function fileBaseNameDate(dateStr){
-  const date=dateStr||new Date().toISOString().slice(0,10);
+  const date=fmtDate(dateStr||new Date().toISOString().slice(0,10));
   const name=(projectMeta.name||'BOQ').trim().replace(/\s*[–—]\s*/g,'_').replace(/\s+-\s+/g,'_');
   return (name+'_'+date).replace(/[\\/:*?"<>|]/g,'-');
 }
@@ -2714,7 +2714,7 @@ async function exportExcel(incBuf=true, sets=null){
     cc.font={bold:true,size:8,color:{argb:BRASS}}; cc.alignment={horizontal:'right'};
     for(let i=1;i<=ncols;i++) r2.getCell(i).border={bottom:inkB};
     const labels=['PROJECT','CLIENT','PIC','DATE','VERSION','PRICE LIST'];
-    const values=[projectMeta.name,projectMeta.client,projectMeta.pic,verDate||new Date().toISOString().slice(0,10),verLabel,plv];
+    const values=[projectMeta.name,projectMeta.client,projectMeta.pic,fmtDate(verDate||new Date().toISOString().slice(0,10)),verLabel,plv];
     const r3=ws.addRow(['',...labels]);
     labels.forEach((_,k)=>{r3.getCell(k+2).font={bold:true,size:7,color:{argb:BRASS}};});
     const r4=ws.addRow(['',...values.map(v=>v||'—')]);
@@ -2917,7 +2917,7 @@ function buildPdfDoc(incBuf, orient, sets){
   // shows ITS OWN version (e.g. "Alt B v1"), not the combined label.
   const metaCells=(vlabel,vdate)=>[
     metaCell('Project',projectMeta.name), metaCell('Client',projectMeta.client),
-    metaCell('PIC',projectMeta.pic), metaCell('Date',vdate||new Date().toISOString().slice(0,10)),
+    metaCell('PIC',projectMeta.pic), metaCell('Date',fmtDate(vdate||new Date().toISOString().slice(0,10))),
     metaCell('Version',vlabel||verLabel), metaCell('Price list',plv),
   ];
 
@@ -3126,6 +3126,8 @@ function toast(msg,type='success',dur=2500){
 // ====================================================================
 function el(id){return document.getElementById(id)}
 function fmt(n){return'Rp '+Math.round(n).toLocaleString('id-ID')}
+// Dates are stored/edited as ISO (YYYY-MM-DD, what <input type=date> needs) but displayed DD-MM-YYYY.
+function fmtDate(iso){ if(!iso) return ''; const p=String(iso).split('-'); return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:String(iso); }
 function fmtShort(n){if(n>=1e9)return'Rp '+(n/1e9).toFixed(1)+'B';if(n>=1e6)return'Rp '+(n/1e6).toFixed(1)+'M';return'Rp '+Math.round(n).toLocaleString('id-ID')}
 function fmtNum(n){return Math.round(n).toLocaleString('id-ID')}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
