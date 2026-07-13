@@ -2569,7 +2569,10 @@ function exportBands(unit, incBuf){
   const collect=match=>{ const out=[]; SECS.forEach(sec=>exportRowsFor(unit,sec,incBuf).forEach(r=>{ if(match(r.groupId)) out.push({r,sec}); })); return out; };
   const bands=[];
   unitGroups(unit).forEach(g=>{ const rows=collect(gid=>gid===g.id); if(rows.length) bands.push({name:g.name, gid:g.id, rows, other:false}); });
-  const other=collect(gid=>!groupById(unit,gid)); if(other.length) bands.push({name:'Other items', gid:null, rows:other, other:true});
+  const other=collect(gid=>!groupById(unit,gid));
+  // noHeader: when the unit has no groups at all, the ungrouped rows are the whole list —
+  // render them flat with no "Other items" header.
+  if(other.length) bands.push({name:'Other items', gid:null, rows:other, other:true, noHeader:bands.length===0});
   return bands;
 }
 function bandTotal(band){ return band.rows.reduce((s,{r})=>s+r.price*r.qty,0); }
@@ -2930,7 +2933,7 @@ async function exportExcel(incBuf=true, sets=null){
       ws.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.35,right:0.35,top:0.5,bottom:0.5,header:0.2,footer:0.2},printTitlesRow:'7:7'};
       let n=1;
       exportBands(unit,incBuf).forEach(band=>{
-        addGroupRow(ws,band);
+        if(!band.noHeader) addGroupRow(ws,band);
         band.rows.forEach(({r,sec})=>addItemRow(ws,r,n++,0,sec));
       });
       ws.addRow([]);
@@ -3062,11 +3065,13 @@ function buildPdfDoc(incBuf, orient, sets){
       let n=0;
       // Group-first: each band = group name + subtotal header, then its rows (tagged by section).
       exportBands(u,incBuf).forEach(band=>{
-        const bt=bandTotal(band);
-        body.push([
-          {text:band.name.toUpperCase(),colSpan:6,fontSize:6,bold:true,color:band.other?GRAY:BRASS,characterSpacing:0.8,margin:[0,3,0,1]},{},{},{},{},{},
-          {text:fmt(bt),colSpan:2,fontSize:6.6,bold:true,color:INK,alignment:'right',margin:[0,3,0,1]},{}
-        ]);
+        if(!band.noHeader){
+          const bt=bandTotal(band);
+          body.push([
+            {text:band.name.toUpperCase(),colSpan:6,fontSize:6,bold:true,color:band.other?GRAY:BRASS,characterSpacing:0.8,margin:[0,3,0,1]},{},{},{},{},{},
+            {text:fmt(bt),colSpan:2,fontSize:6.6,bold:true,color:INK,alignment:'right',margin:[0,3,0,1]},{}
+          ]);
+        }
         band.rows.forEach(({r,sec})=>{
           n++;
           const isBuf=incBuf&&r.buffer===true;
