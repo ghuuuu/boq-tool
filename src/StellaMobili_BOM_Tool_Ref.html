@@ -510,7 +510,7 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
   </div>
   <div class="topbar-actions">
     <span class="rev-pill save-status saved" id="saveStatus" title="Autosave status">Saved</span>
-    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.3.1</span>
+    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.4.0</span>
     <span class="rev-pill" id="revPill" title="Price list version">Pricelist</span>
     <input type="file" id="loadInput" accept=".smbq,.json" style="display:none" onchange="loadFile(this)">
   </div>
@@ -1191,13 +1191,26 @@ function kitGolaAvailable(){
   if(NO_HANDLE_CATS.has(c)) return false;
   return (getPD().kitchen[c]||[]).some(it=>(f+'__gola') in it.prices);
 }
-// Enable/disable the Gola button for the current category+finish; reset to Standard if Gola is no longer valid.
+function kitStandardAvailable(){
+  const c = el('kit-cat')?.value||'', f = el('kit-finish')?.value||'';
+  if(NO_HANDLE_CATS.has(c)) return false;
+  return (getPD().kitchen[c]||[]).some(it=>(f+'__standard') in it.prices);
+}
+// Show/hide the Standard & Gola buttons for the current category+finish; hide any handle
+// with no items, and switch the active variant to whichever one is actually available.
 function refreshKitHandle(){
-  const golaBtn = el('kit-handle-gola'); if(!golaBtn) return;
-  const avail = kitGolaAvailable();
-  golaBtn.disabled = !avail;
-  golaBtn.title = avail ? 'Gola handle' : 'Gola not available for this category / finish';
-  if(!avail && (el('kit-variant')?.value==='gola')) setKitVariant('standard', true);
+  const stdBtn = el('kit-handle-standard'), golaBtn = el('kit-handle-gola');
+  if(!stdBtn || !golaBtn) return;
+  const stdAvail = kitStandardAvailable(), golaAvail = kitGolaAvailable();
+  stdBtn.style.display = stdAvail ? '' : 'none';
+  stdBtn.disabled = !stdAvail;
+  golaBtn.style.display = golaAvail ? '' : 'none';
+  golaBtn.disabled = !golaAvail;
+  golaBtn.title = golaAvail ? 'Gola handle' : 'Gola not available for this category / finish';
+  // Keep the selected variant valid: if the active one has no items, fall back to the other.
+  const cur = el('kit-variant')?.value;
+  if(cur==='gola' && !golaAvail && stdAvail) setKitVariant('standard', true);
+  else if(cur==='standard' && !stdAvail && golaAvail) setKitVariant('gola', true);
 }
 // Toggle the Standard/Gola handle. Keeps the hidden #kit-variant input in sync (all pricing code reads that).
 function setKitVariant(v, skipSearch){

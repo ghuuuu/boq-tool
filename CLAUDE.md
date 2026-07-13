@@ -359,7 +359,7 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 | `selectItem(p, idx)` | Confirm selection from dropdown |
 | `validateGola(item, f, v)` | Returns `{ok, reason}` — blocks invalid gola |
 | `setKitVariant(v)` | Handle toggle: sets the hidden `#kit-variant` value + active button styling (Standard/Gola). All pricing code still reads `#kit-variant.value` |
-| `refreshKitHandle()` / `kitGolaAvailable()` | Enable/disable the Gola button per category+finish; reverts to Standard if Gola unavailable. Called from `onKitFinishChange` |
+| `refreshKitHandle()` / `kitGolaAvailable()` / `kitStandardAvailable()` | Show/hide the Standard & Gola buttons per category+finish — a handle button is hidden when no item has items for it; the active variant auto-switches to whichever one is available. Called from `onKitFinishChange` |
 | `markDirty()` / `updateDirtyIndicator()` | Sets the `dirty` flag on any mutation + shows the topbar "Unsaved edits" pulse. Cleared by `confirmCommit` / `loadVersion` / `loadFile` |
 | `updateSaveStatus()` | Topbar save-status chip: Unsaved edits → Saving… → Autosaved HH:MM → Saved (updateDirtyIndicator/updateAltVerChip are legacy aliases) |
 | `renderRevisionsPanel()` | Returns HTML for the Revisions & Alternatives card (injected into `renderOverview`) |
