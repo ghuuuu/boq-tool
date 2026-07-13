@@ -90,7 +90,7 @@ html,body{margin:0;padding:0}
     </div>
     <div style="display:{{ crumbDisplay }};flex:1"></div>
     <span title="Autosave status" style="{{ saveStatusStyle }}">{{ saveStatusLabel }}</span>
-    <span title="Tool version" style="background:transparent;color:var(--ink2);border:1px solid var(--line);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0">v1.3.0</span>
+    <span title="Tool version" style="background:transparent;color:var(--ink2);border:1px solid var(--line);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0">v1.5.1</span>
     <span style="background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:.03em;font-family:var(--font-mono);flex-shrink:0" data-comment-anchor="c06209d124-span">{{ revLabel }}</span>
     <input ref="{{ loadInputRef }}" type="file" accept=".smbq,.json" style="display:none" onChange="{{ onLoadFile }}">
   </header>
@@ -187,10 +187,6 @@ html,body{margin:0;padding:0}
                 <input value="{{ ovPic }}" onChange="{{ onPicChange }}" placeholder="Person in charge" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
               </div>
               <div style="display:flex;flex-direction:column;gap:5px">
-                <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Date <span style="color:var(--danger);font-weight:800">*</span></label>
-                <input type="date" value="{{ ovDate }}" onChange="{{ onDateChange }}" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
-              </div>
-              <div style="display:flex;flex-direction:column;gap:5px">
                 <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase" data-comment-anchor="ee64d7977b-label">Notes</label>
                 <input value="{{ ovNotes }}" onChange="{{ onNotesChange }}" placeholder="Revision notes, special requests..." style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
               </div>
@@ -249,7 +245,10 @@ html,body{margin:0;padding:0}
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                   <sc-for list="{{ ra.versions }}" as="rv" hint-placeholder-count="1">
-                    <button onclick="{{ rv.pick }}" title="{{ rv.title }}" style="{{ rv.chipStyle }}">{{ rv.label }}</button>
+                    <span style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0">
+                      <button onclick="{{ rv.pick }}" title="{{ rv.title }}" style="{{ rv.chipStyle }}">{{ rv.label }}</button>
+                      <span title="Click to edit this version's date" style="font-size:12.5px;color:var(--accent);cursor:pointer;font-family:var(--font-mono);border-bottom:1px dashed var(--accent);padding-bottom:1px;flex-shrink:0">{{ rv.date }}</span>
+                    </span>
                   </sc-for>
                   <span style="font-size:11.5px;color:var(--ink2)">{{ ra.metaLine }}</span>
                   <span style="flex:1"></span>
@@ -421,7 +420,7 @@ html,body{margin:0;padding:0}
             </div>
             <div style="display:flex;flex-direction:column;gap:5px">
               <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Qty</label>
-              <span class="qtybox"><input type="number" value="{{ kitQty }}" onChange="{{ onKitQtyChange }}" min="1" style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;width:86px;text-align:left;font-family:var(--font-mono)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ onKitQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ onKitQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
+              <span class="qtybox"><input type="number" value="{{ kitQty }}" onChange="{{ onKitQtyChange }}" min="0.1" step="any" style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;width:86px;text-align:left;font-family:var(--font-mono)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ onKitQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ onKitQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
             </div>
             <div style="display:flex;gap:6px">
               <button onclick="{{ addKitRow }}" style="padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">+ Add</button>
@@ -483,7 +482,7 @@ html,body{margin:0;padding:0}
             </div>
             <div style="display:flex;flex-direction:column;gap:5px">
               <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Qty</label>
-              <span class="qtybox"><input type="number" value="{{ wdQty }}" onChange="{{ onWdQtyChange }}" min="1" style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;width:86px;text-align:left;font-family:var(--font-mono)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ onWdQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ onWdQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
+              <span class="qtybox"><input type="number" value="{{ wdQty }}" onChange="{{ onWdQtyChange }}" min="0.1" step="any" style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;width:86px;text-align:left;font-family:var(--font-mono)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ onWdQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ onWdQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
             </div>
             <div style="display:flex;gap:6px">
               <button onclick="{{ addWdRow }}" style="padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">+ Add</button>
@@ -523,7 +522,7 @@ html,body{margin:0;padding:0}
             </div>
             <div style="display:flex;flex-direction:column;gap:5px">
               <label style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Qty</label>
-              <span class="qtybox"><input type="number" value="{{ accQty }}" onChange="{{ onAccQtyChange }}" min="1" style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;width:86px;text-align:left;font-family:var(--font-mono)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ onAccQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ onAccQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
+              <span class="qtybox"><input type="number" value="{{ accQty }}" onChange="{{ onAccQtyChange }}" min="0.1" step="any" style="padding:8px 10px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);border-radius:6px;background:var(--panel2);font-size:13px;width:86px;text-align:left;font-family:var(--font-mono)" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ onAccQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ onAccQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
             </div>
             <div style="display:flex;gap:6px">
               <button onclick="{{ addAccRow }}" style="padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">+ Add</button>
@@ -543,15 +542,20 @@ html,body{margin:0;padding:0}
         </sc-if>
         <sc-if value="{{ tableNotEmpty }}" hint-placeholder-val="{{ true }}">
           <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.1)">
-            <sc-if value="{{ selBarVisible }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ selBarVisible }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;margin:8px 12px 0;background:var(--panel2);border:1px solid color-mix(in srgb,var(--accent) 60%,transparent);border-left:4px solid var(--accent);border-radius:8px;flex-wrap:wrap;box-shadow:0 2px 8px color-mix(in srgb,var(--accent) 12%,transparent)">
-                <span style="font-size:13px;font-weight:700;color:var(--accent);flex:1;min-width:120px">{{ selCountLabel }}</span>
-                <button onclick="{{ openChangeFinishBulk }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">Change Finish</button>
-                <sc-if value="{{ showCopyToUnitBtn }}" hint-placeholder-val="{{ false }}">
-                  <button onclick="{{ openCopyToUnit }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel2);color:var(--ink);white-space:nowrap;flex-shrink:0">Copy to Unit</button>
-                </sc-if>
-                <button onclick="{{ deleteSelectedNow }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid color-mix(in srgb,var(--danger) 32%,transparent);background:var(--panel2);color:var(--danger);white-space:nowrap;flex-shrink:0">Delete Selected</button>
-                <button onclick="{{ clearSelectionNow }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--ink);white-space:nowrap;flex-shrink:0">Clear</button>
+                <span style="font-size:13px;font-weight:700;color:{{ selCountColor }};flex:1;min-width:120px">{{ selCountLabel }}</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;{{ selActStyle }}">
+                  <button onclick="{{ addToGroupNow }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">+ Group</button>
+                  <button onclick="{{ removeFromGroupNow }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel2);color:var(--ink);white-space:nowrap;flex-shrink:0">- Group</button>
+                  <span style="width:1px;align-self:stretch;min-height:22px;background:color-mix(in srgb,var(--accent) 25%,transparent);margin:0 2px"></span>
+                  <button onclick="{{ openChangeFinishBulk }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);white-space:nowrap;flex-shrink:0">Change Finish</button>
+                  <sc-if value="{{ showCopyToUnitBtn }}" hint-placeholder-val="{{ false }}">
+                    <button onclick="{{ openCopyToUnit }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel2);color:var(--ink);white-space:nowrap;flex-shrink:0">Copy to Unit</button>
+                  </sc-if>
+                  <button onclick="{{ deleteSelectedNow }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:1px solid color-mix(in srgb,var(--danger) 32%,transparent);background:var(--panel2);color:var(--danger);white-space:nowrap;flex-shrink:0">Delete</button>
+                  <button onclick="{{ clearSelectionNow }}" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--ink);white-space:nowrap;flex-shrink:0">Clear</button>
+                </span>
               </div>
             </sc-if>
             <div style="padding:0;overflow-x:auto">
@@ -572,6 +576,22 @@ html,body{margin:0;padding:0}
                   </tr>
                 </thead>
                 <tbody>
+                  <!-- Group band (v1.5.1): grouped rows cluster under a named band with a combined subtotal -->
+                  <tr>
+                    <td colspan="11" style="padding:6px 14px;background:color-mix(in srgb,var(--accent) 8%,transparent);border-top:2px solid var(--accent);border-bottom:1px solid color-mix(in srgb,var(--accent) 25%,transparent)">
+                      <div style="display:flex;align-items:center;gap:9px">
+                        <span style="color:var(--ink2);display:inline-flex"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"></path></svg></span>
+                        <input type="checkbox" style="margin:0">
+                        <span style="font-weight:700;color:var(--accent);font-size:13.5px">Kitchen Island</span>
+                        <span style="color:var(--ink2);font-size:12px;font-family:var(--font-mono)">3 items</span>
+                        <span style="margin-left:auto;font-weight:700;color:var(--accent);font-family:var(--font-mono);font-size:13px">Rp 24.500.000</span>
+                        <span style="display:inline-flex;gap:4px">
+                          <button title="Rename group" style="background:none;border:none;cursor:pointer;color:var(--ink2);padding:3px;border-radius:5px;display:inline-flex"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                          <button title="Remove group (keep items)" style="background:none;border:none;cursor:pointer;color:var(--ink2);padding:3px;border-radius:5px;display:inline-flex"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-9 0v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6"></path></svg></button>
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
                   <sc-for list="{{ tableRows }}" as="row" hint-placeholder-count="3">
                     <tr draggable="true" onDragStart="{{ row.onDragStart }}" onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDrop }}" onDragEnd="{{ row.onDragEnd }}" style="{{ row.trStyle }}">
                       <td style="padding:{{ rowPadV }} 4px;border-bottom:1px solid var(--line2);color:var(--ink2);cursor:grab;text-align:center">
@@ -601,7 +621,7 @@ html,body{margin:0;padding:0}
                       </td>
                       <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono)">{{ row.priceLabel }}</td>
                       <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:right">
-                        <span class="qtybox"><input type="number" value="{{ row.qty }}" onChange="{{ row.onQtyChange }}" min="1" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:86px;text-align:left;font-family:var(--font-mono);font-size:13px" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ row.onQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ row.onQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
+                        <span class="qtybox"><input type="number" value="{{ row.qty }}" onChange="{{ row.onQtyChange }}" min="0.1" step="any" style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;width:86px;text-align:left;font-family:var(--font-mono);font-size:13px" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)"><span class="qsteps"><button onclick="{{ row.onQtyUp }}" tabindex="-1" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"></path></svg></button><button onclick="{{ row.onQtyDown }}" tabindex="-1" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"></path></svg></button></span></span>
                       </td>
                       <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono);font-weight:700;color:var(--accent)">{{ row.totalLabel }}</td>
                       <td style="padding:{{ rowPadV }} 10px;border-bottom:1px solid var(--line2)">
@@ -622,6 +642,25 @@ html,body{margin:0;padding:0}
                       </td>
                     </tr>
                   </sc-for>
+                  <!-- Other items band (v1.5.1): rows not in any group -->
+                  <tr>
+                    <td colspan="11" style="padding:6px 14px;background:var(--panel);border-top:1px dashed var(--line)">
+                      <span style="font-weight:600;color:var(--ink2);font-size:12.5px;text-transform:uppercase;letter-spacing:.04em">Other items</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 4px;border-bottom:1px solid var(--line2);color:var(--ink2);text-align:center"><svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14"><circle cx="2" cy="2" r="1.3"></circle><circle cx="6" cy="2" r="1.3"></circle><circle cx="2" cy="7" r="1.3"></circle><circle cx="6" cy="7" r="1.3"></circle><circle cx="2" cy="12" r="1.3"></circle><circle cx="6" cy="12" r="1.3"></circle></svg></td>
+                    <td style="padding:8px 4px;border-bottom:1px solid var(--line2);text-align:center"><input type="checkbox"></td>
+                    <td style="padding:8px 10px;border-bottom:1px solid var(--line2);text-align:center;color:var(--ink2)">4</td>
+                    <td style="padding:8px 10px;border-bottom:1px solid var(--line2)"><span style="display:block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--line2);color:var(--ink);text-align:center">Lighting</span></td>
+                    <td style="padding:8px 10px;border-bottom:1px solid var(--line2)"><span style="font-size:12px;color:var(--ink)">N/A</span></td>
+                    <td style="padding:8px 10px;border-bottom:1px solid var(--line2)"><div style="font-weight:600;color:var(--ink)">LED Strip Warm White 5m</div></td>
+                    <td style="padding:8px 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono)">Rp 420.000</td>
+                    <td style="padding:8px 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono)">2</td>
+                    <td style="padding:8px 10px;border-bottom:1px solid var(--line2);text-align:right;font-family:var(--font-mono);font-weight:700;color:var(--accent)">Rp 840.000</td>
+                    <td style="padding:8px 10px;border-bottom:1px solid var(--line2)"></td>
+                    <td style="padding:8px 10px;border-bottom:1px solid var(--line2)"></td>
+                  </tr>
                 </tbody>
                 <tfoot>
                   <tr>
@@ -685,7 +724,7 @@ html,body{margin:0;padding:0}
               </div>
               <div style="display:flex;flex-direction:column;gap:5px">
                 <label style="font-size:11px;color:var(--ink2);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Qty</label>
-                <input type="number" value="{{ cmQty }}" onChange="{{ onCmQtyChange }}" min="1" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
+                <input type="number" value="{{ cmQty }}" onChange="{{ onCmQtyChange }}" min="0.1" step="any" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)">
               </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:5px">
@@ -2036,7 +2075,7 @@ class Component extends DCLogic {
       sbResizerStyle: (isMobile || s.sidebarCollapsed) ? 'display:none' : 'cursor:col-resize;z-index:60;background:transparent;margin-left:-1px',
       sidebarStyle: isMobile
         ? `background:var(--panel2);border-right:1px solid var(--line);padding:16px 12px;display:${s.sidebarMobileOpen?'flex':'none'};flex-direction:column;gap:4px;overflow-y:auto;position:fixed;top:57px;bottom:0;left:0;width:280px;z-index:200;box-shadow:0 12px 36px rgba(0,0,0,.3)`
-        : `background:var(--panel2);border-right:1px solid var(--line);padding:${s.sidebarCollapsed?'16px 6px':'16px 12px'};display:flex;flex-direction:column;gap:4px;overflow-y:auto`,
+        : `background:var(--panel2);border-right:1px solid var(--line);padding:${s.sidebarCollapsed?'16px 6px':'16px 12px'};display:flex;flex-direction:column;gap:4px;overflow-y:auto;position:sticky;top:57px;align-self:start;height:calc(100vh - 57px)`,
       sidebarMobileOpen: s.sidebarMobileOpen,
       sbLabelDisplay: s.sidebarCollapsed && !isMobile ? 'none':'flex',
       sbAddJustify: s.sidebarCollapsed && !isMobile ? 'center':'flex-start',
@@ -2053,7 +2092,7 @@ class Component extends DCLogic {
       onProjNameChange: this.onProjNameChange, onClientChange: this.onClientChange, onPicChange: this.onPicChange, onDateChange: this.onDateChange, onNotesChange: this.onNotesChange,
       priceListOptions, ovPriceListVersion: s.projectMeta.priceListVersion, onPriceListChange: this.onPriceListChange,
       isOldPriceList, priceListLatest: s.priceListLatest,
-      metaGridCols: isNarrow ? '1fr' : (isMobile ? '1fr 1fr' : '2fr 1.5fr 1fr 1fr 2fr 1.2fr'),
+      metaGridCols: isNarrow ? '1fr' : (isMobile ? '1fr 1fr' : 'repeat(4,minmax(0,1fr)) minmax(90px,0.7fr)'),
 
       heroStatCols: (this.props.layoutVariant==='B') ? (isMobile?'1fr 1fr':'repeat(4,1fr)') : (isMobile ? '1fr' : '1.3fr 2fr'),
       heroTotalStyle: 'background:var(--sidebar);border-radius:10px;padding:'+((this.props.layoutVariant==='B')?'10px 12px':'14px 18px')+';display:flex;flex-direction:column;justify-content:center',
@@ -2114,8 +2153,12 @@ class Component extends DCLogic {
 
       tableEmpty, tableNotEmpty, tableRows, subtotalLabel, subtotalBufferNote,
       rowPadV: (this.props.tableDensity==='compact') ? '5px':'10px',
-      selBarVisible: selCount>0, selCountLabel: selCount+' item'+(selCount===1?'':'s')+' selected',
+      selBarVisible: true,   // always visible in v1.5.1; dims when nothing is selected
+      selCountLabel: selCount>0 ? (selCount+' item'+(selCount===1?'':'s')+' selected') : 'Select items to group, change finish, or copy…',
+      selCountColor: selCount>0 ? 'var(--accent)' : 'var(--ink2)',
+      selActStyle: selCount>0 ? '' : 'opacity:.4;pointer-events:none',
       showCopyToUnitBtn: s.units.length>1,
+      addToGroupNow: this.addToGroupNow||this.openChangeFinishBulk, removeFromGroupNow: this.removeFromGroupNow||this.clearSelectionNow,
       openChangeFinishBulk: this.openChangeFinishBulk, openCopyToUnit: this.openCopyToUnit,
       deleteSelectedNow: this.deleteSelectedNow, clearSelectionNow: this.clearSelectionNow,
       selectAllChecked: unit ? (Object.keys(s.selectedRows[s.currentTab]).length>0 && Object.keys(s.selectedRows[s.currentTab]).length===unit.items[s.currentTab].length) : false,
@@ -2127,6 +2170,8 @@ class Component extends DCLogic {
   }
 
   revisionRenderVals(s){
+    // Dates are stored ISO (YYYY-MM-DD) but shown DD-MM-YYYY (v1.5.1)
+    const fmtDate=iso=>{ if(!iso) return ''; const p=String(iso).split('-'); return p.length===3?(p[2]+'-'+p[1]+'-'+p[0]):String(iso); };
     const pill=c=>`display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:${c};background:color-mix(in srgb,${c} 12%,transparent);border:1px solid color-mix(in srgb,${c} 30%,transparent);white-space:nowrap;flex-shrink:0`;
     const stColor=st=> st==='Ready for quotation'?'var(--positive)':st==='Draft'?'var(--warn)':'var(--ink2)';
     const activeAlt=this.getActiveAlt()||{key:'A',name:'',versions:[]};
@@ -2142,7 +2187,7 @@ class Component extends DCLogic {
         statusLabel:latest?latest.status:'Not saved yet',
         statusStyle:pill(latest?stColor(latest.status):'var(--ink2)'),
         totalFmt:latest?this.fmt(latest.total):'—',
-        metaLine:latest?('latest v'+latest.ver+' · '+latest.date+(latest.note?' — '+latest.note:'')):'no versions yet — use "Save as v1"',
+        metaLine:latest?('latest v'+latest.ver+(latest.note?' — '+latest.note:'')):'no versions yet — use "Save as v1"',
         readyLabel:latest&&latest.status==='Ready for quotation'?'Back to Draft':'Mark Ready',
         readyDisplay:latest?'inline-flex':'none',
         onToggleReady:(e)=>{ e.stopPropagation(); this.toggleReady(a.key); },
@@ -2155,7 +2200,8 @@ class Component extends DCLogic {
           const isLatest=latest&&v.ver===latest.ver;
           return {
             label:'v'+v.ver,
-            title:'Alt '+a.key+' · v'+v.ver+' · '+v.status+' · '+v.date+' · '+this.fmt(v.total)+(v.note?' — '+v.note:''),
+            date:fmtDate(v.date),
+            title:'Alt '+a.key+' · v'+v.ver+' · '+v.status+' · '+fmtDate(v.date)+' · '+this.fmt(v.total)+(v.note?' — '+v.note:''),
             pick:(e)=>{ e.stopPropagation(); this.loadVersion(a.key,v.ver); },
             chipStyle:`padding:3px 11px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);cursor:pointer;white-space:nowrap;flex-shrink:0;border:1px solid ${isLoaded?'var(--accent)':(isLatest?'color-mix(in srgb,var(--accent) 42%,transparent)':'var(--line)')};background:${isLoaded?'var(--accent)':'transparent'};color:${isLoaded?'var(--on-accent)':(isLatest?'var(--accent)':'var(--ink2)')}`,
           };
