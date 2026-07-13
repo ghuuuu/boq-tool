@@ -46,11 +46,17 @@ Margin above: 8px/6pt.
 
 ## Item table
 
-Columns (portrait, px): `# 20 | DESCRIPTION * | CATEGORY 70 | FINISH 110 | UNIT PRICE 70 | QTY 22 | TOTAL 80 | NOTES 88`, 10px gutters.
-pdfmake widths (pt): `[15, '*', 52.5, 82.5, 52.5, 16.5, 60, 66]` with cell paddingLeft/Right 3.75pt.
+Column order: `#, Description (*), Category, Finish, Unit price, Qty, Total, Notes`.
+pdfmake widths (pt), portrait: `[15, '*', 60, 54, 64, 18, 66, 44]`, paddingLeft/Right 3.75pt.
+pdfmake widths (pt), landscape: `[18, '*', 110, 84, 76, 20, 80, 66]`, padding 4.5pt.
 
-Columns (landscape, px): `# 24 | DESC * | CATEGORY 140 | FINISH 125 | UNIT 82 | QTY 24 | TOTAL 92 | NOTES 105`, 12px gutters.
-pdfmake widths (pt): `[18, '*', 105, 93.75, 61.5, 18, 69, 78.75]`, padding 4.5pt.
+**Price columns never wrap.** Unit price, Qty and Total carry `noWrap:true` and their columns are
+sized to hold large values (up to ~9-figure prices) on a single line, so figures are always intact.
+
+**Wrap-priority cascade.** Text columns are sized in reverse of how readily they should wrap, so when
+space is tight the wrapping order is Notes → Finish → Category → Description: Description (`*`) is
+widest and wraps last; then Category > Finish > Notes (narrowest, wraps first). Fixed widths keep
+every per-unit table column-aligned.
 
 Header row: 7.5px/5.6pt uppercase, gray `#7A7166`, bold, characterSpacing 0.8pt;
 1px/0.75pt ink rule below (no rule above, no vertical lines anywhere).
