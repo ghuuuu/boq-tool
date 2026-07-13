@@ -13,7 +13,8 @@ it for price verification by Stella Mobili Jakarta.
 
 - Build a **room-by-room BOQ** for a client project
 - Select cabinet items by **category, finish, and handle style** (Kitchen / Wardrobe / Accessories)
-- Track **revisions & alternatives** (quotable version history)
+- Bundle rows into **item groups** — named packages that can span sections, with their own subtotals (exports are laid out group-first)
+- Track **revisions & alternatives** (quotable version history, each version with its own date)
 - Flag **buffer / insurance stock** (counted in totals, excluded from the Sales Order downstream)
 - **Save / load** progress as a versioned `.smbq` file (plain JSON)
 - **Export to Excel** (one sheet per room + summary)
@@ -39,7 +40,7 @@ reopen later).
 ## Project layout
 
 ```
-StellaMobili_BOM_Tool.html          # BUILD OUTPUT — the tool you actually open (generated, ~3.3 MB)
+StellaMobili_BOM_Tool.html          # BUILD OUTPUT — the tool you actually open (generated, ~7 MB)
 README.md                           # This file
 CLAUDE.md                           # Full developer/architecture guide
 src/                                # Source + build scripts

@@ -323,7 +323,7 @@
     </div>
     <div style="text-align:right">
       <strong>Language:</strong> English (EN)<br>
-      <strong>Tool version:</strong> v1.0.0<br>
+      <strong>Tool version:</strong> v1.5.1<br>
       <strong>Price list:</strong> v26.06.02<br>
       <strong>Document:</strong> July 2026
     </div>
@@ -369,7 +369,7 @@
   </div>
   <div class="zone">
     <div class="zone-name">Sidebar</div>
-    <p>Unit list (rooms/locations), navigation to Overview and Totals, <strong>View Database</strong> and <strong>Import Price List</strong> buttons at the bottom.</p>
+    <p>Unit list (rooms/locations) and navigation to Overview and Totals. It stays pinned in place as the main area scrolls, and can be resized by dragging its right edge or collapsed to an icon rail.</p>
   </div>
   <div class="zone">
     <div class="zone-name">Main Area</div>
@@ -385,7 +385,7 @@
 <h1>3 · Starting a New Project</h1>
 <ol class="steps">
   <li>Open the tool — it starts with one default unit called "Kitchen" and an empty project.</li>
-  <li>In the <strong>Overview</strong> view, fill in: <strong>Project Name</strong>, <strong>Client</strong>, <strong>PIC</strong>, <strong>Date</strong>, and <strong>Notes to SM Jakarta</strong>.</li>
+  <li>In the <strong>Overview</strong> view, fill in: <strong>Project Name</strong>, <strong>Client</strong>, <strong>PIC</strong>, and <strong>Notes to SM Jakarta</strong> (Price List sits narrow on the right). There is no project-wide date field — the quotation date lives on each saved version instead (see Chapter 8).</li>
   <li>Check the <strong>Price List</strong> dropdown — it defaults to the latest version. Leave it as-is for new projects.</li>
   <li>Rename the default unit by clicking its name in the sidebar and typing a new name (e.g. "Master Bedroom"). Add more units with the <strong>+ Add Unit</strong> button in Overview.</li>
 </ol>
@@ -403,7 +403,7 @@
   <li>Select a <strong>Finish</strong> from the dropdown. The <strong>Thickness</strong> badge fills in automatically when known, or shows <code>—</code> if no thickness data exists for that finish.</li>
   <li>Select <strong>Handle</strong>: <code>Standard</code> or <code>Gola</code>.</li>
   <li>Click the <strong>Search / Browse</strong> field and start typing, or click to see all items for the current category and finish. You can search by <strong>description, category, size, or note</strong> — matching text is highlighted. Click an item to select it, or press <strong>Enter</strong> to pick the top match. The price preview updates on the right.</li>
-  <li>Set <strong>Qty</strong> (whole numbers or decimals to one place, e.g. <code>1.5</code>). Press <strong>Enter</strong> — in either the search field or the qty field — to add the item instantly, or click <strong>+ Add</strong>. After adding, the search clears and refocuses so you can type the next item straight away.</li>
+  <li>Set <strong>Qty</strong> (whole numbers or decimals to two places, e.g. <code>1.23</code>). Press <strong>Enter</strong> — in either the search field or the qty field — to add the item instantly, or click <strong>+ Add</strong>. After adding, the search clears and refocuses so you can type the next item straight away.</li>
 </ol>
 <div class="note">
   <strong>⚠ Gola validation:</strong> Gola handle is only supported for certain item + finish combinations. If you select Gola for an unsupported item, the tool will block the add and show an error. Switch to Standard or choose a different finish.
@@ -433,20 +433,32 @@
   <thead><tr><th>Action</th><th>How to do it</th></tr></thead>
   <tbody>
     <tr><td>Change finish</td><td>Click the <strong>pencil icon</strong> in the Finish column. A modal shows all available finishes and prices for that item.</td></tr>
-    <tr><td>Edit quantity</td><td>Click the qty field and type, or use the up/down arrows. Decimals to one place are allowed (e.g. 1.5).</td></tr>
+    <tr><td>Edit quantity</td><td>Click the qty field and type, or use the up/down arrows. Decimals to two places are allowed (e.g. 1.23).</td></tr>
     <tr><td>Add a note</td><td>Click the Notes field on the row and type (e.g. "custom size", "check stock").</td></tr>
     <tr><td>Mark as buffer / insurance stock</td><td>Click the <strong>shield icon</strong> near the right of the row. Buffer items are still counted in all totals but flagged with a blue <span class="badge">BUFFER</span> tag, so they can be excluded from the Sales Order later.</td></tr>
     <tr><td>Duplicate a row</td><td>Click the <strong>copy icon</strong> at the far right of the row.</td></tr>
     <tr><td>Delete a row</td><td>Click the <strong>× icon</strong> at the far right of the row.</td></tr>
     <tr><td>Reorder rows</td><td>Drag the <strong>dot-grid handle</strong> on the far left of the row up or down.</td></tr>
-    <tr><td>Select multiple rows</td><td>Tick the checkboxes on the left. Use the header checkbox to select all.</td></tr>
-    <tr><td>Bulk change finish</td><td>Select rows → click <strong>Change Finish</strong> in the blue action bar.</td></tr>
-    <tr><td>Copy to another unit</td><td>Select rows → click <strong>Copy to Unit</strong> in the blue action bar (only shown when 2+ units exist). Choose the target unit from the list.</td></tr>
-    <tr><td>Bulk delete</td><td>Select rows → click <strong>Delete Selected</strong> in the blue action bar.</td></tr>
+    <tr><td>Select rows</td><td>Click anywhere on a row's blank area to select it (or tick its checkbox). Use the header checkbox to select all. The selection bar sits above the table at all times — it dims when nothing is selected.</td></tr>
+    <tr><td>Bulk change finish</td><td>Select rows → click <strong>Change Finish</strong> in the selection bar.</td></tr>
+    <tr><td>Copy to another unit</td><td>Select rows → click <strong>Copy to Unit</strong> in the selection bar (only shown when 2+ units exist). Choose the target unit from the list.</td></tr>
+    <tr><td>Bulk delete</td><td>Select rows → click <strong>Delete</strong> in the selection bar.</td></tr>
   </tbody>
 </table>
 <div class="tip">
   <strong>Units can also be reordered</strong> by dragging the dot-grid handle next to their name in the sidebar.
+</div>
+
+<h2>Item Groups</h2>
+<p>Groups let you bundle related rows into a named package — for example a <em>"Kitchen Island"</em> made of base units, a solid-surface top, and handles. A group can <strong>span all three sections</strong> (Kitchen + Wardrobe + Accessories), and each unit has its own groups. Grouping is optional — items you don't group simply stay as loose rows.</p>
+<ol class="steps">
+  <li><strong>Create a group:</strong> select some rows, then click <strong>+ Group</strong> in the selection bar → <strong>New group…</strong>, and give it a name.</li>
+  <li><strong>Add more to it:</strong> select more rows (on any tab) and click <strong>+ Group</strong> → pick the existing group. Because groups can span sections, you build a cross-section package tab by tab.</li>
+  <li><strong>Remove from a group:</strong> select the rows and click <strong>- Group</strong>.</li>
+</ol>
+<p>Grouped rows appear under a <strong>group band</strong> showing the group name, its item count, and its combined total (across all sections). On the band you can <strong>collapse</strong> it (chevron), <strong>rename</strong> it (double-click the name or the pencil), or <strong>remove</strong> the group (the items are kept, just ungrouped). Any rows you haven't grouped gather under an <strong>Other items</strong> band.</p>
+<div class="tip">
+  <strong>Groups flow into the exports.</strong> The PDF and Excel are laid out <strong>group-first</strong> — each group is its own band with a subtotal, and a small section tag (KITCHEN / WARDROBE / ACCESSORIES) on each row shows where it came from. A unit with no groups just lists its items flat.
 </div>
 
 <!-- ═══════════════════════════════════════ CHAPTER 6 ═══════════════════════════════════════ -->
@@ -482,7 +494,7 @@
 <h1>8 · Saving &amp; Loading</h1>
 
 <h2>Saving</h2>
-<p>Click <strong>Save .smbq</strong> in the Overview header. The browser saves a file named <code>{Project Name}_{Date}.smbq</code> (e.g. <code>Pak Budi_Kebayoran Baru_2026-07-11.smbq</code>). This saves the <strong>whole project</strong> to one file on your computer — every unit, item, and all your saved versions &amp; alternatives.</p>
+<p>Click <strong>Save .smbq</strong> in the Overview header. The browser saves a file named <code>{Project Name}_{Date}.smbq</code> (e.g. <code>Pak Budi_Kebayoran Baru_13-07-2026.smbq</code>, dates shown day-month-year). This saves the <strong>whole project</strong> to one file on your computer — every unit, item, and all your saved versions &amp; alternatives.</p>
 
 <div class="tip">
   <strong>Crash protection:</strong> the tool auto-saves your working state into the browser's local storage (on this computer, in this browser — not a file) a few seconds after every edit, and warns you before closing the tab. If the browser ever closes unexpectedly, reopen the tool — it will offer to <strong>restore your unsaved work</strong>. This is a safety net, not a replacement for saving your <code>.smbq</code> file.
@@ -500,8 +512,12 @@
 <ul>
   <li><strong>Save as v1, v2, …</strong> — commit the current calculation as a numbered version. While a version is still a <strong>Draft</strong>, saving updates it in place; once you mark it <strong>Ready for quotation</strong>, the next save creates the next version and marks older ones <strong>Superseded</strong>.</li>
   <li><strong>Alternatives (Alt A, Alt B, …)</strong> — offer the client different schemes side by side (e.g. two finish or layout options). Each alternative keeps its own version history.</li>
+  <li><strong>Each version has its own date.</strong> When you save a version it is dated today; the date is shown next to the <code>v#</code> chip (with a dashed underline). Click it to change that version's date — so v1 can read an earlier date than v2. This date is what prints on that version's exported document. Dates are shown day-month-year (e.g. 13-07-2026).</li>
   <li>The <strong>Revisions &amp; Alternatives</strong> panel and the <strong>Working On</strong> card show which Alt · version you're editing; the topbar chip shows the live <strong>autosave status</strong>. All of it travels inside the <code>.smbq</code> file.</li>
 </ul>
+<div class="tip">
+  <strong>Exporting a draft?</strong> If you export the working copy before saving a version, the document is dated <strong>today</strong>. To put a specific date on a quotation, save it as a version and set that version's date.
+</div>
 
 <!-- ═══════════════════════════════════════ CHAPTER 9 ═══════════════════════════════════════ -->
 <h1>9 · Exporting</h1>
@@ -522,10 +538,10 @@
 <p>If the BOQ has no buffer items, the question is skipped and the export runs directly.</p>
 
 <h2>Export to Excel <span class="badge gold">EXCEL</span></h2>
-<p>Click <strong>Export Excel</strong> in the Overview header. The tool generates a styled <code>.xlsx</code> file in the branded document format — the Stella Mobili and MULYA logos at the top of every sheet, a project detail band, minimal ink-and-brass styling, section bands, blue-tinted buffer rows, and Rp number formats — with one sheet per unit plus a <strong>Summary</strong> sheet (unit totals and the full item list). File name: <code>{Project Name}_{Date}_BOQ(Buffer).xlsx</code> — the alternative/version is stated inside the document, not in the filename. Excel export works fully <strong>offline</strong> — no internet needed.</p>
+<p>Click <strong>Export Excel</strong> in the Overview header. The tool generates a styled <code>.xlsx</code> file in the branded document format — the Stella Mobili and MULYA logos at the top of every sheet, a project detail band, minimal ink-and-brass styling, blue-tinted buffer rows, and Rp number formats — with one sheet per unit plus a <strong>Summary</strong> sheet (unit totals and the full item list). Items are laid out <strong>group-first</strong>: each group is a band with its own subtotal, followed by an <em>Other items</em> band; a unit with no groups just lists its items flat. File name: <code>{Project Name}_{Date}_BOQ(Buffer).xlsx</code> (day-month-year) — the alternative/version is stated inside the document, not in the filename. Excel export works fully <strong>offline</strong> — no internet needed.</p>
 
 <h2>Save to PDF</h2>
-<p>Click <strong>Save PDF</strong> in the Overview header. The export popup lets you choose the page format — <strong>A4 Portrait</strong> (two-line items, compact notes) or <strong>A4 Landscape</strong> (one-line items, wide notes column). The tool generates the PDF itself and saves it directly — no print dialog, no printer settings, works offline. The document follows the branded BOQ format: Stella Mobili logo top-left, MULYA logo top-right, project detail band, one section per unit with elegant serif titles, blue-tinted buffer rows with a BUFFER tag (in the with-buffer version), grand total block, and page numbers. Filename: <code>{Project Name}_{Date}_BOQ(Buffer).pdf</code>.</p>
+<p>Click <strong>Save PDF</strong> in the Overview header. The export popup lets you choose the page format — <strong>A4 Portrait</strong> (two-line items, compact notes) or <strong>A4 Landscape</strong> (one-line items, wide notes column). The tool generates the PDF itself and saves it directly — no print dialog, no printer settings, works offline. The document follows the branded BOQ format: Stella Mobili logo top-left, MULYA logo top-right, project detail band (with the exported version's date), one unit per section with elegant serif titles, <strong>group-first bands</strong> (group name + subtotal, a small KITCHEN / WARDROBE / ACCESSORIES tag per row, and an <em>Other items</em> band for anything ungrouped), blue-tinted buffer rows with a BUFFER tag (in the with-buffer version), grand total block, and page numbers. Filename: <code>{Project Name}_{Date}_BOQ(Buffer).pdf</code>.</p>
 
 <h2>Choosing where files are saved</h2>
 <p>When the tool is opened by <strong>double-clicking the HTML file</strong>, the browser saves exports straight to your <strong>Downloads</strong> folder (browsers do not allow a location dialog for double-clicked pages). To be asked for a folder on every export, turn on this one-time browser setting: <strong>Chrome → Settings → Downloads → "Ask where to save each file before downloading"</strong>. After that, every PDF, Excel, and .smbq save opens the normal Windows Save As dialog.</p>
@@ -541,7 +557,7 @@
     <li>In the sidebar, click the <strong>clone icon</strong> (copy symbol) next to the unit name. An exact duplicate is created.</li>
     <li>Open the cloned unit and go to the <strong>Kitchen</strong> or <strong>Wardrobe</strong> tab.</li>
     <li>Tick the <strong>header checkbox</strong> to select all rows.</li>
-    <li>In the blue action bar that appears, click <strong>Change Finish</strong>.</li>
+    <li>In the <strong>selection bar</strong> above the table, click <strong>Change Finish</strong>.</li>
     <li>Select <strong>Finish B</strong> (e.g. Classic Doors PVC) and click <strong>Apply</strong>.</li>
   </ol>
   <p style="margin-top:2mm">Both units now appear in the <strong>Totals Matrix</strong> and in the exported PDF — the client can compare the grand totals for each finish option at a glance.</p>
@@ -555,15 +571,15 @@
   <tbody>
     <tr>
       <td>Partial quantities</td>
-      <td>Type decimals directly into the qty field (e.g. <code>1.5</code> for 1.5 sets of solid surface). Values are stored to 1 decimal place.</td>
+      <td>Type decimals directly into the qty field (e.g. <code>1.23</code> for 1.23 sets of solid surface). Values are stored to 2 decimal places.</td>
     </tr>
     <tr>
       <td>Per-item instructions</td>
       <td>Use the <strong>Notes</strong> column for special instructions that should appear on the export (e.g. "custom size", "check availability with SM Jakarta").</td>
     </tr>
     <tr>
-      <td>Check what's in the database</td>
-      <td>Click <strong>View Database</strong> in the sidebar before adding items. Browse by section and category, then click any item to see all available finishes and prices.</td>
+      <td>Bundle a package</td>
+      <td>Use <strong>Item Groups</strong> (Chapter 5) to gather the pieces of one package — e.g. an island's cabinets, top, and handles — under a named band with its own subtotal, even across Kitchen / Wardrobe / Accessories.</td>
     </tr>
     <tr>
       <td>Track which version you sent</td>
