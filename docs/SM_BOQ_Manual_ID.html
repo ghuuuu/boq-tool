@@ -323,7 +323,7 @@
     </div>
     <div style="text-align:right">
       <strong>Bahasa:</strong> Indonesia (ID)<br>
-      <strong>Versi alat:</strong> v1.0.0<br>
+      <strong>Versi alat:</strong> v1.5.1<br>
       <strong>Price list:</strong> v26.06.02<br>
       <strong>Dokumen:</strong> Juli 2026
     </div>
@@ -369,7 +369,7 @@
   </div>
   <div class="zone">
     <div class="zone-name">Sidebar</div>
-    <p>Daftar unit (ruangan/lokasi), navigasi ke Overview dan Totals, tombol <strong>View Database</strong> dan <strong>Import Price List</strong> di bagian bawah.</p>
+    <p>Daftar unit (ruangan/lokasi) dan navigasi ke Overview dan Totals. Sidebar tetap menempel di tempatnya saat area utama di-scroll, dan dapat diubah lebarnya dengan menyeret tepi kanannya atau diciutkan menjadi rail ikon.</p>
   </div>
   <div class="zone">
     <div class="zone-name">Area Utama</div>
@@ -385,7 +385,7 @@
 <h1>3 · Memulai Proyek Baru</h1>
 <ol class="steps">
   <li>Buka alat — dimulai dengan satu unit default bernama "Kitchen" dan proyek yang kosong.</li>
-  <li>Di tampilan <strong>Overview</strong>, isi kolom: <strong>Project Name</strong>, <strong>Client</strong>, <strong>PIC</strong>, <strong>Date</strong>, dan <strong>Notes to SM Jakarta</strong>.</li>
+  <li>Di tampilan <strong>Overview</strong>, isi kolom: <strong>Project Name</strong>, <strong>Client</strong>, <strong>PIC</strong>, dan <strong>Notes to SM Jakarta</strong> (Price List berada sempit di sebelah kanan). Tidak ada lagi kolom tanggal untuk seluruh proyek — tanggal quotation kini menempel pada masing-masing versi yang disimpan (lihat Bab 8).</li>
   <li>Periksa dropdown <strong>Price List</strong> — secara default menampilkan versi terbaru. Biarkan apa adanya untuk proyek baru.</li>
   <li>Ganti nama unit default dengan mengklik namanya di sidebar lalu mengetik nama baru (mis. "Kamar Master"). Tambah unit baru dengan tombol <strong>+ Add Unit</strong> di Overview.</li>
 </ol>
@@ -403,7 +403,7 @@
   <li>Pilih <strong>Finish</strong> dari dropdown. Badge <strong>Thickness</strong> (ketebalan) akan terisi otomatis jika data tersedia, atau menampilkan <code>—</code> jika tidak ada data ketebalan untuk finish tersebut.</li>
   <li>Pilih <strong>Handle</strong>: <code>Standard</code> atau <code>Gola</code>.</li>
   <li>Klik kolom <strong>Search / Browse</strong> dan mulai mengetik, atau klik untuk melihat semua item sesuai kategori dan finish yang dipilih. Anda dapat mencari berdasarkan <strong>deskripsi, kategori, ukuran, atau catatan</strong> — teks yang cocok akan disorot. Klik item untuk memilihnya, atau tekan <strong>Enter</strong> untuk memilih hasil teratas. Preview harga akan muncul di kanan.</li>
-  <li>Atur <strong>Qty</strong> (bilangan bulat atau desimal satu tempat, mis. <code>1.5</code>). Tekan <strong>Enter</strong> — baik di kolom pencarian maupun kolom qty — untuk langsung menambahkan item, atau klik <strong>+ Add</strong>. Setelah ditambahkan, kolom pencarian otomatis kosong dan fokus kembali agar Anda bisa langsung mengetik item berikutnya.</li>
+  <li>Atur <strong>Qty</strong> (bilangan bulat atau desimal hingga dua tempat, mis. <code>1.23</code>). Tekan <strong>Enter</strong> — baik di kolom pencarian maupun kolom qty — untuk langsung menambahkan item, atau klik <strong>+ Add</strong>. Setelah ditambahkan, kolom pencarian otomatis kosong dan fokus kembali agar Anda bisa langsung mengetik item berikutnya.</li>
 </ol>
 <div class="note">
   <strong>⚠ Validasi Gola:</strong> Handle Gola hanya tersedia untuk kombinasi item + finish tertentu. Jika Gola dipilih untuk item yang tidak mendukung, alat akan memblokir penambahan dan menampilkan pesan error. Ganti ke Standard atau pilih finish yang berbeda.
@@ -433,20 +433,32 @@
   <thead><tr><th>Aksi</th><th>Cara Melakukannya</th></tr></thead>
   <tbody>
     <tr><td>Ganti finish</td><td>Klik <strong>ikon pensil</strong> di kolom Finish. Modal akan menampilkan semua finish dan harga yang tersedia untuk item tersebut.</td></tr>
-    <tr><td>Edit jumlah (qty)</td><td>Klik kolom qty dan ketik, atau gunakan tombol panah atas/bawah. Desimal satu tempat diperbolehkan (mis. 1.5).</td></tr>
+    <tr><td>Edit jumlah (qty)</td><td>Klik kolom qty dan ketik, atau gunakan tombol panah atas/bawah. Desimal hingga dua tempat diperbolehkan (mis. 1.23).</td></tr>
     <tr><td>Tambah catatan</td><td>Klik kolom Notes pada baris tersebut dan ketik (mis. "ukuran custom", "cek stok").</td></tr>
     <tr><td>Tandai sebagai buffer / stok cadangan</td><td>Klik <strong>ikon perisai</strong> di sebelah kanan baris. Item buffer tetap dihitung dalam semua total namun ditandai dengan label biru <span class="badge">BUFFER</span>, sehingga dapat dikecualikan dari Sales Order nanti.</td></tr>
     <tr><td>Duplikasi baris</td><td>Klik <strong>ikon copy</strong> di ujung kanan baris.</td></tr>
     <tr><td>Hapus baris</td><td>Klik <strong>ikon ×</strong> di ujung kanan baris.</td></tr>
     <tr><td>Urutkan ulang baris</td><td>Seret <strong>handle titik-titik</strong> di ujung kiri baris ke atas atau ke bawah.</td></tr>
-    <tr><td>Pilih beberapa baris</td><td>Centang kotak di sebelah kiri. Gunakan checkbox header untuk memilih semua.</td></tr>
-    <tr><td>Ganti finish massal</td><td>Pilih baris → klik <strong>Change Finish</strong> di action bar biru yang muncul.</td></tr>
-    <tr><td>Salin ke unit lain</td><td>Pilih baris → klik <strong>Copy to Unit</strong> di action bar biru (hanya muncul jika ada 2+ unit). Pilih unit tujuan dari daftar.</td></tr>
-    <tr><td>Hapus massal</td><td>Pilih baris → klik <strong>Delete Selected</strong> di action bar biru.</td></tr>
+    <tr><td>Pilih beberapa baris</td><td>Klik di mana saja pada area kosong sebuah baris untuk memilihnya (atau centang kotaknya). Gunakan checkbox header untuk memilih semua. Selection bar selalu berada di atas tabel — meredup saat tidak ada yang dipilih.</td></tr>
+    <tr><td>Ganti finish massal</td><td>Pilih baris → klik <strong>Change Finish</strong> di selection bar.</td></tr>
+    <tr><td>Salin ke unit lain</td><td>Pilih baris → klik <strong>Copy to Unit</strong> di selection bar (hanya muncul jika ada 2+ unit). Pilih unit tujuan dari daftar.</td></tr>
+    <tr><td>Hapus massal</td><td>Pilih baris → klik <strong>Delete</strong> di selection bar.</td></tr>
   </tbody>
 </table>
 <div class="tip">
   <strong>Unit juga bisa diurutkan ulang</strong> dengan menyeret handle titik-titik di sebelah nama unit di sidebar.
+</div>
+
+<h2>Item Groups</h2>
+<p>Groups memungkinkan Anda menggabungkan baris-baris terkait menjadi satu paket bernama — misalnya sebuah <em>"Kitchen Island"</em> yang terdiri dari base unit, top solid surface, dan handle. Sebuah group dapat <strong>mencakup ketiga seksi</strong> (Kitchen + Wardrobe + Accessories), dan setiap unit memiliki group-nya sendiri. Pengelompokan bersifat opsional — item yang tidak Anda kelompokkan cukup tetap sebagai baris lepas.</p>
+<ol class="steps">
+  <li><strong>Membuat group:</strong> pilih beberapa baris, lalu klik <strong>+ Group</strong> di selection bar → <strong>New group…</strong>, dan beri nama.</li>
+  <li><strong>Menambahkan lagi ke dalamnya:</strong> pilih baris lain (di tab mana pun) lalu klik <strong>+ Group</strong> → pilih group yang sudah ada. Karena group dapat mencakup lintas seksi, Anda membangun paket lintas-seksi tab demi tab.</li>
+  <li><strong>Mengeluarkan dari group:</strong> pilih baris tersebut lalu klik <strong>- Group</strong>.</li>
+</ol>
+<p>Baris yang dikelompokkan tampil di bawah sebuah <strong>group band</strong> yang menampilkan nama group, jumlah item, dan total gabungannya (mencakup semua seksi). Pada band tersebut Anda dapat <strong>menciutkan</strong> (chevron), <strong>mengganti nama</strong> (klik dua kali pada nama atau ikon pensil), atau <strong>menghapus</strong> group (item-nya tetap ada, hanya dilepas dari group). Semua baris yang tidak Anda kelompokkan berkumpul di bawah band <strong>Other items</strong>.</p>
+<div class="tip">
+  <strong>Groups mengalir ke ekspor.</strong> PDF dan Excel ditata secara <strong>group-first</strong> — setiap group menjadi band tersendiri dengan subtotal, dan tag seksi kecil (KITCHEN / WARDROBE / ACCESSORIES) pada setiap baris menunjukkan asalnya. Unit tanpa group cukup menampilkan item-nya secara datar.
 </div>
 
 <!-- ═══════════════════════════════════════ BAB 6 ═══════════════════════════════════════ -->
@@ -482,7 +494,7 @@
 <h1>8 · Menyimpan &amp; Memuat</h1>
 
 <h2>Menyimpan</h2>
-<p>Klik <strong>Save .smbq</strong> di header Overview. Browser akan menyimpan file bernama <code>{Nama Proyek}_{Tanggal}.smbq</code> (mis. <code>Pak Budi_Kebayoran Baru_2026-07-11.smbq</code>). Ini menyimpan <strong>seluruh proyek</strong> ke satu file di komputer Anda — setiap unit, item, dan semua versi &amp; alternatif tersimpan Anda.</p>
+<p>Klik <strong>Save .smbq</strong> di header Overview. Browser akan menyimpan file bernama <code>{Nama Proyek}_{Tanggal}.smbq</code> (mis. <code>Pak Budi_Kebayoran Baru_13-07-2026.smbq</code>, tanggal ditampilkan hari-bulan-tahun). Ini menyimpan <strong>seluruh proyek</strong> ke satu file di komputer Anda — setiap unit, item, dan semua versi &amp; alternatif tersimpan Anda.</p>
 
 <div class="tip">
   <strong>Perlindungan dari crash:</strong> alat ini menyimpan otomatis (autosave) kondisi kerja Anda ke penyimpanan lokal browser (di komputer ini, di browser ini — bukan berupa file) beberapa detik setelah setiap perubahan, dan memberi peringatan sebelum tab ditutup. Jika browser tertutup tak terduga, buka kembali alat ini — akan muncul tawaran untuk <strong>memulihkan pekerjaan yang belum tersimpan</strong>. Ini jaring pengaman, bukan pengganti menyimpan file <code>.smbq</code>.
@@ -500,8 +512,12 @@
 <ul>
   <li><strong>Save as v1, v2, …</strong> — simpan perhitungan saat ini sebagai versi bernomor. Selama versi masih <strong>Draft</strong>, menyimpan akan memperbaruinya di tempat; setelah ditandai <strong>Ready for quotation</strong>, penyimpanan berikutnya membuat versi baru dan menandai versi lama sebagai <strong>Superseded</strong>.</li>
   <li><strong>Alternatif (Alt A, Alt B, …)</strong> — tawarkan skema berbeda kepada klien secara berdampingan (mis. dua opsi finish atau layout). Setiap alternatif memiliki riwayat versinya sendiri.</li>
+  <li><strong>Setiap versi memiliki tanggalnya sendiri.</strong> Saat Anda menyimpan sebuah versi, tanggalnya diisi hari ini; tanggal ini ditampilkan di sebelah chip <code>v#</code> (dengan garis bawah putus-putus). Klik untuk mengubah tanggal versi tersebut — sehingga v1 bisa bertanggal lebih awal dari v2. Tanggal inilah yang tercetak pada dokumen ekspor versi tersebut. Tanggal ditampilkan hari-bulan-tahun (mis. 13-07-2026).</li>
   <li>Panel <strong>Revisions &amp; Alternatives</strong> dan kartu <strong>Working On</strong> menampilkan Alt · versi yang sedang Anda edit; chip di topbar menampilkan status <strong>autosave</strong>. Semuanya tersimpan di dalam file <code>.smbq</code>.</li>
 </ul>
+<div class="tip">
+  <strong>Mengekspor draft?</strong> Jika Anda mengekspor working copy sebelum menyimpan sebuah versi, dokumennya bertanggal <strong>hari ini</strong>. Untuk mencantumkan tanggal tertentu pada quotation, simpan sebagai versi lalu atur tanggal versi tersebut.
+</div>
 
 <!-- ═══════════════════════════════════════ BAB 9 ═══════════════════════════════════════ -->
 <h1>9 · Ekspor</h1>
@@ -522,10 +538,10 @@
 <p>Jika BOQ tidak memiliki item buffer, pertanyaan ini dilewati dan ekspor langsung berjalan.</p>
 
 <h2>Ekspor ke Excel <span class="badge gold">EXCEL</span></h2>
-<p>Klik <strong>Export Excel</strong> di header Overview. Alat menghasilkan file <code>.xlsx</code> dalam format dokumen resmi — logo Stella Mobili dan MULYA di bagian atas setiap sheet, band detail proyek, gaya minimal tinta &amp; brass, band per seksi, baris buffer berwarna biru, dan format angka Rp — dengan satu sheet per unit ditambah sheet <strong>Summary</strong> (total per unit dan daftar item lengkap). Nama file: <code>{Nama Proyek}_{Tanggal}_BOQ(Buffer).xlsx</code> — alternatif/versi tercantum di dalam dokumen, bukan di nama file. Ekspor Excel bekerja sepenuhnya <strong>offline</strong> — tidak perlu internet.</p>
+<p>Klik <strong>Export Excel</strong> di header Overview. Alat menghasilkan file <code>.xlsx</code> dalam format dokumen resmi — logo Stella Mobili dan MULYA di bagian atas setiap sheet, band detail proyek, gaya minimal tinta &amp; brass, baris buffer berwarna biru, dan format angka Rp — dengan satu sheet per unit ditambah sheet <strong>Summary</strong> (total per unit dan daftar item lengkap). Item ditata secara <strong>group-first</strong>: setiap group menjadi band dengan subtotal-nya sendiri, diikuti band <em>Other items</em>; unit tanpa group cukup menampilkan item-nya secara datar. Nama file: <code>{Nama Proyek}_{Tanggal}_BOQ(Buffer).xlsx</code> (hari-bulan-tahun) — alternatif/versi tercantum di dalam dokumen, bukan di nama file. Ekspor Excel bekerja sepenuhnya <strong>offline</strong> — tidak perlu internet.</p>
 
 <h2>Simpan ke PDF</h2>
-<p>Klik <strong>Save PDF</strong> di header Overview. Popup ekspor menyediakan pilihan format halaman — <strong>A4 Portrait</strong> (item dua baris, catatan ringkas) atau <strong>A4 Landscape</strong> (item satu baris, kolom catatan lebar). Alat membuat PDF-nya sendiri dan langsung menyimpannya — tanpa dialog print, tanpa pengaturan printer, dan bekerja offline. Dokumennya mengikuti format BOQ resmi: logo Stella Mobili di kiri atas, logo MULYA di kanan atas, band detail proyek, satu seksi per unit dengan judul serif elegan, baris buffer berwarna biru dengan tanda BUFFER (pada versi dengan buffer), blok grand total, dan nomor halaman. Nama file: <code>{Nama Proyek}_{Tanggal}_BOQ(Buffer).pdf</code>.</p>
+<p>Klik <strong>Save PDF</strong> di header Overview. Popup ekspor menyediakan pilihan format halaman — <strong>A4 Portrait</strong> (item dua baris, catatan ringkas) atau <strong>A4 Landscape</strong> (item satu baris, kolom catatan lebar). Alat membuat PDF-nya sendiri dan langsung menyimpannya — tanpa dialog print, tanpa pengaturan printer, dan bekerja offline. Dokumennya mengikuti format BOQ resmi: logo Stella Mobili di kiri atas, logo MULYA di kanan atas, band detail proyek (dengan tanggal versi yang diekspor), <strong>band group-first</strong> (nama group + subtotal, tag seksi kecil KITCHEN / WARDROBE / ACCESSORIES pada setiap baris, dan band <em>Other items</em> untuk yang tidak dikelompokkan), baris buffer berwarna biru dengan tanda BUFFER (pada versi dengan buffer), blok grand total, dan nomor halaman. Nama file: <code>{Nama Proyek}_{Tanggal}_BOQ(Buffer).pdf</code>.</p>
 
 <h2>Memilih lokasi penyimpanan file</h2>
 <p>Saat alat dibuka dengan <strong>klik dua kali file HTML</strong>, browser menyimpan hasil ekspor langsung ke folder <strong>Downloads</strong> (browser tidak mengizinkan dialog pilih lokasi untuk halaman yang dibuka dari file). Agar selalu ditanya lokasi penyimpanan, aktifkan sekali pengaturan browser ini: <strong>Chrome → Settings → Downloads → "Ask where to save each file before downloading"</strong>. Setelah itu, setiap penyimpanan PDF, Excel, dan .smbq akan membuka dialog Save As Windows seperti biasa.</p>
@@ -541,7 +557,7 @@
     <li>Di sidebar, klik <strong>ikon clone</strong> (simbol copy) di sebelah nama unit. Salinan identik akan dibuat secara otomatis.</li>
     <li>Buka unit hasil clone dan pilih tab <strong>Kitchen</strong> atau <strong>Wardrobe</strong>.</li>
     <li>Centang <strong>checkbox header</strong> untuk memilih semua baris.</li>
-    <li>Di action bar biru yang muncul, klik <strong>Change Finish</strong>.</li>
+    <li>Di <strong>selection bar</strong> di atas tabel, klik <strong>Change Finish</strong>.</li>
     <li>Pilih <strong>Finish B</strong> (mis. Classic Doors PVC) lalu klik <strong>Apply</strong>.</li>
   </ol>
   <p style="margin-top:2mm">Kedua unit kini muncul di <strong>Totals Matrix</strong> dan di ekspor PDF — klien dapat langsung membandingkan grand total masing-masing pilihan finish.</p>
@@ -555,15 +571,15 @@
   <tbody>
     <tr>
       <td>Jumlah desimal</td>
-      <td>Ketik langsung di kolom qty (mis. <code>1.5</code> untuk 1,5 set solid surface). Nilai disimpan hingga 1 tempat desimal.</td>
+      <td>Ketik langsung di kolom qty (mis. <code>1.23</code> untuk 1,23 set solid surface). Nilai disimpan hingga 2 tempat desimal.</td>
     </tr>
     <tr>
       <td>Instruksi per item</td>
       <td>Gunakan kolom <strong>Notes</strong> untuk instruksi khusus yang akan muncul di ekspor (mis. "ukuran custom", "konfirmasi ketersediaan dengan SM Jakarta").</td>
     </tr>
     <tr>
-      <td>Cek isi database</td>
-      <td>Klik <strong>View Database</strong> di sidebar sebelum menambah item. Telusuri berdasarkan seksi dan kategori, lalu klik item untuk melihat semua finish dan harga yang tersedia.</td>
+      <td>Gabungkan sebuah paket</td>
+      <td>Gunakan <strong>Item Groups</strong> (Bab 5) untuk mengumpulkan bagian-bagian satu paket — mis. kabinet, top, dan handle sebuah island — di bawah satu band bernama dengan subtotal-nya sendiri, bahkan lintas Kitchen / Wardrobe / Accessories.</td>
     </tr>
     <tr>
       <td>Lacak versi yang dikirim</td>
