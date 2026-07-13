@@ -32,8 +32,10 @@ The file is fully self-contained — the price data is baked in, so it works off
 shared as a single file. Save your work with the disk icon (produces a `.smbq` file you can
 reopen later).
 
-> A short user manual is available in `docs/SM_BOQ_Manual_EN.html` (English) and
-> `docs/SM_BOQ_Manual_ID.html` (Indonesian).
+> A short user manual ships next to the tool — `SM_BOQ_Manual_EN.html` (English) and
+> `SM_BOQ_Manual_ID.html` (Indonesian, switch language at the top of the page). The
+> **Help** button in the tool's topbar opens it, so keep the two manual files in the
+> same folder as `StellaMobili_BOM_Tool.html` when you deploy.
 
 ---
 
@@ -41,6 +43,8 @@ reopen later).
 
 ```
 StellaMobili_BOM_Tool.html          # BUILD OUTPUT — the tool you actually open (generated, ~7 MB)
+SM_BOQ_Manual_EN.html               # User manual (English) — opened by the tool's Help button; deploy alongside the tool
+SM_BOQ_Manual_ID.html               # User manual (Indonesian) — EN/ID switcher at the top
 README.md                           # This file
 CLAUDE.md                           # Full developer/architecture guide
 src/                                # Source + build scripts
@@ -52,8 +56,6 @@ price-data/                         # All price data
   Price List Ref/                   # Source price-list Excels (read-only reference)
   price_lists/                      # Extracted price data (one JSON per section per version) + index.json
 docs/                               # Human documentation
-  SM_BOQ_Manual_EN.html             # User manual (English)
-  SM_BOQ_Manual_ID.html             # User manual (Indonesian)
   UPDATING_PRICE_LIST.md            # How to update the price list
   design/boq-system.md              # CRM integration design doc
 archive/                            # Old backups & superseded scripts (not used by the build)
