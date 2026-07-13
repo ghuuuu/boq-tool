@@ -58,6 +58,13 @@ space is tight the wrapping order is Notes → Finish → Category → Descripti
 widest and wraps last; then Category > Finish > Notes (narrowest, wraps first). Fixed widths keep
 every per-unit table column-aligned.
 
+**Group-first bands.** Item rows within a unit are grouped by item **group** (a named, unit-scoped
+package that may span sections). Each band = a header row (group name, brass; a plain "Other items"
+band in gray for ungrouped rows) with the **group subtotal** under the Total column, followed by its
+member rows. This **replaces the old per-section (KITCHEN/WARDROBE/ACCESSORIES) sub-headers**; each
+row instead carries a small brass section tag in the Category cell (toggle: `showSecTag` const in
+`buildPdfDoc` / `exportExcel`). Bands are ordered by `exportBands()`; empty bands are omitted.
+
 Header row: 7.5px/5.6pt uppercase, gray `#7A7166`, bold, characterSpacing 0.8pt;
 1px/0.75pt ink rule below (no rule above, no vertical lines anywhere).
 

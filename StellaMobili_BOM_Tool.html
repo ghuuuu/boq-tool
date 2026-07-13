@@ -155,7 +155,7 @@ input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
 .shell{position:relative;display:grid;grid-template-columns:var(--sidebar-w,260px) 1fr;min-height:calc(100vh - 57px)}
 
 /* ===== Sidebar ===== */
-.sidebar{background:var(--surface);border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+.sidebar{background:var(--surface);border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;position:sticky;top:57px;align-self:start;height:calc(100vh - 57px)}
 
 /* Sidebar drag-to-resize handle (desktop only) — sits over the sidebar/main border */
 .sb-resizer{display:none;position:absolute;top:0;bottom:0;left:var(--sidebar-w,260px);width:8px;margin-left:-4px;cursor:col-resize;z-index:60;background:transparent;transition:background .15s}
@@ -337,6 +337,8 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
 .bom-table tbody td:first-child{padding-left:14px}
 .bom-table tbody td:last-child{padding-right:14px;text-align:right}
 .bom-table tbody tr:hover{background:#faf8ff}
+.bom-table tbody tr[data-id]{cursor:pointer}   /* click a blank cell to select the row */
+.bom-table tbody td.col-qty,.bom-table tbody td.col-finish,.bom-table tbody td.col-actions,.bom-table tbody td.col-drag,.bom-table tbody td:last-child{cursor:auto}
 .bom-table tfoot td{padding:10px;font-weight:700;border-top:2px solid var(--pu-200);background:var(--pu-50)}
 .bom-table tfoot td:first-child{padding-left:14px;border-radius:0 0 0 8px}
 .bom-table tfoot td:last-child{padding-right:14px;border-radius:0 0 8px 0;text-align:right;color:var(--pu-700);font-family:var(--font-num);font-variant-numeric:tabular-nums}
@@ -511,6 +513,28 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
 .sel-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--pu-75);border:1px solid var(--pu-200);border-radius:8px;margin-bottom:8px;flex-wrap:wrap}
 .sel-bar .sel-count{font-size:14px;font-weight:600;color:var(--pu-700);flex:1;min-width:120px}
 .sel-bar.hidden{display:none}
+/* Always-visible selection bar: dim + disable the actions when nothing is picked */
+.sel-bar.sel-empty{background:var(--panel);border-color:var(--line)}
+.sel-bar.sel-empty .sel-count{color:var(--ink2);font-weight:500}
+.sel-bar.sel-empty .sel-act{opacity:.4;pointer-events:none}
+.sel-bar .sel-div{width:1px;align-self:stretch;min-height:22px;background:var(--pu-200);margin:0 4px}
+/* Group bands inside the item table */
+.group-band>td{padding:6px 14px;background:var(--pu-50);border-top:2px solid var(--brass);border-bottom:1px solid var(--pu-200)}
+.group-band.other-band>td{background:var(--panel);border-top:1px dashed var(--line)}
+.group-head{display:flex;align-items:center;gap:9px}
+.group-chev{cursor:pointer;color:var(--ink2);display:inline-flex;transition:transform .12s;flex-shrink:0}
+.group-chev.collapsed{transform:rotate(-90deg)}
+.group-band .g-check{margin:0}
+.group-name{font-weight:700;color:var(--pu-800);font-size:13.5px}
+.other-band .group-name{color:var(--ink2);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em}
+.group-name-in{font-size:13.5px;font-weight:700;color:var(--pu-800);border:1px solid var(--pu-300);border-radius:5px;padding:0 6px;height:20px;line-height:18px;box-sizing:border-box;margin:0;background:#fff}
+.group-head{min-height:20px}
+.group-meta{color:var(--ink2);font-size:12px;font-variant-numeric:tabular-nums}
+.group-total{margin-left:auto;font-weight:700;color:var(--brass);font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:13px}
+.group-acts{display:inline-flex;gap:4px;flex-shrink:0}
+.group-acts button{background:none;border:none;cursor:pointer;color:var(--ink2);padding:3px;border-radius:5px;display:inline-flex}
+.group-acts button:hover{background:var(--pu-100);color:var(--pu-700)}
+.bom-table tbody tr.row-hidden{display:none}
 .col-check{width:36px;padding-left:10px !important;padding-right:4px !important;text-align:center}
 .col-check input[type=checkbox]{width:15px;height:15px;accent-color:var(--pu-600);cursor:pointer;vertical-align:middle}
 tr.row-sel td{background:var(--pu-50)}
@@ -563,7 +587,7 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
   </div>
   <div class="topbar-actions">
     <span class="rev-pill save-status saved" id="saveStatus" title="Autosave status">Saved</span>
-    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.4.1</span>
+    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.5.0</span>
     <span class="rev-pill" id="revPill" title="Price list version">Pricelist</span>
     <input type="file" id="loadInput" accept=".smbq,.json" style="display:none" onchange="loadFile(this)">
   </div>
@@ -670,6 +694,9 @@ try{if(localStorage.getItem('sbCollapsed')==='1'&&window.innerWidth>900)document
 initSidebarResize();
 document.addEventListener('click', globalClickClose);
 document.addEventListener('mousedown', e => { _mousedownEl = e.target; });
+// Rows are only draggable while their drag-handle is held (set in col-drag onmousedown), so
+// clicking inputs never lands the caret inside a draggable ancestor. Reset on any mouseup.
+document.addEventListener('mouseup', () => { document.querySelectorAll('tr[data-id][draggable="true"]').forEach(tr=>tr.draggable=false); });
 document.addEventListener('keydown', e => {
   if(e.key==='Escape'){
     ['kit','wd','acc'].forEach(p=>hideDropdown(p));
@@ -864,7 +891,7 @@ function renderSidebarUnits(){
 function addUnit(name){
   unitCounter++;
   const id = 'u'+unitCounter;
-  units.push({id, name: name||'Unit '+unitCounter, items:{kitchen:[],wardrobe:[],accessories:[]}});
+  units.push({id, name: name||'Unit '+unitCounter, items:{kitchen:[],wardrobe:[],accessories:[]}, groups:[]});
   if(!activeUnitId) activeUnitId = id;
   markDirty();
   renderSidebarUnits();
@@ -924,11 +951,108 @@ function secBufferTotal(u,sec){return u.items[sec].filter(r=>r.buffer===true).re
 function unitBufferTotal(u){return['kitchen','wardrobe','accessories'].reduce((s,sec)=>s+secBufferTotal(u,sec),0)}
 
 // ====================================================================
+// ITEM GROUPS
+// A group is unit-scoped and can span sections (Kitchen + Wardrobe + Accessories).
+// unit.groups = [{id,name,collapsed}] (ordered); each row carries row.groupId (null = ungrouped).
+// Rows in each section array are kept in group order (reflowSection) so display == array order,
+// which keeps the existing #-numbering + drag-reorder logic intact.
+// ====================================================================
+const SECS=['kitchen','wardrobe','accessories'];
+function unitGroups(u){ if(!Array.isArray(u.groups)) u.groups=[]; return u.groups; }
+function groupById(u,gid){ return gid?unitGroups(u).find(g=>g.id===gid)||null:null; }
+function newGroupId(){ return 'g'+Date.now().toString(36)+Math.floor(Math.random()*46656).toString(36); }
+function groupTotal(u,gid){ let s=0; SECS.forEach(sec=>u.items[sec].forEach(r=>{ if(r.groupId===gid) s+=r.price*r.qty; })); return s; }
+function groupBufferTotal(u,gid){ let s=0; SECS.forEach(sec=>u.items[sec].forEach(r=>{ if(r.groupId===gid&&r.buffer===true) s+=r.price*r.qty; })); return s; }
+function groupCount(u,gid){ let n=0; SECS.forEach(sec=>u.items[sec].forEach(r=>{ if(r.groupId===gid) n++; })); return n; }
+// Stable-sort a section's rows into group order (unit.groups order; ungrouped/orphaned last).
+function reflowSection(u,sec){
+  const order=unitGroups(u).map(g=>g.id);
+  const rank=r=>{ const i=r.groupId?order.indexOf(r.groupId):-1; return i>=0?i:order.length; };
+  u.items[sec]=u.items[sec].map((r,i)=>[r,i]).sort((a,b)=>(rank(a[0])-rank(b[0]))||(a[1]-b[1])).map(p=>p[0]);
+}
+function reflowUnit(u){ SECS.forEach(sec=>reflowSection(u,sec)); }
+// Drop any row groupIds that no longer point at a live group → treated as ungrouped.
+function pruneGroups(u){
+  const live=new Set(unitGroups(u).map(g=>g.id));
+  SECS.forEach(sec=>u.items[sec].forEach(r=>{ if(r.groupId&&!live.has(r.groupId)) r.groupId=null; }));
+}
+function createGroupWithSelected(sec,name){
+  const u=getUnit(); if(!u) return;
+  const g={id:newGroupId(),name:name||'New group',collapsed:false};
+  unitGroups(u).push(g);
+  assignSelectedToGroup(sec,g.id);
+}
+function assignSelectedToGroup(sec,gid){
+  const u=getUnit(); if(!u) return;
+  const ids=selectedRows[sec]; if(!ids.size){toast('No items selected','warn');return;}
+  let n=0; u.items[sec].forEach(r=>{ if(ids.has(String(r.id))){ r.groupId=gid; n++; } });
+  reflowSection(u,sec); markDirty(); closeModal(); clearSelection(sec); refreshTable(sec);
+  const g=groupById(u,gid);
+  toast(n+' item'+(n===1?'':'s')+(gid?' → "'+(g?g.name:'group')+'"':' ungrouped'));
+}
+function removeSelectedFromGroup(sec){ assignSelectedToGroup(sec,null); }
+function renameGroup(u,gid,name){ const g=groupById(u,gid); if(g){ g.name=(name||'').trim()||g.name; markDirty(); } }
+function deleteGroup(sec,gid){
+  const u=getUnit(); if(!u) return;
+  SECS.forEach(s=>u.items[s].forEach(r=>{ if(r.groupId===gid) r.groupId=null; }));
+  u.groups=unitGroups(u).filter(g=>g.id!==gid);
+  reflowUnit(u); markDirty(); refreshTable(sec); toast('Group removed (items kept)');
+}
+function toggleGroupCollapse(sec,gid){ const u=getUnit(); const g=groupById(u,gid); if(g){ g.collapsed=!g.collapsed; markDirty(); refreshTable(sec); } }
+// --- group band rows (rendered inside the item table by buildTableCard) ---
+function groupBandHtml(u,gid,sec){
+  const g=groupById(u,gid); if(!g) return '';
+  const cnt=groupCount(u,gid), tot=groupTotal(u,gid);
+  const secIds=u.items[sec].filter(r=>r.groupId===gid).map(r=>String(r.id));
+  const allSel=secIds.length>0&&secIds.every(id=>selectedRows[sec].has(id));
+  return `<tr class="group-band" data-gid="${escAttr(gid)}"><td colspan="11"><div class="group-head">
+    <input type="checkbox" class="g-check"${allSel?' checked':''} onchange="toggleGroupSelect('${sec}','${escAttr(gid)}',this.checked)" title="Select this group's items in this tab">
+    <span class="group-chev${g.collapsed?' collapsed':''}" onclick="toggleGroupCollapse('${sec}','${escAttr(gid)}')" title="Collapse / expand"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></span>
+    <span class="group-name" id="gname-${escAttr(gid)}" ondblclick="editGroupName('${sec}','${escAttr(gid)}')" title="Double-click to rename">${esc(g.name)}</span>
+    <span class="group-meta">${cnt} item${cnt===1?'':'s'}${cnt>secIds.length?' · '+secIds.length+' here':''}</span>
+    <span class="group-total">${fmt(tot)}</span>
+    <span class="group-acts">
+      <button onclick="editGroupName('${sec}','${escAttr(gid)}')" title="Rename group"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <button onclick="confirmDeleteGroup('${sec}','${escAttr(gid)}')" title="Remove group (keep items)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-9 0v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6"/></svg></button>
+    </span></div></td></tr>`;
+}
+function otherBandHtml(){ return `<tr class="group-band other-band"><td colspan="11"><div class="group-head"><span class="group-name">Other items</span></div></td></tr>`; }
+function toggleGroupSelect(sec,gid,checked){
+  const u=getUnit(); if(!u) return;
+  u.items[sec].forEach(r=>{ if(r.groupId===gid){ if(checked) selectedRows[sec].add(String(r.id)); else selectedRows[sec].delete(String(r.id)); } });
+  refreshTable(sec);
+}
+function editGroupName(sec,gid){
+  const u=getUnit(); const g=groupById(u,gid); if(!g) return;
+  const span=document.getElementById('gname-'+gid); if(!span) return;
+  const inp=document.createElement('input'); inp.type='text'; inp.value=g.name; inp.className='group-name-in';
+  let done=false;
+  const commit=()=>{ if(done) return; done=true; renameGroup(u,gid,inp.value); refreshTable(sec); };
+  inp.onclick=e=>e.stopPropagation();
+  inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') commit(); if(e.key==='Escape'){ done=true; refreshTable(sec); } };
+  inp.onblur=commit;
+  span.replaceWith(inp); inp.focus(); inp.select();
+}
+function confirmDeleteGroup(sec,gid){ const u=getUnit(); const g=groupById(u,gid); if(!g) return; if(confirm(`Remove group "${g.name}"? Items are kept and become ungrouped.`)) deleteGroup(sec,gid); }
+function showAddToGroup(sec){
+  const ids=selectedRows[sec]; if(!ids.size){toast('No items selected','warn');return;}
+  const u=getUnit(); const gs=unitGroups(u);
+  const list=gs.map(g=>`<div class="db-item-row" onclick="assignSelectedToGroup('${sec}','${escAttr(g.id)}')">${esc(g.name)} <span style="color:var(--ink-faint);font-size:12px">· ${groupCount(u,g.id)} item${groupCount(u,g.id)===1?'':'s'}</span></div>`).join('');
+  showModal(`<div class="modal-head"><h2>Add ${ids.size} item${ids.size===1?'':'s'} to group</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body">
+    <div class="field"><label>New group</label><div style="display:flex;gap:8px"><input class="input" id="newgroup-name" placeholder="e.g. Kitchen Island" onkeydown="if(event.key==='Enter'){event.preventDefault();createGroupFromModal('${sec}')}"><button class="btn primary" style="flex-shrink:0" onclick="createGroupFromModal('${sec}')">Create</button></div></div>
+    ${gs.length?`<div style="margin:12px 0 6px;font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em">Add to existing group</div>${list}`:''}
+  </div>
+  <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Cancel</button></div>`);
+}
+function createGroupFromModal(sec){ const name=(el('newgroup-name')?.value||'').trim(); if(!name){toast('Enter a group name','warn');return;} createGroupWithSelected(sec,name); }
+
+// ====================================================================
 // OVERVIEW VIEW
 // ====================================================================
 function renderOverview(){
   const grand = units.reduce((s,u)=>s+unitTotal(u),0);
-  const {name:projName,client,pic,date,notes,priceListVersion} = projectMeta;
+  const {name:projName,client,pic,notes,priceListVersion} = projectMeta;
   const isOld = priceListVersion && priceListVersion !== PRICE_LIST_LATEST;
   const plOpts = PRICE_LIST_VERSIONS.map(v=>`<option${v===priceListVersion?' selected':''}>${v}</option>`).join('');
   const newerChip = isOld ? `<span class="pl-newer-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${PRICE_LIST_LATEST} available</span>` : '';
@@ -962,7 +1086,6 @@ function renderOverview(){
           <div class="field"><label>Project Name <span class="req">*</span></label><input class="input compact" type="text" id="projName" placeholder="e.g. Pak Budi – Kebayoran Baru" oninput="onMetaInput()" value="${esc(projName)}"></div>
           <div class="field"><label>Client <span class="req">*</span></label><input class="input compact" type="text" id="projClient" placeholder="Client name" oninput="onMetaInput()" value="${esc(client)}"></div>
           <div class="field"><label>PIC <span class="req">*</span></label><input class="input compact" type="text" id="projPIC" placeholder="PIC name" oninput="onMetaInput()" value="${esc(pic)}"></div>
-          <div class="field"><label>Date <span class="req">*</span></label><div style="display:flex;gap:6px;align-items:center"><input class="input compact" type="date" id="projDate" oninput="onMetaInput()" value="${date||new Date().toISOString().split('T')[0]}" style="flex:1"><button class="btn btn-sm ghost" type="button" onclick="el('projDate').value=new Date().toISOString().slice(0,10);onMetaInput()" title="Set date to today">Today</button></div></div>
           <div class="field"><label>Notes to SM Jakarta</label><input class="input compact" type="text" id="projNotes" placeholder="Revision notes, special requests..." oninput="onMetaInput()" value="${esc(notes)}"></div>
           <div class="field"><label>Price List</label><div style="display:flex;align-items:center;gap:8px"><select class="select compact" id="projPL" onchange="switchPriceList(this.value)">${plOpts}</select>${newerChip}</div></div>
         </div>
@@ -1004,7 +1127,7 @@ function onMetaInput(){
   document.getElementById('crumb-project').textContent = projectMeta.name||'—';
 }
 function syncProjectMetaFromDOM(){
-  const fields = {name:'projName',client:'projClient',pic:'projPIC',date:'projDate',notes:'projNotes'};
+  const fields = {name:'projName',client:'projClient',pic:'projPIC',notes:'projNotes'};   // date removed — versions carry their own; working copy exports as today
   for(const [k,id] of Object.entries(fields)){
     const inp = document.getElementById(id);
     if(inp) projectMeta[k] = inp.value.trim();
@@ -1557,7 +1680,7 @@ function addRow(sec){
   const pm={kitchen:'kit',wardrobe:'wd',accessories:'acc'};
   const p=pm[sec]; const it=selectedItems[p];
   if(!it){toast('Please select an item first','warn');return;}
-  const qty=Math.max(0.1, Math.round(parseFloat(el(p+'-qty')?.value)*10)/10||1);
+  const qty=Math.max(0.1, Math.round(parseFloat(el(p+'-qty')?.value)*100)/100||1);   // 2-decimal qty (e.g. 1.23)
   let price=0, finish='', variant='', category='', thickness='', subcat='', unit_str='set', w=null, h=null, d=null;
 
   if(sec==='kitchen'){
@@ -1636,19 +1759,20 @@ function buildTableCard(unit, sec){
   const bufSub=secBufferTotal(unit,sec);
   const selSet=selectedRows[sec], selCount=selSet.size;
   const allSelected=selCount===rows.length&&rows.length>0;
-  const tbody=rows.map((r,i)=>{
+  const rowHtml=(r,n,collapsed)=>{
     const fd=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
     const tbadge=r.thickness&&r.finish!=='(No Finish)'?`<span class="thickness-badge">${esc(r.thickness)}</span>`:'';
     const dims=fmtDims(r);
     const dimsBadge=dims?`<span class="thickness-badge">${dims}</span>`:'';
     const subcatBadge=r.subcat?`<span class="tag gray" style="font-size:9.5px">${esc(r.subcat)}</span>`:'';
     const isSel=selSet.has(String(r.id));
-    return `<tr data-id="${r.id}" class="${isSel?'row-sel':''}" draggable="true"
+    return `<tr data-id="${r.id}" class="${isSel?'row-sel':''}${collapsed?' row-hidden':''}" draggable="false"
+      onclick="rowClickSelect(event,'${sec}','${r.id}')"
       ondragstart="rowDragStart(event,'${sec}','${r.id}')" ondragover="rowDragOver(event,'${sec}','${r.id}')"
-      ondrop="rowDrop(event,'${sec}','${r.id}')" ondragend="rowDragEnd('${sec}')">
-      <td class="col-drag"><svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14" style="color:var(--ink-faint)"><circle cx="2" cy="2" r="1.3"/><circle cx="6" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="6" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="6" cy="12" r="1.3"/></svg></td>
+      ondrop="rowDrop(event,'${sec}','${r.id}')" ondragend="rowDragEnd('${sec}');this.draggable=false">
+      <td class="col-drag" onmousedown="this.closest('tr').draggable=true" title="Drag to reorder"><svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14" style="color:var(--ink-faint)"><circle cx="2" cy="2" r="1.3"/><circle cx="6" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="6" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="6" cy="12" r="1.3"/></svg></td>
       <td class="col-check"><input type="checkbox"${isSel?' checked':''} onchange="toggleRowSelect('${sec}','${r.id}',this.checked)"></td>
-      <td class="col-no">${i+1}</td>
+      <td class="col-no">${n}</td>
       <td class="col-cat"><div class="cat-stack" style="min-height:46px">${r.custom?'<span class="tag custom">CUSTOM</span>':`<span class="tag gray">${esc(r.category)}</span>`}${r.buffer===true?'<span class="tag buffer" title="Buffer / insurance item — counted in totals, excluded from the Sales Order">BUFFER</span>':''}</div></td>
       <td class="col-finish">
         <div class="editable-finish" onclick="editFinish(this,'${sec}','${r.id}')" title="Click to change finish">
@@ -1673,13 +1797,30 @@ function buildTableCard(unit, sec){
         </button>
       </span></td>
     </tr>`;
-  }).join('');
-  const selBar=`<div class="sel-bar${selCount?'':' hidden'}" id="sel-bar-${sec}">
-    <span class="sel-count">${selCount} item${selCount===1?'':'s'} selected</span>
-    <button class="btn btn-sm primary" onclick="changeFinishSelected('${sec}')">Change Finish</button>
-    ${units.length>1?`<button class="btn btn-sm" onclick="showCopyToUnit('${sec}')">Copy to Unit</button>`:''}
-    <button class="btn btn-sm danger" onclick="deleteSelected('${sec}')">Delete Selected</button>
-    <button class="btn btn-sm ghost" onclick="clearSelection('${sec}')">Clear</button>
+  };
+  // Rows are kept in group order (reflowSection); walk them inserting group / "Other items" bands.
+  const anyGroup=rows.some(r=>groupById(unit,r.groupId));
+  let tbody='', prevSeg='__start__', n=0;
+  rows.forEach(r=>{
+    const gid=groupById(unit,r.groupId)?r.groupId:null;
+    if(gid!==prevSeg){
+      if(gid) tbody+=groupBandHtml(unit,gid,sec);
+      else if(anyGroup) tbody+=otherBandHtml();
+      prevSeg=gid;
+    }
+    n++;
+    tbody+=rowHtml(r,n, gid&&groupById(unit,gid).collapsed);
+  });
+  const selHint='Select items to group, change finish, or copy…';
+  const selBar=`<div class="sel-bar${selCount?'':' sel-empty'}" id="sel-bar-${sec}">
+    <span class="sel-count">${selCount?selCount+' item'+(selCount===1?'':'s')+' selected':selHint}</span>
+    <button class="btn btn-sm primary sel-act" onclick="showAddToGroup('${sec}')">+ Group</button>
+    <button class="btn btn-sm sel-act" onclick="removeSelectedFromGroup('${sec}')">- Group</button>
+    <span class="sel-div"></span>
+    <button class="btn btn-sm sel-act" onclick="changeFinishSelected('${sec}')">Change Finish</button>
+    ${units.length>1?`<button class="btn btn-sm sel-act" onclick="showCopyToUnit('${sec}')">Copy to Unit</button>`:''}
+    <button class="btn btn-sm danger sel-act" onclick="deleteSelected('${sec}')">Delete</button>
+    <button class="btn btn-sm ghost sel-act" onclick="clearSelection('${sec}')">Clear</button>
   </div>`;
   return `<div class="card">
     <div class="card-body" style="padding:10px 16px 0">${selBar}</div>
@@ -1762,7 +1903,7 @@ function commitFinish(sec,id){
 // ====================================================================
 // ROW OPERATIONS
 // ====================================================================
-function updateQty(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.qty=Math.max(0.1, Math.round(parseFloat(val)*10)/10||1);markDirty();refreshTable(sec);}}
+function updateQty(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.qty=Math.max(0.1, Math.round(parseFloat(val)*100)/100||1);markDirty();refreshTable(sec);}}
 function updateNotes(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.notes=val;markDirty();}}
 function toggleRowBuffer(sec,id){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(!r)return;r.buffer=r.buffer===true?false:true;markDirty();refreshTable(sec);toast(r.buffer?'Marked as buffer':'Buffer removed');}
 function removeRow(sec,id){const unit=getUnit();if(!unit)return;unit.items[sec]=unit.items[sec].filter(r=>r.id!=id);selectedRows[sec].delete(String(id));markDirty();refreshTable(sec);updateTabCounts();renderSidebarUnits();}
@@ -1778,6 +1919,13 @@ function toggleRowSelect(sec,id,checked){
   if(checked) selectedRows[sec].add(String(id)); else selectedRows[sec].delete(String(id));
   updateSelectionUI(sec);
 }
+// Click a row's blank area to toggle its selection (skip clicks on inputs/buttons/editors).
+function rowClickSelect(e,sec,id){
+  if(e.target.closest('input,button,select,a,label,.editable-finish,.col-drag,.qsteps,.notes-input')) return;
+  const key=String(id), has=selectedRows[sec].has(key);
+  if(has) selectedRows[sec].delete(key); else selectedRows[sec].add(key);
+  updateSelectionUI(sec);
+}
 function toggleAllRows(sec,checked){
   const unit=getUnit();if(!unit)return;
   if(checked) unit.items[sec].forEach(r=>selectedRows[sec].add(String(r.id)));
@@ -1788,7 +1936,7 @@ function updateSelectionUI(sec){
   const unit=getUnit();if(!unit)return;
   const count=selectedRows[sec].size;
   const bar=document.getElementById('sel-bar-'+sec);
-  if(bar){ bar.classList.toggle('hidden',count===0); const ct=bar.querySelector('.sel-count'); if(ct) ct.textContent=count+' item'+(count===1?'':'s')+' selected'; }
+  if(bar){ bar.classList.toggle('sel-empty',count===0); const ct=bar.querySelector('.sel-count'); if(ct) ct.textContent=count?count+' item'+(count===1?'':'s')+' selected':'Select items to group, change finish, or copy…'; }
   unit.items[sec].forEach(r=>{
     const tr=document.querySelector(`tr[data-id="${r.id}"]`);
     if(tr){ const sel=selectedRows[sec].has(String(r.id)); tr.classList.toggle('row-sel',sel); const cb=tr.querySelector('input[type=checkbox]');if(cb)cb.checked=sel; }
@@ -1821,7 +1969,7 @@ function copyToUnit(sec,targetId){
   const src=getUnit();const tgt=getUnit(targetId);if(!src||!tgt)return;
   const ids=selectedRows[sec];
   const toCopy=src.items[sec].filter(r=>ids.has(String(r.id)));
-  toCopy.forEach(r=>tgt.items[sec].push({...r,id:Date.now()+Math.random(),altGroup:null}));
+  toCopy.forEach(r=>tgt.items[sec].push({...r,id:Date.now()+Math.random(),altGroup:null,groupId:null}));   // land ungrouped in target
   markDirty();
   toast(`Copied ${toCopy.length} item${toCopy.length===1?'':'s'} to "${tgt.name}"`);
   renderSidebarUnits();if(currentView==='overview')renderOverview();
@@ -1955,6 +2103,7 @@ function rowDrop(e,sec,targetId){
   const [moved]=items.splice(srcIdx,1);
   const newTgt=items.findIndex(r=>String(r.id)===String(targetId));
   items.splice(after?newTgt+1:newTgt,0,moved);
+  reflowSection(unit,sec);   // normalize: keep group members contiguous (within-group reorder is preserved)
   markDirty();
   dragRow={sec:null,id:null}; refreshTable(sec); renderSidebarUnits();
 }
@@ -1988,7 +2137,7 @@ function confirmCustom(){
     id:Date.now()+Math.random(), category:'Custom', subcat:'', desc,
     finish:(el('cm-finish')?.value||'').trim(), variant:'', thickness:(el('cm-thickness')?.value||'').trim(),
     unit:el('cm-unit')?.value||'set', w:null, h:null, d:null,
-    qty:Math.round(parseFloat(el('cm-qty')?.value)*10)/10||1, price:parseFloat(el('cm-price')?.value)||0,
+    qty:Math.round(parseFloat(el('cm-qty')?.value)*100)/100||1, price:parseFloat(el('cm-price')?.value)||0,
     notes:(el('cm-notes')?.value||'').trim(), custom:true, altGroup:null, buffer:false
   });
   markDirty();closeModal();refreshTable(customModalSection);updateTabCounts();renderSidebarUnits();toast('Custom item added');
@@ -2220,9 +2369,13 @@ function renderRevisionsPanel(){
       const isLoaded=isActive&&activeVerNum===v.ver, isLatest=latest&&v.ver===latest.ver;
       const chip=`padding:3px 11px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-num);font-variant-numeric:tabular-nums;cursor:pointer;white-space:nowrap;flex-shrink:0;border:1px solid ${isLoaded?'var(--accent)':(isLatest?'color-mix(in srgb,var(--accent) 42%,transparent)':'var(--line)')};background:${isLoaded?'var(--accent)':'transparent'};color:${isLoaded?'var(--on-accent)':(isLatest?'var(--accent)':'var(--ink-faint)')}`;
       const title='Alt '+a.key+' · v'+v.ver+' · '+v.status+' · '+v.date+' · '+fmt(v.total)+(v.note?' — '+v.note:'');
-      return `<button style="${chip}" title="${escAttr(title)}" onclick="event.stopPropagation();loadVersion('${a.key}',${v.ver})">v${v.ver}</button>`;
+      const dstyle='font-size:10.5px;color:var(--ink-faint);cursor:pointer;font-family:var(--font-num);font-variant-numeric:tabular-nums;border-bottom:1px dashed var(--line);flex-shrink:0';
+      return `<span style="display:inline-flex;align-items:center;gap:5px;flex-shrink:0">
+        <button style="${chip}" title="${escAttr(title)}" onclick="event.stopPropagation();loadVersion('${a.key}',${v.ver})">v${v.ver}</button>
+        <span id="vdate-${a.key}-${v.ver}" style="${dstyle}" title="Click to change this version's date" onclick="event.stopPropagation();editVersionDate('${a.key}',${v.ver})">${esc(v.date||'—')}</span>
+      </span>`;
     }).join('');
-    const metaLine=latest?('latest v'+latest.ver+' · '+latest.date+(latest.note?' — '+esc(latest.note):'')):'no versions yet — use "Save as v1"';
+    const metaLine=latest?('latest v'+latest.ver+(latest.note?' — '+esc(latest.note):'')):'no versions yet — use "Save as v1"';
     const readyLabel=latest&&latest.status==='Ready for quotation'?'Back to Draft':'Mark Ready';
     return `<div style="${rowStyle}" ${isActive?'':`onclick="selectAlt('${a.key}')"`} title="${isActive?'':'Click to switch to this alternative'}">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -2260,6 +2413,25 @@ function renderRevisionsPanel(){
       ${altRows}
     </div>
   </div>`;
+}
+// Per-version quotation date (shown in exports). Editable inline in the Revisions panel.
+function editVersionDate(altKey,ver){
+  const span=document.getElementById('vdate-'+altKey+'-'+ver); if(!span) return;
+  const a=alts.find(x=>x.key===altKey); const v=a&&a.versions.find(x=>x.ver===ver); if(!v) return;
+  const inp=document.createElement('input'); inp.type='date'; inp.value=v.date||''; inp.className='input compact';
+  inp.style.cssText='width:142px;font-size:11px;padding:2px 6px';
+  inp.onclick=e=>e.stopPropagation();
+  let done=false;
+  const commit=()=>{ if(done) return; done=true; if(inp.value&&inp.value!==v.date) setVersionDate(altKey,ver,inp.value); else renderOverview(); };
+  inp.onchange=commit; inp.onblur=commit;
+  inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') commit(); if(e.key==='Escape'){ done=true; renderOverview(); } };
+  span.replaceWith(inp); inp.focus();
+}
+function setVersionDate(altKey,ver,val){
+  if(!val) return;
+  const a=alts.find(x=>x.key===altKey); const v=a&&a.versions.find(x=>x.ver===ver); if(!v) return;
+  v.date=val; fileUnsaved=true; autosaveNow(); renderOverview();
+  toast('Alt '+altKey+' · v'+ver+' dated '+val);
 }
 
 // ====================================================================
@@ -2327,6 +2499,7 @@ function applyLoadedState(st){
     if(!projectMeta.priceListVersion) projectMeta.priceListVersion=PRICE_LIST_LATEST;
   }
   units=st.units||[];unitCounter=st.unitCounter||units.length;activeUnitId=units[0]?.id||null;
+  units.forEach(u=>{ if(!Array.isArray(u.groups)) u.groups=[]; pruneGroups(u); reflowUnit(u); });   // groups backward-compat
   revisionNumber=st.revisionNumber||1;
   // Restore alternatives/versions (backward-compatible with older .smbq files)
   alts=(Array.isArray(st.alts)&&st.alts.length)?st.alts:[{key:'A', name:'Initial scheme', versions:[]}];
@@ -2389,14 +2562,25 @@ function switchPriceList(v){
 // incBuf=true  -> Quotation prep: all items, buffer rows highlighted, totals incl. & excl. buffer
 // incBuf=false -> Sales Order prep (SM Jakarta): buffer items left out of lists and totals entirely
 function exportRowsFor(unit, sec, incBuf){ return unit.items[sec].filter(r=>incBuf||r.buffer!==true); }
+// Group-first export layout for one unit: an ordered list of bands, each carrying its member
+// rows (across sections, tagged with their section). Groups in unit.groups order, then a final
+// "Other items" band for ungrouped rows. Used by both the PDF and Excel exporters.
+function exportBands(unit, incBuf){
+  const collect=match=>{ const out=[]; SECS.forEach(sec=>exportRowsFor(unit,sec,incBuf).forEach(r=>{ if(match(r.groupId)) out.push({r,sec}); })); return out; };
+  const bands=[];
+  unitGroups(unit).forEach(g=>{ const rows=collect(gid=>gid===g.id); if(rows.length) bands.push({name:g.name, gid:g.id, rows, other:false}); });
+  const other=collect(gid=>!groupById(unit,gid)); if(other.length) bands.push({name:'Other items', gid:null, rows:other, other:true});
+  return bands;
+}
+function bandTotal(band){ return band.rows.reduce((s,{r})=>s+r.price*r.qty,0); }
+function bandBufferTotal(band){ return band.rows.reduce((s,{r})=>s+(r.buffer===true?r.price*r.qty:0),0); }
 
 // Project Name + Client are mandatory before any export (they drive the document + filename).
 function requireProjectFields(){
   syncProjectMetaFromDOM();
   const fields=[['projName','Project Name',(projectMeta.name||'').trim()],
                 ['projClient','Client',(projectMeta.client||'').trim()],
-                ['projPIC','PIC',(projectMeta.pic||'').trim()],
-                ['projDate','Date',(projectMeta.date||'').trim()]];
+                ['projPIC','PIC',(projectMeta.pic||'').trim()]];
   const missing=fields.filter(f=>!f[2]);
   if(!missing.length) return true;
   toast('Required before export: '+missing.map(f=>f[1]).join(', '),'warn',3500);
@@ -2408,8 +2592,9 @@ function requireProjectFields(){
   return false;
 }
 // Export filename: project name, date, quotation version, mode — Windows-safe.
-function fileBaseNameDate(){
-  const date=projectMeta.date||new Date().toISOString().slice(0,10);
+// dateStr defaults to today (used for .smbq saves + working-copy exports).
+function fileBaseNameDate(dateStr){
+  const date=dateStr||new Date().toISOString().slice(0,10);
   const name=(projectMeta.name||'BOQ').trim().replace(/\s*[–—]\s*/g,'_').replace(/\s+-\s+/g,'_');
   return (name+'_'+date).replace(/[\\/:*?"<>|]/g,'-');
 }
@@ -2422,6 +2607,12 @@ function setUnits(altKey,ver){
   if(ver==='working') return units;
   const a=alts.find(x=>x.key===altKey); const v=a&&a.versions.find(x=>x.ver===ver);
   return (v&&v.snapshot&&v.snapshot.units)||[];
+}
+// Document date for an export set: a saved version's own date, or today for the working copy.
+function setDate(set){
+  if(set.ver==='working') return new Date().toISOString().slice(0,10);
+  const a=alts.find(x=>x.key===set.altKey); const v=a&&a.versions.find(x=>x.ver===set.ver);
+  return (v&&v.date)||new Date().toISOString().slice(0,10);
 }
 function setLabel(s){
   return 'Alt '+s.altKey+(s.ver==='working'?' · current':' · v'+s.ver);
@@ -2442,7 +2633,9 @@ function exportFileBase(incBuf, sets){
   const keys=[...new Set(sets.map(s=>s.altKey))].sort();
   const allKeys=alts.map(a=>a.key).sort();
   const altSeg=(keys.length && keys.length<allKeys.length)?'Alt_'+keys.join('-')+'_':'';
-  return fileBaseNameDate()+'_'+altSeg+buf;
+  // single-set export → that version's date; multi-set → today.
+  const dateStr=sets.length===1?setDate(sets[0]):null;
+  return fileBaseNameDate(dateStr)+'_'+altSeg+buf;
 }
 
 function openExportModal(kind){
@@ -2567,7 +2760,7 @@ async function exportExcel(incBuf=true, sets=null){
   const mulyaImg=wb.addImage({base64:BOQ_LOGOS.mulya,extension:'png'});
 
   // Brand header (rows 1–5): logos, doc line + company, meta band — mirrors the PDF header
-  const addBrandHeader=(ws,ncols,verLabel)=>{
+  const addBrandHeader=(ws,ncols,verLabel,verDate)=>{
     const r1=ws.addRow([]); r1.height=40;
     const r2=ws.addRow([docLine]); r2.height=14;
     ws.mergeCells(r2.number,1,r2.number,6);
@@ -2577,7 +2770,7 @@ async function exportExcel(incBuf=true, sets=null){
     cc.font={bold:true,size:8,color:{argb:BRASS}}; cc.alignment={horizontal:'right'};
     for(let i=1;i<=ncols;i++) r2.getCell(i).border={bottom:inkB};
     const labels=['PROJECT','CLIENT','PIC','DATE','VERSION','PRICE LIST'];
-    const values=[projectMeta.name,projectMeta.client,projectMeta.pic,projectMeta.date,verLabel,plv];
+    const values=[projectMeta.name,projectMeta.client,projectMeta.pic,verDate||new Date().toISOString().slice(0,10),verLabel,plv];
     const r3=ws.addRow(['',...labels]);
     labels.forEach((_,k)=>{r3.getCell(k+2).font={bold:true,size:7,color:{argb:BRASS}};});
     const r4=ws.addRow(['',...values.map(v=>v||'—')]);
@@ -2606,10 +2799,12 @@ async function exportExcel(incBuf=true, sets=null){
     for(let i=1;i<=NCOLS;i++){const c=row.getCell(i);c.font={bold:true,size:7,color:{argb:GRAY}};c.alignment={vertical:'middle',horizontal:i===6||i===9?'right':(i===7?'center':'left')};c.border={bottom:inkB};}
     row.height=16;
   };
-  const addItemRow=(ws,r,n,offset)=>{
+  const SECLBL={kitchen:'Kitchen',wardrobe:'Wardrobe',accessories:'Accessories'}, showSecTag=true;   // showSecTag: prefix the Category cell with its section in grouped bands
+  const addItemRow=(ws,r,n,offset,sec)=>{
     const fin=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:'')+(r.thickness?' · '+r.thickness:''));
     const isBuf=incBuf&&r.buffer===true;
-    const base=[n,r.category+(r.subcat?' · '+r.subcat:''),r.desc,fin,fmtDims(r),r.price,r.qty,r.unit||'',r.price*r.qty,r.notes||''].concat(showBufCol?[isBuf?'YES':'']:[]);
+    const catLabel=(showSecTag&&sec?SECLBL[sec]+' · ':'')+r.category+(r.subcat?' · '+r.subcat:'');
+    const base=[n,catLabel,r.desc,fin,fmtDims(r),r.price,r.qty,r.unit||'',r.price*r.qty,r.notes||''].concat(showBufCol?[isBuf?'YES':'']:[]);
     const row=ws.addRow(offset?Array(offset).fill('').concat(base):base);
     const o=offset||0;
     for(let i=1;i<=NCOLS+o;i++){const c=row.getCell(i);c.border={bottom:isBuf?bufHairB:hairB};if(isBuf)c.fill=solid(BUFFILL);}
@@ -2621,11 +2816,14 @@ async function exportExcel(incBuf=true, sets=null){
     row.getCell(10+o).font={size:9,color:{argb:GRAY}};
     if(showBufCol){const c=row.getCell(11+o);c.font={bold:true,size:8,color:{argb:BUFC}};c.alignment={horizontal:'center'};}
   };
-  const addSecRow=(ws,sec,ncols)=>{
-    const row=ws.addRow([sec.toUpperCase()]);
-    ws.mergeCells(row.number,1,row.number,ncols);
-    row.getCell(1).font={bold:true,size:8,color:{argb:GRAY}};
-    row.height=14;
+  // Group band header row: group name (merged left) + group subtotal under the Total column.
+  const addGroupRow=(ws,band)=>{
+    const row=ws.addRow([]);
+    ws.mergeCells(row.number,1,row.number,8);
+    const nc=row.getCell(1); nc.value=band.name; nc.font={bold:true,size:9,color:{argb:band.other?GRAY:BRASS}};
+    const tc=row.getCell(9); tc.value=bandTotal(band); tc.numFmt=MONEY; tc.font={bold:true,size:9,color:{argb:INK}}; tc.alignment={horizontal:'right'};
+    for(let i=1;i<=NCOLS;i++) row.getCell(i).border={bottom:hairB};
+    row.height=15;
   };
   const addTotalRow=(ws,label,val,kind)=>{
     const row=ws.addRow(['','','','','','','',label,val]);
@@ -2646,6 +2844,7 @@ async function exportExcel(incBuf=true, sets=null){
   sets.forEach(set=>{
     const sUnits=setUnits(set.altKey,set.ver);
     const verLabel=setLabel(set);
+    const verDate=setDate(set);
     const prefix=multi?set.altKey+' · ':'';
 
     // pass 1: collect data for this set
@@ -2665,7 +2864,7 @@ async function exportExcel(incBuf=true, sets=null){
     const sw=wb.addWorksheet(claimSheetName(multi?'Summary '+set.altKey:'Summary'));
     sw.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.35,right:0.35,top:0.5,bottom:0.5,header:0.2,footer:0.2}};
     sw.columns=[{width:4},{width:20},{width:26},{width:46},{width:23},{width:20},{width:14},{width:5},{width:6},{width:15},{width:24}].concat(showBufCol?[{width:8}]:[]);   // col6 = 20: fits the 14pt grand-total figure
-    addBrandHeader(sw,SNC,verLabel);
+    addBrandHeader(sw,SNC,verLabel,verDate);
     if(projectMeta.notes){
       const nr=sw.addRow(['','NOTES',projectMeta.notes]);
       nr.getCell(2).font={bold:true,size:7,color:{argb:BRASS}};
@@ -2698,10 +2897,11 @@ async function exportExcel(incBuf=true, sets=null){
     for(let i=1;i<=NCOLS+1;i++){const c=fh.getCell(i);c.font={bold:true,size:7,color:{argb:GRAY}};c.border={bottom:inkB};c.alignment={horizontal:i===7||i===10?'right':(i===8?'center':'left')};}
     fh.height=16;
     let rn=1;
-    unitData.forEach(({unit,rows})=>rows.forEach(({r})=>{
+    unitData.forEach(({unit})=>exportBands(unit,incBuf).forEach(band=>band.rows.forEach(({r,sec})=>{
       const fin=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:'')+(r.thickness?' · '+r.thickness:''));
       const isBuf=incBuf&&r.buffer===true;
-      const row=sw.addRow([rn++,unit.name,r.category+(r.subcat?' · '+r.subcat:''),r.desc,fin,fmtDims(r),r.price,r.qty,r.unit||'',r.price*r.qty,r.notes||''].concat(showBufCol?[isBuf?'YES':'']:[]));
+      const catLabel=(showSecTag&&sec?SECLBL[sec]+' · ':'')+r.category+(r.subcat?' · '+r.subcat:'');
+      const row=sw.addRow([rn++,unit.name,catLabel,r.desc,fin,fmtDims(r),r.price,r.qty,r.unit||'',r.price*r.qty,r.notes||''].concat(showBufCol?[isBuf?'YES':'']:[]));
       for(let i=1;i<=NCOLS+1;i++){const c=row.getCell(i);c.border={bottom:isBuf?bufHairB:hairB};if(isBuf)c.fill=solid(BUFFILL);}
       row.getCell(1).font={size:9,color:{argb:GRAY}};
       row.getCell(4).font={bold:true,size:10,color:{argb:INK}};
@@ -2710,14 +2910,14 @@ async function exportExcel(incBuf=true, sets=null){
       row.getCell(10).numFmt=MONEY;row.getCell(10).font={bold:true,color:{argb:BRASS},size:10};
       row.getCell(11).font={size:9,color:{argb:GRAY}};
       if(showBufCol){const c=row.getCell(12);c.font={bold:true,size:8,color:{argb:BUFC}};c.alignment={horizontal:'center'};}
-    }));
+    })));
 
     // per-unit sheets for the set
     unitData.forEach(({unit,rows,uTot,uBuf})=>{
       const base=prefix+(unit.name.replace(/[\\/*?[\]:]/g,'').substring(0,multi?24:28)||'Unit');
       const ws=wb.addWorksheet(claimSheetName(base));
       ws.columns=widths.map(w=>({width:w}));
-      addBrandHeader(ws,NCOLS,verLabel);
+      addBrandHeader(ws,NCOLS,verLabel,verDate);
       const tr=ws.addRow([unit.name]);
       tr.getCell(1).font={name:'Libre Caslon Text',size:13,color:{argb:INK}};
       ws.mergeCells(tr.number,1,tr.number,NCOLS-2);
@@ -2728,10 +2928,10 @@ async function exportExcel(incBuf=true, sets=null){
       styleHeaderRow(ws.addRow(hdr));
       ws.views=[{state:'frozen',ySplit:7}];
       ws.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.35,right:0.35,top:0.5,bottom:0.5,header:0.2,footer:0.2},printTitlesRow:'7:7'};
-      let n=1,lastSec='';
-      rows.forEach(({r,sec})=>{
-        if(sec!==lastSec){addSecRow(ws,sec,NCOLS);lastSec=sec;}
-        addItemRow(ws,r,n++,0);
+      let n=1;
+      exportBands(unit,incBuf).forEach(band=>{
+        addGroupRow(ws,band);
+        band.rows.forEach(({r,sec})=>addItemRow(ws,r,n++,0,sec));
       });
       ws.addRow([]);
       addTotalRow(ws,'UNIT TOTAL',uTot,'grand');
@@ -2771,9 +2971,9 @@ function buildPdfDoc(incBuf, orient, sets){
   ]});
   // vlabel overrides the Version cell — in a multi-set export each alternative's letterhead
   // shows ITS OWN version (e.g. "Alt B v1"), not the combined label.
-  const metaCells=(vlabel)=>[
+  const metaCells=(vlabel,vdate)=>[
     metaCell('Project',projectMeta.name), metaCell('Client',projectMeta.client),
-    metaCell('PIC',projectMeta.pic), metaCell('Date',projectMeta.date),
+    metaCell('PIC',projectMeta.pic), metaCell('Date',vdate||new Date().toISOString().slice(0,10)),
     metaCell('Version',vlabel||verLabel), metaCell('Price list',plv),
   ];
 
@@ -2781,7 +2981,7 @@ function buildPdfDoc(incBuf, orient, sets){
   // logos as vector SVG (crisp at any print size); aspect ratios from the SVG viewBoxes.
   // Built fresh each call (pdfmake mutates nodes) so the full letterhead can repeat atop
   // each alternative in a multi-set export — every alternative reads as a standalone BOQ.
-  function pushLetterhead(brk,vlabel){
+  function pushLetterhead(brk,vlabel,vdate){
     const leftStack={width:land?'auto':'*',stack:[
       {svg:BOQ_LOGOS.stellaSvg,height:LOGO_H,width:LOGO_H*(121.92/34.58)},
       {text:docLine,fontSize:6,color:BRASS,characterSpacing:0.6,margin:[0,6.75,0,0]},
@@ -2793,7 +2993,7 @@ function buildPdfDoc(incBuf, orient, sets){
     const head=land
       // landscape: the six meta cells sit inline between the logos (spec)
       ?{columns:[leftStack,
-        {width:'*',margin:[20,22,10,0],columns:metaCells(vlabel).map(c=>Object.assign({width:'auto'},c)),columnGap:19.5},
+        {width:'*',margin:[20,22,10,0],columns:metaCells(vlabel,vdate).map(c=>Object.assign({width:'auto'},c)),columnGap:19.5},
         rightStack]}
       :{columns:[leftStack,rightStack]};
     if(brk) head.pageBreak='before';
@@ -2803,13 +3003,13 @@ function buildPdfDoc(incBuf, orient, sets){
       // portrait: meta band on its own row under the header rule
       const MW=(CW-5*10.5)/5.4;   // spread ≈ mock grid 1.1fr 1.1fr 0.7fr 0.9fr 0.8fr 0.8fr
       const mw=[MW*1.1,MW*1.1,MW*0.7,MW*0.9,MW*0.8,'*'];
-      content.push({margin:[0,6.75,0,0],columnGap:10.5,columns:metaCells(vlabel).map((c,i)=>Object.assign({width:mw[i]},c))});
+      content.push({margin:[0,6.75,0,0],columnGap:10.5,columns:metaCells(vlabel,vdate).map((c,i)=>Object.assign({width:mw[i]},c))});
       content.push({canvas:[{type:'line',x1:0,y1:6.75,x2:CW,y2:6.75,lineWidth:0.4,lineColor:HAIR}]});
     }
     if(projectMeta.notes) content.push({text:[{text:'NOTES   ',fontSize:5.6,bold:true,color:BRASS,characterSpacing:0.9},{text:projectMeta.notes,fontSize:7.1,color:GRAY}],margin:[0,5,0,0]});
   }
   // single-set export: one letterhead at the very top. Multi-set: one atop each alternative (in the loop).
-  if(!multi) pushLetterhead(false);
+  if(!multi) pushLetterhead(false,null,setDate(sets[0]));
 
   // ---- per-set rendering ----
   const th=(t,al)=>({text:t.toUpperCase(),fontSize:5.6,bold:true,color:GRAY,characterSpacing:0.8,alignment:al||'left',margin:[0,3,0,2]});
@@ -2819,6 +3019,7 @@ function buildPdfDoc(incBuf, orient, sets){
   // Category → Description: Description ('*') is widest (wraps last), then Category > Finish > Notes
   // (narrowest, wraps first). Fixed widths keep every unit table aligned. (user request 2026-07-13)
   const COLS=land?[18,'*',110,84,76,20,80,66]:[15,'*',60,54,64,18,66,44];
+  const showSecTag=true;   // set false to drop the per-row KITCHEN/WARDROBE/ACCESSORIES tag in grouped bands
   const PADX=land?4.5:3.75;
   // BUFFER tag as a bordered pill (1-cell table; fresh node per row — pdfmake mutates nodes)
   const pill=()=>({width:'auto',margin:[4,0.5,0,0],table:{body:[[{text:'BUFFER',fontSize:5.25,bold:true,color:BUFC,characterSpacing:0.75}]]},layout:{hLineWidth:()=>0.5,vLineWidth:()=>0.5,hLineColor:()=>BUFBORDER,vLineColor:()=>BUFBORDER,paddingLeft:()=>3,paddingRight:()=>2.25,paddingTop:()=>1,paddingBottom:()=>1}});
@@ -2834,7 +3035,7 @@ function buildPdfDoc(incBuf, orient, sets){
       // atop each alternative — starting on a fresh page — so every one reads with full context.
       // The letterhead's Version cell shows THIS alternative's own version (e.g. "Alt B v1").
       const aLabel='Alt '+set.altKey+(set.ver==='working'?' · working':' v'+set.ver);
-      pushLetterhead(si>0,aLabel);
+      pushLetterhead(si>0,aLabel,setDate(set));
       // Alternative title bar (no heavy rule) with a compact "Alt A v2" label, underlined by a hairline.
       content.push({margin:[0,5,0,2],stack:[
         {columns:[
@@ -2858,41 +3059,46 @@ function buildPdfDoc(incBuf, orient, sets){
         {text:fmt(uTot),fontSize:8.6,bold:true,color:BRASS,width:'auto',noWrap:true,margin:[0,2,0,0]},
       ]});
       const body=[[th('#'),th('Description'),th('Category'),th('Finish'),th('Unit price','right'),th('Qty','center'),th('Total','right'),th('Notes')]];
-      let lastSec='', n=0;
-      rows.forEach(({r,sec})=>{
-        if(sec!==lastSec){
-          body.push([{text:sec.toUpperCase(),colSpan:8,fontSize:5.6,bold:true,color:GRAY,characterSpacing:0.8,margin:[0,2,0,0]},{},{},{},{},{},{},{}]);
-          lastSec=sec; n=0;
-        }
-        n++;
-        const isBuf=incBuf&&r.buffer===true;
-        const fd=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
-        const dims=fmtDims(r);
-        let descCell, catCell;
-        if(land){
-          // one-line rows: name + dims share the line; category + sub-category too
-          const nameText={width:'auto',text:[{text:r.desc,bold:true,color:INK}].concat(dims?[{text:'   '+dims,fontSize:6.4,color:GRAY,bold:false}]:[]),fontSize:7.5,lineHeight:1.15};
-          descCell=isBuf?{columns:[nameText,pill()],columnGap:0}:{text:nameText.text,fontSize:7.5,lineHeight:1.15};
-          catCell={text:[{text:r.category}].concat(r.subcat?[{text:'  ·  '+r.subcat,fontSize:6.4,color:GRAY}]:[]),fontSize:7.5,color:INK};
-        }else{
-          const nameLine=isBuf
-            ?{columns:[{width:'auto',text:r.desc,fontSize:7.9,bold:true,color:INK,lineHeight:1.15},pill()],columnGap:0}
-            :{text:r.desc,fontSize:7.9,bold:true,color:INK,lineHeight:1.15};
-          descCell={stack:[nameLine].concat(dims?[{text:dims,fontSize:6.4,color:GRAY,margin:[0,0.75,0,0]}]:[])};
-          catCell={stack:[{text:r.category,fontSize:7.5,color:INK}].concat(r.subcat?[{text:r.subcat,fontSize:6.4,color:GRAY}]:[])};
-        }
-        const row=[
-          {text:String(n),fontSize:7.1,color:GRAY},
-          descCell,
-          catCell,
-          {text:fd+(r.thickness?' · '+r.thickness:''),fontSize:7.5,color:INK},
-          {text:fmt(r.price),fontSize:7.5,color:INK,alignment:'right',noWrap:true},
-          {text:String(r.qty),fontSize:7.5,color:INK,alignment:'center',noWrap:true},
-          {text:fmt(r.price*r.qty),fontSize:7.5,bold:true,color:BRASS,alignment:'right',noWrap:true},
-          {text:r.notes||'',fontSize:7.1,color:GRAY,lineHeight:1.2},
-        ];
-        row.__buffer=isBuf;   // read by fillColor/hLineColor in the layout below
-        body.push(row);
+      let n=0;
+      // Group-first: each band = group name + subtotal header, then its rows (tagged by section).
+      exportBands(u,incBuf).forEach(band=>{
+        const bt=bandTotal(band);
+        body.push([
+          {text:band.name.toUpperCase(),colSpan:6,fontSize:6,bold:true,color:band.other?GRAY:BRASS,characterSpacing:0.8,margin:[0,3,0,1]},{},{},{},{},{},
+          {text:fmt(bt),colSpan:2,fontSize:6.6,bold:true,color:INK,alignment:'right',margin:[0,3,0,1]},{}
+        ]);
+        band.rows.forEach(({r,sec})=>{
+          n++;
+          const isBuf=incBuf&&r.buffer===true;
+          const fd=r.finish==='(No Finish)'?'N/A':(r.finish+(r.variant&&r.variant!=='standard'?' / '+r.variant:''));
+          const dims=fmtDims(r);
+          const secTag=sec.toUpperCase();   // per-row section tag (showSecTag toggles it)
+          let descCell, catCell;
+          if(land){
+            // one-line rows: name + dims share the line; category + sub-category too
+            const nameText={width:'auto',text:[{text:r.desc,bold:true,color:INK}].concat(dims?[{text:'   '+dims,fontSize:6.4,color:GRAY,bold:false}]:[]),fontSize:7.5,lineHeight:1.15};
+            descCell=isBuf?{columns:[nameText,pill()],columnGap:0}:{text:nameText.text,fontSize:7.5,lineHeight:1.15};
+            catCell={text:(showSecTag?[{text:secTag+'  ',fontSize:5.4,color:BRASS,bold:true,characterSpacing:0.5}]:[]).concat([{text:r.category}]).concat(r.subcat?[{text:'  ·  '+r.subcat,fontSize:6.4,color:GRAY}]:[]),fontSize:7.5,color:INK};
+          }else{
+            const nameLine=isBuf
+              ?{columns:[{width:'auto',text:r.desc,fontSize:7.9,bold:true,color:INK,lineHeight:1.15},pill()],columnGap:0}
+              :{text:r.desc,fontSize:7.9,bold:true,color:INK,lineHeight:1.15};
+            descCell={stack:[nameLine].concat(dims?[{text:dims,fontSize:6.4,color:GRAY,margin:[0,0.75,0,0]}]:[])};
+            catCell={stack:(showSecTag?[{text:secTag,fontSize:5.4,color:BRASS,bold:true,characterSpacing:0.5,margin:[0,0,0,0.5]}]:[]).concat([{text:r.category,fontSize:7.5,color:INK}]).concat(r.subcat?[{text:r.subcat,fontSize:6.4,color:GRAY}]:[])};
+          }
+          const row=[
+            {text:String(n),fontSize:7.1,color:GRAY},
+            descCell,
+            catCell,
+            {text:fd+(r.thickness?' · '+r.thickness:''),fontSize:7.5,color:INK},
+            {text:fmt(r.price),fontSize:7.5,color:INK,alignment:'right',noWrap:true},
+            {text:String(r.qty),fontSize:7.5,color:INK,alignment:'center',noWrap:true},
+            {text:fmt(r.price*r.qty),fontSize:7.5,bold:true,color:BRASS,alignment:'right',noWrap:true},
+            {text:r.notes||'',fontSize:7.1,color:GRAY,lineHeight:1.2},
+          ];
+          row.__buffer=isBuf;   // read by fillColor/hLineColor in the layout below
+          body.push(row);
+        });
       });
       content.push({margin:[0,2,0,0],table:{headerRows:1,widths:COLS,body,dontBreakRows:true},layout:{
         hLineWidth:i=>(i===1?0.75:(i===0?0:0.4)),
@@ -2988,7 +3194,7 @@ const QSTEPS='<span class="qsteps">'
 function stepQty(btn,d){
   const inp=btn.closest('.qtybox')?.querySelector('input'); if(!inp) return;
   let v=parseFloat(inp.value); if(!isFinite(v)) v=0;
-  v=Math.round((v+d)*10)/10;
+  v=Math.round((v+d)*100)/100;   // step by whole units but preserve 2-decimal fractions (e.g. 1.23 → 2.23)
   const min=parseFloat(inp.min); if(isFinite(min)&&v<min) v=min; else if(v<0) v=0;
   inp.value=v;
   inp.dispatchEvent(new Event('change',{bubbles:true}));

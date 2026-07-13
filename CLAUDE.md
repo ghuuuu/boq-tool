@@ -252,10 +252,11 @@ units = [
     id: "u1",
     name: "Master Bedroom",
     items: {
-      kitchen:     [{ id, category, desc, finish, variant, thickness, qty, price, notes, custom, altGroup }],
+      kitchen:     [{ id, category, desc, finish, variant, thickness, qty, price, notes, custom, altGroup, groupId }],
       wardrobe:    [...],
       accessories: [...]
-    }
+    },
+    groups: [{ id, name, collapsed }]   // item groups for this unit (may span sections)
   },
   ...
 ]
@@ -279,6 +280,33 @@ Row fields:
 - `custom: true` → yellow CUSTOM badge
 - `buffer: true` → **buffer/insurance stock**: still counted in all BOQ totals, but flagged so it can be excluded from the Sales Order downstream. Per-row shield toggle (`toggleRowBuffer`); shown with a blue BUFFER tag + tinted shield, an "incl. buffer Rp X" note on section subtotals / unit total / grand total, a "Buffer" column (YES) in Excel, and a BUFFER badge in the PDF. Buffer totals: `secBufferTotal(u,sec)` / `unitBufferTotal(u)`. Color token `--buffer` (#3E648C). Travels in `.smbq` (part of the units array).
 - `altGroup` → legacy field; always `null` on new items. The makeAlt UI feature has been removed from the built tool.
+- `groupId` → id of the item group this row belongs to (`null` = ungrouped). See **Item Groups** below.
+
+### Item Groups
+A **group** clusters related rows into a named package (e.g. "Kitchen Island") and **can span
+sections** — a group's members may be Kitchen base units + Accessories handles + a Solid Surface
+top at once. Group defs live on the unit: `unit.groups = [{id, name, collapsed}]` (ordered);
+each row carries `row.groupId`. Backward-compatible: files without groups seed `groups: []` and
+`groupId` is treated as `null` (`applyLoadedState` runs `pruneGroups` + `reflowUnit`). `.smbq`
+format stays `version: 3` (additive fields).
+
+- Each section array is kept in **group order** by `reflowSection(u,sec)` (stable sort:
+  unit.groups order, ungrouped/orphaned last) so display order == array order — the existing
+  #-numbering and drag-reorder logic is unchanged. `reflowUnit` does all three sections.
+- On screen (per-section tabs): `buildTableCard` walks the reflowed rows and inserts group
+  band header rows (`groupBandHtml` — name, cross-section count · total, collapse, rename ✎,
+  delete) plus one **"Other items"** band (`otherBandHtml`) for the ungrouped tail. Because
+  the unit view is tabbed by section, a cross-section group is built tab-by-tab (add each
+  section's rows from its own tab); the band shows the full cross-section total on every tab.
+- Selection bar is now **always visible** (`.sel-bar.sel-empty` dims the actions when nothing
+  is picked) and carries **+ Add to Group** (`showAddToGroup` modal → new group / existing /
+  ungroup).
+- Exports are **group-first** (`exportBands(unit, incBuf)` → ordered bands, each with its
+  cross-section rows tagged by section, then an "Other items" band): the per-section
+  sub-headers are replaced by group bands + group subtotals in both the PDF (`buildPdfDoc`)
+  and Excel (`exportExcel`, `addGroupRow`). A per-row section tag is gated by a single
+  `showSecTag` const in each exporter (set `false` to drop it). `bandTotal` / `bandBufferTotal`
+  give band sums; empty bands (e.g. a buffer-only group when buffer is excluded) are omitted.
 
 ---
 
@@ -307,7 +335,9 @@ Revisions/Alternatives tree. The loader is backward-compatible with older v1/v2 
 {
   "version": 3,
   "revisionNumber": 1,
-  "project": { "name": "...", "client": "...", "pic": "...", "date": "...", "notes": "...", "priceListVersion": "..." },
+  "project": { "name": "...", "client": "...", "pic": "...", "notes": "...", "priceListVersion": "..." },
+  //            NB: no project-level "date" anymore — each version carries its own date (below);
+  //            the working copy exports as today. (Old files with project.date load fine, value ignored.)
   "units": [ ...full units array (the LIVE working calculation)... ],
   "unitCounter": 3,
   "alts": [
@@ -376,7 +406,8 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 | `saveFile()` | Save .smbq (named via `fileBaseNameDate()`); clears the localStorage autosave |
 | `pickSaveHandle(fname)` / `writePicked(pick,blob)` | Two-phase native Save As (showSaveFilePicker): dialog opens FIRST on the click, file written after generation. Used by saveFile/exportExcel/savePDF. **`file://` pages have no picker API** (Chrome limitation) → silent fallback to instant download; the manuals point users to Chrome's "Ask where to save each file" setting |
 | `autosaveNow()` / `applyLoadedState(st)` | Unsaved-work protection: state autosaved to `localStorage.smboq_autosave` every 30s while dirty + on beforeunload (which also warns); on startup a modal offers restore/discard. `applyLoadedState` is shared by loadFile and the restore |
-| `fileBaseNameDate()` / `exportFileBase(incBuf,sets)` | Filename builder: `{Name}_{date}` + optional `_Alt_A-B-C` (only when SOME alternatives are exported; omitted when all are) + `_BOQ(Buffer)`/`_BOQ`. The document itself states each alternative's version. Dashes in name collapse to `_` |
+| `fileBaseNameDate(dateStr)` / `exportFileBase(incBuf,sets)` | Filename builder: `{Name}_{date}` + optional `_Alt_A-B-C` (only when SOME alternatives are exported; omitted when all are) + `_BOQ(Buffer)`/`_BOQ`. `dateStr` defaults to today (used for `.smbq` saves + working-copy exports); a single-set export passes that version's date. Dashes in name collapse to `_` |
+| `setDate(set)` / `editVersionDate(k,v)` / `setVersionDate(k,v,val)` | **Per-version quotation date.** Each committed version stores its own `date` (defaults to today at commit); editable inline in the Revisions & Alternatives panel (click the date next to a `v#` chip). Exports (PDF `pushLetterhead`/`metaCells`, Excel `addBrandHeader`) print `setDate(set)` — the version's date, or today for the working copy. There is no longer a project-level date field |
 | `setUnits(altKey,ver)` / `setLabel(s)` / `defaultSets()` / `setsHaveBuffer(sets)` | Export **sets**: `{altKey, ver}` where ver is a saved version number or `'working'` (live calc, active alt only). setUnits resolves the units array (snapshot vs live) |
 | `openExportModal(kind)` / `getExportSets()` / `confirmExport(kind,incBuf)` | Export picker: per-alternative checkbox + version dropdown (default: active alt, working copy when dirty else latest version), Select all, A4 orientation (PDF), buffer chooser. Multi-set export = ONE document: PDF repeats the full letterhead (logos + project meta, with THAT alternative's own version in the Version cell) atop each set — each on a new page — followed by an "Alternative K — name / ALT K vN" title bar + per-set grand totals, so every alternative reads as a standalone BOQ; Excel gets `Summary K` + `K · Unit` sheets per set |
 | `loadFile(input)` | Parse .smbq, restore full state |
