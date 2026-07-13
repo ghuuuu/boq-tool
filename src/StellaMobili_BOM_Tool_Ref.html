@@ -510,7 +510,7 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
   </div>
   <div class="topbar-actions">
     <span class="rev-pill save-status saved" id="saveStatus" title="Autosave status">Saved</span>
-    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.4.0</span>
+    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.4.1</span>
     <span class="rev-pill" id="revPill" title="Price list version">Pricelist</span>
     <input type="file" id="loadInput" accept=".smbq,.json" style="display:none" onchange="loadFile(this)">
   </div>
@@ -588,6 +588,10 @@ let alts = [{key:'A', name:'Initial scheme', versions:[]}];
 let _autosaveDebounce=null, _lastAutosaveAt=null;
 let _expOrient='portrait';   // PDF page orientation chosen in the export modal   // save-status chip + debounced autosave
 let activeAltKey = 'A', activeVerNum = null, dirty = false;
+// fileUnsaved = there are changes not yet written to a .smbq FILE. Distinct from `dirty`
+// (uncommitted working edits, cleared on version-commit) and from autosave (localStorage,
+// device-local). Only a real Save .smbq / file load clears it — drives the close warning.
+let fileUnsaved = false;
 let selectedRows = {kitchen:new Set(),wardrobe:new Set(),accessories:new Set()};
 let dragUnit = null, dragRow = {sec:null, id:null};
 let _mousedownEl = null;
@@ -601,6 +605,7 @@ function updateRevPill(){ const p=document.getElementById('revPill'); if(p) p.te
 projectMeta.priceListVersion = PRICE_LIST_LATEST;
 addUnit('Kitchen');
 dirty = false;
+fileUnsaved = false;   // fresh empty project — nothing to save yet
 showView('overview');
 updateRevPill();
 updateDirtyIndicator();
@@ -628,10 +633,11 @@ function autosaveNow(){
 }
 setInterval(()=>{ if(dirty) autosaveNow(); }, 30000);
 window.addEventListener('beforeunload', e=>{
-  if(dirty){ autosaveNow(); e.preventDefault(); e.returnValue=''; }
+  if(dirty) autosaveNow();                                  // keep localStorage recovery current
+  if(fileUnsaved){ e.preventDefault(); e.returnValue=''; }  // warn until saved to a .smbq file
 });
 let _autosaveState=null;
-function restoreAutosave(){ closeModal(); if(_autosaveState){ applyLoadedState(_autosaveState); dirty=true; updateDirtyIndicator(); toast('Autosaved work restored'); _autosaveState=null; } }
+function restoreAutosave(){ closeModal(); if(_autosaveState){ applyLoadedState(_autosaveState); dirty=true; fileUnsaved=true; updateDirtyIndicator(); toast('Autosaved work restored'); _autosaveState=null; } }
 function discardAutosave(){ closeModal(); _autosaveState=null; try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){} toast('Autosave discarded','warn'); }
 (function offerAutosaveRestore(){
   let st=null;
@@ -1430,12 +1436,28 @@ function showDropdown(p, items){
 
 function positionDropdown(p){
   const inp=el(p+'-search'), res=el(p+'-results'); if(!inp||!res) return;
+  // position:fixed → coords are viewport-relative; getBoundingClientRect() is already
+  // viewport-relative, so do NOT add scroll offsets. Clamp height to the space available
+  // and flip above the field when there isn't enough room below.
   const rect=inp.getBoundingClientRect();
-  res.style.top=(rect.bottom+window.scrollY+4)+'px';
-  res.style.left=(rect.left+window.scrollX)+'px';
+  const gap=4, margin=8, vh=window.innerHeight;
+  const spaceBelow=vh-rect.bottom-gap-margin;
+  const spaceAbove=rect.top-gap-margin;
+  const openUp=spaceBelow<220 && spaceAbove>spaceBelow;
+  const avail=Math.max(120, Math.floor(openUp?spaceAbove:spaceBelow));
+  res.style.maxHeight=Math.min(560,avail)+'px';
   res.style.width=Math.max(rect.width,320)+'px';
+  res.style.left=Math.round(rect.left)+'px';
+  if(openUp){ res.style.top='auto'; res.style.bottom=Math.round(vh-rect.top+gap)+'px'; }
+  else { res.style.bottom='auto'; res.style.top=Math.round(rect.bottom+gap)+'px'; }
 }
 function hideDropdown(p){ const r=el(p+'-results'); if(r) r.classList.add('hidden'); }
+// Keep any open dropdown glued to its search field as the page/inner container scrolls or resizes.
+function repositionOpenDropdowns(){
+  ['kit','wd','acc'].forEach(p=>{ const r=el(p+'-results'); if(r && !r.classList.contains('hidden')) positionDropdown(p); });
+}
+window.addEventListener('scroll', repositionOpenDropdowns, true);   // capture: catches inner scroll containers too
+window.addEventListener('resize', repositionOpenDropdowns);
 
 function selectItem(p, idx){
   const it=searchPools[p][idx]; if(!it) return;
@@ -1920,6 +1942,7 @@ function confirmCustom(){
 // REVISIONS & ALTERNATIVES + DIRTY TRACKING
 // ====================================================================
 function markDirty(){
+  fileUnsaved=true;   // any edit means the .smbq on disk is now stale
   if(!dirty){ dirty=true; _lastAutosaveAt=null; }
   updateSaveStatus();
   clearTimeout(_autosaveDebounce);
@@ -2237,6 +2260,7 @@ async function saveFile(){
   if(pick.mode==='cancelled'){ toast('Save cancelled','warn'); return; }
   const s=getState();
   await writePicked(pick, new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));
+  fileUnsaved=false;   // now safely on disk
   toast('Saved '+fname);
   try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){}
 }
@@ -2253,6 +2277,7 @@ function applyLoadedState(st){
   activeAltKey=st.activeAltKey||alts[0].key;
   activeVerNum=(st.activeVerNum!==undefined)?st.activeVerNum:null;
   dirty=false;
+  fileUnsaved=false;   // loaded from a .smbq file → matches disk (autosave-restore re-flags below)
   updateRevPill(); updateDirtyIndicator(); updateAltVerChip();
   renderSidebarUnits();showView('overview');
 }
@@ -2732,7 +2757,12 @@ function buildPdfDoc(incBuf, orient, sets){
 
   // ---- per-set rendering ----
   const th=(t,al)=>({text:t.toUpperCase(),fontSize:5.6,bold:true,color:GRAY,characterSpacing:0.8,alignment:al||'left',margin:[0,3,0,2]});
-  const COLS=land?[18,'*',105,72,61.5,18,69,78.75]:[15,'*',52.5,65,52.5,16.5,60,66];   // spec widths (pt); finish narrowed in favor of the '*' description column (user request 2026-07-12)
+  // Column widths (pt), order: #, Description('*'), Category, Finish, Unit price, Qty, Total, Notes.
+  // Prices/Qty/Total are noWrap (below) and kept wide enough to hold large values on one line.
+  // Text columns are sized in reverse of wrap-willingness so wrapping cascades Notes → Finish →
+  // Category → Description: Description ('*') is widest (wraps last), then Category > Finish > Notes
+  // (narrowest, wraps first). Fixed widths keep every unit table aligned. (user request 2026-07-13)
+  const COLS=land?[18,'*',110,84,76,20,80,66]:[15,'*',60,54,64,18,66,44];
   const PADX=land?4.5:3.75;
   // BUFFER tag as a bordered pill (1-cell table; fresh node per row — pdfmake mutates nodes)
   const pill=()=>({width:'auto',margin:[4,0.5,0,0],table:{body:[[{text:'BUFFER',fontSize:5.25,bold:true,color:BUFC,characterSpacing:0.75}]]},layout:{hLineWidth:()=>0.5,vLineWidth:()=>0.5,hLineColor:()=>BUFBORDER,vLineColor:()=>BUFBORDER,paddingLeft:()=>3,paddingRight:()=>2.25,paddingTop:()=>1,paddingBottom:()=>1}});
@@ -2800,9 +2830,9 @@ function buildPdfDoc(incBuf, orient, sets){
           descCell,
           catCell,
           {text:fd+(r.thickness?' · '+r.thickness:''),fontSize:7.5,color:INK},
-          {text:fmt(r.price),fontSize:7.5,color:INK,alignment:'right'},
-          {text:String(r.qty),fontSize:7.5,color:INK,alignment:'center'},
-          {text:fmt(r.price*r.qty),fontSize:7.5,bold:true,color:BRASS,alignment:'right'},
+          {text:fmt(r.price),fontSize:7.5,color:INK,alignment:'right',noWrap:true},
+          {text:String(r.qty),fontSize:7.5,color:INK,alignment:'center',noWrap:true},
+          {text:fmt(r.price*r.qty),fontSize:7.5,bold:true,color:BRASS,alignment:'right',noWrap:true},
           {text:r.notes||'',fontSize:7.1,color:GRAY,lineHeight:1.2},
         ];
         row.__buffer=isBuf;   // read by fillColor/hLineColor in the layout below

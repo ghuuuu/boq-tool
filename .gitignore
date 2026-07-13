@@ -4,6 +4,11 @@
 # User working files (BOQ saves)
 *.smbq
 
+# Brand source art — the master Illustrator file + SVGs the exported-PDF/Excel logos
+# are derived from. Kept locally, not versioned (the built logos are already embedded in
+# the tool via src/assets/). See docs/assets/.
+docs/assets/
+
 # Python
 __pycache__/
 *.pyc
