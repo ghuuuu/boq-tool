@@ -433,6 +433,14 @@ tr.row-zero .input.qty{color:#9a6a12;border-color:#e8d3a8}
 
 /* ===== Toast ===== */
 .toast-stack{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+/* Drop-a-.smbq overlay — above modals (z 1000) so a drop works with one open, below toasts (2000) */
+.drop-zone{position:fixed;inset:0;z-index:1500;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ink) 42%,transparent);backdrop-filter:blur(3px);padding:18px}
+.drop-zone.on{display:flex}
+.drop-card{background:var(--surface);border:2px dashed var(--brass);border-radius:14px;padding:32px 44px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.24);max-width:min(430px,88vw);pointer-events:none}
+.drop-card svg{color:var(--brass);margin-bottom:8px}
+.drop-title{font-size:21px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:5px}
+.drop-sub{font-size:13px;color:var(--ink-soft);line-height:1.5}
+.drop-sub strong{color:var(--brass)}
 .toast{background:var(--ink);color:#fff;padding:11px 16px;border-radius:9px;font-size:14px;font-weight:500;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:9px;animation:slideUp .22s ease-out;min-width:220px}
 .toast.success{background:var(--good)}
 .toast.warn{background:var(--warn)}
@@ -652,6 +660,15 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
   </main>
 </div>
 
+<!-- Drop anywhere to open a .smbq (shown only while a file is dragged over the window) -->
+<div class="drop-zone" id="dropZone">
+  <div class="drop-card">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="42" height="42"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    <div class="drop-title">Drop to open</div>
+    <div class="drop-sub">Release a <strong>.smbq</strong> file anywhere on this page to load it</div>
+  </div>
+</div>
+
 <!-- Toast stack -->
 <div class="toast-stack" id="toast-stack"></div>
 
@@ -731,16 +748,16 @@ window.addEventListener('beforeunload', e=>{
   if(dirty) autosaveNow();                                  // keep localStorage recovery current
   if(fileUnsaved){ e.preventDefault(); e.returnValue=''; }  // warn until saved to a .smbq file
 });
-let _autosaveState=null;
-function restoreAutosave(){ closeModal(); if(_autosaveState){ applyLoadedState(_autosaveState); dirty=true; fileUnsaved=true; updateDirtyIndicator(); toast('Autosaved work restored'); _autosaveState=null; } }
-function discardAutosave(){ closeModal(); _autosaveState=null; try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){} toast('Autosave discarded','warn'); }
+let _autosaveState=null, _autosaveOfferOpen=false;
+function restoreAutosave(){ _autosaveOfferOpen=false; closeModal(); if(_autosaveState){ applyLoadedState(_autosaveState); dirty=true; fileUnsaved=true; updateDirtyIndicator(); toast('Autosaved work restored'); _autosaveState=null; } }
+function discardAutosave(){ _autosaveOfferOpen=false; closeModal(); _autosaveState=null; try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){} toast('Autosave discarded','warn'); }
 (function offerAutosaveRestore(){
   let st=null;
   try{ st=JSON.parse(localStorage.getItem(AUTOSAVE_KEY)||'null'); }catch(e){}
   if(!st) return;
   const hasContent=(st.units||[]).some(u=>u.items&&['kitchen','wardrobe','accessories'].some(sec=>(u.items[sec]||[]).length))||((st.project||{}).name||'').trim();
   if(!hasContent){ try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){} return; }
-  _autosaveState=st;
+  _autosaveState=st; _autosaveOfferOpen=true;
   const when=st.autosavedAt?new Date(st.autosavedAt).toLocaleString():'earlier';
   const n=(st.units||[]).reduce((t,u)=>t+(u.items?['kitchen','wardrobe','accessories'].reduce((tt,sec)=>tt+(u.items[sec]||[]).length,0):0),0);
   showModal(`<div class="modal-head"><h2>Recover unsaved work?</h2></div>
@@ -2526,17 +2543,65 @@ function applyLoadedState(st){
   renderSidebarUnits();showView('overview');
 }
 
-function loadFile(input){
-  const file=input.files[0];if(!file)return;
+// Shared by the Load .smbq picker and the drag-and-drop handler below.
+function readSmbqFile(file){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
       applyLoadedState(JSON.parse(e.target.result));
+      // Opening a file supersedes a still-open "Recover unsaved work?" offer — otherwise
+      // the modal stays up over the loaded project and Restore would clobber it.
+      if(_autosaveOfferOpen){ _autosaveOfferOpen=false; _autosaveState=null; closeModal(); }
       toast('Loaded: '+file.name);
-    }catch(err){toast('Failed to load: '+err.message,'error');}
+    }catch(err){toast('Failed to load: '+err.message,'error',5000);}
   };
-  reader.readAsText(file);input.value='';
+  reader.onerror=()=>toast('Could not read '+file.name,'error',5000);
+  reader.readAsText(file);
 }
+function loadFile(input){
+  const file=input.files[0];
+  if(file) readSmbqFile(file);
+  input.value='';
+}
+
+// ---- Drag & drop a .smbq anywhere on the page ----
+// Only file drags count: an internal row-reorder drag carries no 'Files' type, so the
+// overlay never fires on it. Chrome emits dragenter/dragleave for every child element the
+// pointer crosses, so a depth counter (not a boolean) decides when the overlay goes away.
+let _dragDepth=0, _pendingDrop=null;
+function dragHasFile(e){
+  const t=e.dataTransfer&&e.dataTransfer.types;
+  return !!t && Array.prototype.indexOf.call(t,'Files')!==-1;
+}
+function showDropZone(on){ document.getElementById('dropZone')?.classList.toggle('on',on); }
+window.addEventListener('dragenter', e=>{ if(!dragHasFile(e))return; e.preventDefault(); _dragDepth++; showDropZone(true); });
+window.addEventListener('dragover',  e=>{ if(!dragHasFile(e))return; e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
+window.addEventListener('dragleave', e=>{ if(!dragHasFile(e))return; _dragDepth=Math.max(0,_dragDepth-1); if(!_dragDepth) showDropZone(false); });
+window.addEventListener('drop', e=>{
+  if(!dragHasFile(e))return;
+  e.preventDefault(); _dragDepth=0; showDropZone(false);
+  const files=Array.from(e.dataTransfer.files||[]);
+  if(!files.length) return;
+  if(files.length>1){ toast('Drop one .smbq file at a time','warn',4000); return; }
+  const f=files[0];
+  if(!/\.(smbq|json)$/i.test(f.name)){ toast(`"${f.name}" is not a .smbq file`,'error',5000); return; }
+  // A stray drag shouldn't silently bin unsaved work — confirm first when the file on disk is stale.
+  if(fileUnsaved) confirmDropLoad(f); else readSmbqFile(f);
+});
+function confirmDropLoad(f){
+  _pendingDrop=f;
+  showModal(`<div class="modal-head"><h2>Open dropped file?</h2></div>
+    <div class="modal-body"><p style="font-size:13px;color:var(--ink-soft);margin:0">
+      Opening <strong>${esc(f.name)}</strong> replaces the project currently open, which has
+      changes not yet saved to a <code>.smbq</code> file. Save first if you need to keep them.
+    </p></div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="cancelDropLoad()">Cancel</button>
+      <button class="btn primary" onclick="acceptDropLoad()">Open anyway</button>
+    </div>`);
+}
+function acceptDropLoad(){ const f=_pendingDrop; _pendingDrop=null; closeModal(); if(f) readSmbqFile(f); }
+function cancelDropLoad(){ _pendingDrop=null; closeModal(); }
 
 // ====================================================================
 // SWITCH PRICE LIST
