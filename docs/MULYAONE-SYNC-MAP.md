@@ -193,19 +193,17 @@ detail: `MulyaOne/docs/design/10-sm-boq.md`.
 
 ---
 
-## 7. Current drift (as of 2026-07-29)
+## 7. Drift status (in sync as of 2026-07-30)
 
-Standalone is **v1.5.2**; the embed's template copy is **v1.5.1**. Two standalone changes are
-**not yet ported** to MulyaOne:
+Standalone and the embed are both **v1.5.2** — the template copies are byte-identical. The
+v1.5.1→v1.5.2 delta (qty-0 support; drag-drop `.smbq` load) was deployed **2026-07-30** via
+the §8 playbook (template copy + rebuild). Server schema was already compatible — `qty` is
+`z.number().nonnegative()` in `lib/boq.ts`, so zero-qty rows save fine.
 
-1. **Qty 0 allowed** (`d226b25`, v1.5.2) — `min="0"`, `normQty()`, `warnZeroQty()`, the
-   `row-zero`/`QTY 0` markers, `updateQty`/`addRow`/`confirmCustom` all changed. The embed
-   still has the old `min="0.1"` / `Math.max(0.1, …)` logic.
-2. **Drag & drop a `.smbq` anywhere to load** (`50717c4`) — the `#dropZone` overlay + CSS +
-   handlers. Absent from the embed. (Low value in the embed — DB is the source of truth — but
-   it keeps the templates identical.)
-
-Neither breaks the embed; they're just missing features. Resync when convenient (§8).
+> **Follow-up (for the §10 `EMBEDDED` work):** drag-drop `.smbq` load now runs inside the
+> embed too. It only replaces the tool's in-memory state (not the DB), but it should be
+> **gated off when `EMBEDDED`** — importing a `.smbq` belongs to `ImportSmbqButton`
+> (files it as a new, numbered set), not an ad-hoc drop over the open project.
 
 > **Rule of thumb:** the tool-version chip is the drift tripwire. If `#toolVer` differs
 > between `src/StellaMobili_BOM_Tool_Ref.html` and
