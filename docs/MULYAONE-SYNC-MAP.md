@@ -213,9 +213,10 @@ Neither breaks the embed; they're just missing features. Resync when convenient 
 
 ---
 
-## 8. Resync procedure (standalone → MulyaOne)
+## 8. "Deploy to MulyaOne" — the playbook
 
-When a template change should reach the embed:
+**Trigger:** when the user says *"deploy to MulyaOne"*, run this end-to-end (nothing is
+automatic — the two repos are only linked by this procedure). Target model = §10.
 
 ```bash
 # 1. Copy the updated template into MulyaOne
@@ -231,11 +232,23 @@ cp "C:/Projects/SM BOQ Tool/price-data/price_lists/"*.json \
 cd "C:/Projects/MulyaOne" && python scripts/build-boq-tool.py   # → lib/boq/sm-boq-tool.html
 ```
 
-Then, in MulyaOne: **check the bridge still lines up** — did the change rename any symbol in
-§4, or alter `getState()`/`applyLoadedState()`/the project-field ids? If so, update the
-`BRIDGE` constant in `scripts/build-boq-tool.py` and rebuild. Smoke-test in the iframe
-(load → edit → request-state round-trip). Keep `EMBEDDED-TOOL-CHANGES.md` accurate if the
-embed-only behavior changes.
+Then work through this checklist in the MulyaOne repo:
+
+1. **Bridge symbols (§4).** Did the change rename anything the bridge reaches into
+   (`getState`, `applyLoadedState`, `confirmCommit`, `saveFile`, `toast`, the `#proj*` ids,
+   `fileUnsaved`/`dirty`/`_commit`/`activeVerNum`)? If so, update the `BRIDGE` constant in
+   `scripts/build-boq-tool.py`. Under the §10 model the bridge is thinner, but the
+   **messaging** symbols (`getState`/`applyLoadedState`) stay coupled — always re-check.
+2. **State shape.** New fields on units/rows/alts? Check `boqUnitSchema` passthrough in
+   `lib/boq.ts`, the `snapshot` round-trip, and `ImportSmbqButton.tsx`. New `.smbq` behavior
+   → also update [`MULYAONE-BOQ-HANDOFF.md`](MULYAONE-BOQ-HANDOFF.md).
+3. **Exports.** If in-tool Excel/PDF changed, mirror it in `lib/pdf/templates/boq.tsx` /
+   `boq-excel.ts` (the embed exports server-side, not via the tool).
+4. **Version + drift.** Bump the embed's `#toolVer` to match; update the drift line in §7 and
+   `EMBEDDED-TOOL-CHANGES.md`.
+5. **Smoke-test in the iframe:** open **Build BOQ** (blank, project fields locked & filled) →
+   add items → Save Revision → reopen the **draft** (loads saved state) → `request-state`
+   round-trip. Confirm no "Recover unsaved work?" modal leaks across projects (§10).
 
 ---
 
@@ -252,6 +265,50 @@ embed-only behavior changes.
 | Per-version delete (#31/#32) | ✅ implement natively | inherited via resync | Bucket C — reserved for standalone |
 | Locked project fields / Ready-lock / Send-to-Sales | ❌ | MulyaOne bridge/host only | Bucket B — never add to standalone |
 | BOQ sets, DB, quotations, roles, numbering | ❌ | MulyaOne only | Bucket B — server-side by design |
+
+---
+
+## 10. Agreed working model (decided 2026-07-29)
+
+The user develops the tool **standalone in this repo**, then says *"deploy to MulyaOne"* to
+port it (§8). Two decisions define how the two versions differ:
+
+### 10.1 The `EMBEDDED` flag lives in the template
+Rather than injecting every behavioral difference through the bridge, the **template detects
+when it's embedded** (`window.parent !== window`, or a build-set flag) via a single
+`EMBEDDED` const, and **self-adjusts natively**. The bridge (`build-boq-tool.py`) shrinks to
+just the postMessage messaging (§4). Benefits: no silent break when internal symbols are
+renamed, and internal-only features (e.g. per-version delete via `renderRevisionsPanel`)
+become reachable. The standalone carries this embed code but it's **inert** when
+`EMBEDDED === false`.
+
+Behavior gated by `EMBEDDED` (all no-ops in the standalone):
+
+| Behavior | Standalone (`EMBEDDED=false`) | Embed (`EMBEDDED=true`) |
+|---|---|---|
+| Project / client / PIC fields | editable manual input | read-only, filled from `boq:load` (MulyaOne project) |
+| Project **notes** | editable | editable (stays) |
+| Persistence | `.smbq` file save/load + localStorage autosave | DB via host (Save Revision / Send to Sales); file-save UI hidden |
+| `beforeunload` "unsaved file" warning | on | off (DB is truth) |
+| In-tool Excel/PDF export UI | on (libs embedded) | hidden (server-side export) |
+| Autosave scope | single global localStorage key | **per project+set** (§10.2) |
+
+> When adding a **new** difference, prefer an `EMBEDDED` branch in the template over a new
+> bridge wrap — keep the bridge to pure messaging.
+
+### 10.2 Autosave is per-project-scoped in the embed
+The current global `smboq_autosave` key can offer one project's draft inside another
+project's BOQ. Target: in the embed, key the autosave/restore by **project + set** (the host
+passes an identifier via `boq:load`), so a restore can only ever surface *this* BOQ's draft;
+in the standalone, autosave is unchanged. Alternatively the host can hand the tool the id it
+should scope to. Until built, treat the global-key restore as a known embed risk.
+
+### 10.3 What is *not* the tool's job (stays host-side)
+"Build BOQ = blank" (`?new`), "open draft = load saved" (`?set=N`), multiple BOQs per project
+("sets"), DB revisions, BOQ numbering, quotations, roles, notifications, server exports —
+these are **MulyaOne host + model** concerns and need no tool change. The tool just has to
+(a) accept a full state via `boq:load` and start blank when sent an empty one, and (b) hand
+back its full state via `getState()` on `boq:request-state`. Keep those two contracts stable.
 
 ---
 
