@@ -10,7 +10,8 @@
 > contract) and, in the MulyaOne repo, `docs/boq-handoff/EMBEDDED-TOOL-CHANGES.md`
 > (tool-side tweaks made only in the embed) + `docs/design/10-sm-boq.md` (the module design).
 >
-> _Last verified: 2026-07-29 — standalone **v1.5.2**, MulyaOne embed **v1.5.1** (drifted; see §7)._
+> _Last verified: 2026-08-13 — standalone **v1.6.0**, MulyaOne embed **v1.6.0**, both on
+> boq-kit **1.7.0**. In sync (§7)._
 
 ---
 
@@ -44,16 +45,20 @@ replaces the four injection markers it contains:
 | Marker in the template | Standalone build fills with | MulyaOne build fills with |
 |---|---|---|
 | `/*__PRICE_DATA_INJECTION__*/`   | `ALL_PRICE_DATA` + `PRICE_LIST_LATEST/VERSIONS` | same (from its own copy of the JSONs) |
-| `/*__BRAND_ASSETS_INJECTION__*/` | `const BOQ_LOGOS={stella,mulya,stellaSvg,mulyaSvg}` (SVG + PNG) | `const BRAND_ASSETS={mulya,stellaMobili}` (PNG only) ⚠️ |
+| `/*__BRAND_ASSETS_INJECTION__*/` | `const BOQ_LOGOS={stella,mulya,stellaSvg,mulyaSvg}` (SVG + PNG) | **same** — `BOQ_LOGOS` (SVG + PNG), with a `BRAND_ASSETS` alias kept for compatibility |
 | `/*__EXCELJS_INJECTION__*/`      | ExcelJS 4.4.0 (offline xlsx) | **empty** — in-tool Excel disabled |
 | `/*__PDFMAKE_INJECTION__*/`      | pdfmake 0.2.10 + Roboto (offline pdf) | **empty** — in-tool PDF disabled |
 
-⚠️ **Brand-assets contract mismatch (known):** the template's PDF code reads
-`BOQ_LOGOS.stella/.mulya/.stellaSvg/.mulyaSvg`, but the MulyaOne build injects a
-differently-named/shaped const (`BRAND_ASSETS`). In the embed `BOQ_LOGOS` is therefore
-**undefined** — which is harmless *only because* pdfmake is also left empty, so the tool's
-own PDF path never runs (MulyaOne exports server-side instead, §6). If you ever wire the
-embed to use the tool's own PDF/logos, this must be reconciled first.
+✅ **Brand-assets mismatch — fixed 2026-08-13.** The embed used to inject a
+differently-named/shaped `BRAND_ASSETS`, leaving `BOQ_LOGOS` undefined; harmless only
+because pdfmake was empty too. `load_brand_assets_injection()` now emits the real
+`BOQ_LOGOS` (PNG + SVG, same shape as the standalone) and keeps `BRAND_ASSETS` as an
+alias. The trap is gone.
+
+A **fifth marker**, `<!--__KIT_INJECTION__-->`, carries the shared chrome (boq-kit): the
+self-hosted screen font, the brand `:root` from `brand.config.json`, `kit.css`, then
+`kit.js` / `kit-export.js` / `bridge.js`. **Both** builds fill it — the embed's copy of the
+kit is vendored at `docs/boq-handoff/kit/` next to the template.
 
 ---
 
@@ -61,9 +66,10 @@ embed to use the tool's own PDF/logos, this must be reconciled first.
 
 ### Standalone (this repo)
 ```
-src/StellaMobili_BOM_Tool_Ref.html
+src/StellaMobili_BOM_Tool_Ref.html  +  src/kit/ (vendored boq-kit) + src/brand.config.json
+   └─ python src/sync_kit.py     (refresh src/kit/ from C:/Projects/boq-kit)
    └─ python src/build_tool.py
-        · injects price data + ExcelJS + pdfmake + BOQ_LOGOS
+        · injects price data + ExcelJS + pdfmake + BOQ_LOGOS + the kit
    → StellaMobili_BOM_Tool.html          (~6.4 MB, fully offline, double-click to run)
       python src/check_html.py            (sanity check)
 ```
@@ -71,9 +77,11 @@ src/StellaMobili_BOM_Tool_Ref.html
 ### MulyaOne embed (`C:\Projects\MulyaOne`)
 ```
 docs/boq-handoff/StellaMobili_BOM_Tool_Ref.html   ← COPY of this repo's template
+docs/boq-handoff/kit/ + brand.config.json         ← COPY of this repo's src/kit/ + config
    └─ python scripts/build-boq-tool.py
         · injects price data (from lib/boq/price-data/*.json)
-        · injects BRAND_ASSETS (PNG only, from docs/boq-handoff/brand-assets/)
+        · injects BOQ_LOGOS (PNG + SVG, from docs/boq-handoff/brand-assets/)
+        · injects the kit: font + brand tokens + kit.css + kit.js/kit-export/bridge
         · leaves ExcelJS/pdfmake markers EMPTY
         · appends the postMessage BRIDGE before the final </script>
    → lib/boq/sm-boq-tool.html            (~3.2 MB)
@@ -193,23 +201,41 @@ detail: `MulyaOne/docs/design/10-sm-boq.md`.
 
 ---
 
-## 7. Drift status (in sync as of 2026-07-30)
+## 7. Drift status (in sync as of 2026-08-13)
 
-Standalone and the embed are both **v1.5.2** — the template copies are byte-identical. The
-v1.5.1→v1.5.2 delta (qty-0 support; drag-drop `.smbq` load) was deployed **2026-07-30** via
-the §8 playbook (template copy + rebuild). Server schema was already compatible — `qty` is
-`z.number().nonnegative()` in `lib/boq.ts`, so zero-qty rows save fine.
+Standalone and the embed are both **v1.6.0** on **boq-kit 1.7.0**, and the template copies
+are byte-identical. The v1.5.2 → v1.6.0 delta is the **shared-chrome migration**: the
+topbar, sidebar, buttons, cards, fields, tables, modals, toasts, save status, autosave,
+file save/load and the whole Revisions & Alternatives engine now come from
+`boq-kit` instead of the template. Also: the Google Fonts CDN link is gone (the UI font is
+self-hosted and inlined), the modal traps focus, money is never abbreviated, dates read
+`01 Dec 2026`, and export filenames use `YYYYMMDD`.
 
-> **Follow-up (for the §10 `EMBEDDED` work):** drag-drop `.smbq` load now runs inside the
-> embed too. It only replaces the tool's in-memory state (not the DB), but it should be
-> **gated off when `EMBEDDED`** — importing a `.smbq` belongs to `ImportSmbqButton`
-> (files it as a new, numbered set), not an ad-hoc drop over the open project.
+> **The tripwire had failed.** Between 2026-07-30 and 2026-08-13 the two templates diverged
+> substantially while **both still reported `v1.5.2`** — the chip said "in sync" when it
+> wasn't. If you change the template and don't deploy in the same session, bump `#toolVer`
+> anyway, or the indicator lies.
 
-> **Rule of thumb:** the tool-version chip is the drift tripwire. If `#toolVer` differs
-> between `src/StellaMobili_BOM_Tool_Ref.html` and
-> `MulyaOne/docs/boq-handoff/StellaMobili_BOM_Tool_Ref.html`, the embed is behind.
+**Deploying the kit needed a build change, not just a file copy.** `scripts/build-boq-tool.py`
+had never seen `<!--__KIT_INJECTION__-->`; copying the template alone would have left the
+marker as a literal HTML comment and shipped an unstyled tool with no `KIT` object. The
+embed's build now vendors `docs/boq-handoff/kit/` and fills that marker (§3).
 
----
+**Verified on the rebuilt embed** (`lib/boq/sm-boq-tool.html`, 3.66 MB): marker consumed,
+kit 1.7.0 + `BRAND` stamped, chrome styled, `KIT.started === true`, all 13 hooks
+registered, no console errors. Every symbol the bridge reaches into resolves —
+`getState`, `applyLoadedState`, `saveFile`, `confirmCommit`, `getActiveAlt`, `toast`,
+`updateRevPill`, `updateDirtyIndicator`, plus `activeVerNum` / `_commit` / `dirty` /
+`fileUnsaved` — even though they now live in `kit.js` rather than the template; they are
+still top-level in the same shared global scope. `#projName/#projClient/#projPIC/#projNotes`
+all present for the field lock. ExcelJS and pdfmake remain `undefined` (server-side export).
+A simulated `boq:load` → `boq:request-state` round-trip returned the units **losslessly**
+with `version: 3`.
+
+> **Still to smoke-test in the real iframe** (needs the app running, not a static file):
+> Build BOQ → project fields locked and filled → add items → Save Revision → reopen the
+> draft → `request-state` round-trip → confirm no "Recover unsaved work?" modal leaks
+> across projects (§10.2 — the autosave key is still global, `smboq_autosave`).
 
 ## 8. "Deploy to MulyaOne" — the playbook
 
@@ -217,12 +243,21 @@ the §8 playbook (template copy + rebuild). Server schema was already compatible
 automatic — the two repos are only linked by this procedure). Target model = §10.
 
 ```bash
-# 1. Copy the updated template into MulyaOne
-cp "C:/Projects/SM BOQ Tool/src/StellaMobili_BOM_Tool_Ref.html" \
+# 0. Make sure the standalone is on the kit you intend to ship
+cd "C:/Projects/sm-boq-tool" && python src/sync_kit.py && python src/build_tool.py
+
+# 1. Copy the updated template into MulyaOne — AND the kit it now depends on
+cp "C:/Projects/sm-boq-tool/src/StellaMobili_BOM_Tool_Ref.html" \
    "C:/Projects/MulyaOne/docs/boq-handoff/StellaMobili_BOM_Tool_Ref.html"
+cp "C:/Projects/sm-boq-tool/src/brand.config.json" \
+   "C:/Projects/MulyaOne/docs/boq-handoff/brand.config.json"
+rm -rf "C:/Projects/MulyaOne/docs/boq-handoff/kit"
+cp -r "C:/Projects/sm-boq-tool/src/kit" "C:/Projects/MulyaOne/docs/boq-handoff/kit"
+rm -f "C:/Projects/MulyaOne/docs/boq-handoff/kit/.kit-source" \
+      "C:/Projects/MulyaOne/docs/boq-handoff/kit/.kit-manifest.json"
 
 # 2. If price lists changed, copy those too (MulyaOne keeps its own copy)
-cp "C:/Projects/SM BOQ Tool/price-data/price_lists/"*.json \
+cp "C:/Projects/sm-boq-tool/price-data/price_lists/"*.json \
    "C:/Projects/MulyaOne/lib/boq/price-data/"
 #    …and reseed SmPriceList if the price-list version changed.
 
@@ -232,6 +267,9 @@ cd "C:/Projects/MulyaOne" && python scripts/build-boq-tool.py   # → lib/boq/sm
 
 Then work through this checklist in the MulyaOne repo:
 
+0. **Kit version.** `docs/boq-handoff/kit/KIT_VERSION` must match `src/kit/KIT_VERSION` in
+   the SM repo. The embed stamps it as `KIT_VERSION` alongside `#toolVer` — two chips,
+   two tripwires.
 1. **Bridge symbols (§4).** Did the change rename anything the bridge reaches into
    (`getState`, `applyLoadedState`, `confirmCommit`, `saveFile`, `toast`, the `#proj*` ids,
    `fileUnsaved`/`dirty`/`_commit`/`activeVerNum`)? If so, update the `BRIDGE` constant in
