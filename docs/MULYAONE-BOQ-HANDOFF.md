@@ -264,9 +264,11 @@ Export behaviors to reproduce:
   "Alternative K — name / ALT K vN" title bar, so each alternative reads as a
   standalone BOQ. Excel: `Summary K` + `K · Unit` sheets per set.
 - Buffer chooser (with/without) whenever any buffer rows exist.
-- Dates print DD-MM-YYYY; a committed version prints **its own** date, the working
+- Dates print **DD Mon YYYY** (`02 Jun 2026`) — spelled-out month, so a client can't
+  read it day-first or month-first by mistake. Export **filenames** use the compact
+  `DD-MM-YYYY` form instead. A committed version prints **its own** date, the working
   copy prints today.
-- Filename convention: `{ProjectName}_{date}` + `_Alt_A-B-C` (only when a subset of
+- Filename convention: `{ProjectName}_{YYYYMMDD}` + `_Alt_A-B-C` (only when a subset of
   alternatives is exported) + `_BOQ(Buffer)` / `_BOQ`.
 
 ## 7. UI notes (what to rebuild vs drop)

@@ -4,256 +4,28 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>SM BOQ Tool</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- UI font (Hanken Grotesk) is self-hosted by the kit — no CDN, works offline. -->
 <script>/*__EXCELJS_INJECTION__*/</script>
 <script>/*__PDFMAKE_INJECTION__*/</script>
+<!--__KIT_INJECTION__-->
 <style>
 /* ============================================================
-   SM BOQ — Warm brass/cream palette · Hanken Grotesk · MulyaOne UI system
+   SM BOQ — brand-specific styles.
+   Design tokens, the base reset and all shared chrome (topbar, sidebar,
+   buttons, cards, fields, tables, modals, toasts) come from the kit, injected
+   above this block: src/kit/kit.css + src/brand.config.json.
+   See docs/BOQ-SHARED-CHROME.md — do not re-declare kit tokens here.
    ============================================================ */
-:root{
-  /* ===== Warm brass / cream palette — synced from Claude Design (2026-07) ===== */
-  /* Semantic design tokens */
-  --bg:#F1ECE1;
-  --panel:#FBF9F4;
-  --panel2:#FFFFFF;
-  --surface:#FFFFFF;
-  --ink:#26221B;
-  --ink-soft:#4A4438;
-  --ink-faint:#7A7264;
-  --ink2:#7A7264;
-  --line:#E4DCCC;
-  --line-soft:#EFE9DC;
-  --accent:#8A5A3B;
-  --on-accent:#ffffff;
-  --brass:#A6803E;
-  --sidebar:#26221B;
-  --sidebar-ink:#C7BCA6;
-  /* Number/price font — Hanken Grotesk w/ tabular figures (Claude Design priceFont, 2026-07-11) */
-  --font-num:'Hanken Grotesk',system-ui,sans-serif;
-  /* Purple scale remapped onto the warm palette so existing rules re-skin */
-  --pu-50:#F1E9DB;
-  --pu-75:#ECE2CF;
-  --pu-100:#E4DCCC;
-  --pu-200:#D8C7A6;
-  --pu-300:#C2A377;
-  --pu-400:#A6803E;
-  --pu-500:#8A5A3B;
-  --pu-600:#79492F;
-  --pu-700:#5E3A24;
-  --pu-800:#3E2718;
-  --pu-900:#26221B;
-  --gold:#A6803E;
-  --gold-bg:#F7F1E4;
-  --warn:#B4832E;
-  --warn-bg:#FBF3E1;
-  --good:#3E7C5A;
-  --good-bg:#E7F1EA;
-  --danger:#B4483E;
-  --danger-bg:#F8E9E7;
-  --buffer:#3E648C;
-  --buffer-bg:#EAF0F6;
-  --shadow-sm:0 1px 2px rgba(50,40,24,.06),0 1px 1px rgba(50,40,24,.04);
-  --shadow-md:0 4px 14px rgba(50,40,24,.08),0 2px 4px rgba(50,40,24,.05);
-  --shadow-lg:0 12px 36px rgba(50,40,24,.13),0 6px 12px rgba(50,40,24,.07);
-  --radius-sm:6px;
-  --radius:10px;
-  --radius-lg:14px;
-}
-*,*::before,*::after{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;line-height:1.5}
-button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
-input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
-.mono{font-family:var(--font-num);font-variant-numeric:tabular-nums}
 
-/* ===== Topbar ===== */
-.topbar{background:var(--surface);border-bottom:1px solid var(--line);padding:0 20px;height:57px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:50;box-shadow:var(--shadow-sm)}
-.brand{display:flex;align-items:center;gap:10px}
-.brand-mark{width:32px;height:32px;border-radius:8px;background:var(--brass);display:grid;place-items:center;color:var(--on-accent);font-weight:800;box-shadow:0 4px 10px rgba(0,0,0,.25);flex-shrink:0}
-.brand-mark svg{width:17px;height:17px}
-.brand-name{display:flex;flex-direction:column;line-height:1.05}
-.brand-name strong{font-size:15px;font-weight:700;letter-spacing:-.01em}
-.brand-name span{font-size:12px;color:var(--ink-faint);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
-.crumb{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:14px;color:var(--ink-soft);overflow:hidden;white-space:nowrap}
-.crumb .sep{color:var(--line);font-weight:600}
-.crumb .here{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis}
-.topbar-actions{display:flex;align-items:center;gap:6px}
-.rev-pill{background:var(--pu-50);color:var(--pu-700);border:1px solid var(--pu-100);font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.04em;font-family:var(--font-num);font-variant-numeric:tabular-nums}
-.help-btn{display:inline-flex;align-items:center;gap:5px;cursor:pointer;background:var(--pu-50);color:var(--pu-700);border:1px solid var(--pu-100);font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;font-family:inherit;transition:background .15s,color .15s}
-.help-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
-.help-btn svg{width:13px;height:13px}
-.alt-ver-chip{background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent)}
-.tool-ver-chip{background:transparent;color:var(--ink2);border-color:var(--line)}
-.save-status{display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--ink-faint);border-color:var(--line);transition:color .2s,border-color .2s}
-.save-status.unsaved{color:#B4832E;border-color:color-mix(in srgb,#B4832E 40%,transparent);background:color-mix(in srgb,#B4832E 8%,transparent)}
-.save-status.saving{color:var(--ink-faint);font-style:italic}
-.save-status.autosaved{color:#3E7C5A;border-color:color-mix(in srgb,#3E7C5A 35%,transparent)}
-.dirty-flag{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--warn);font-weight:600;flex-shrink:0}
-.dirty-dot{width:7px;height:7px;border-radius:999px;background:var(--warn);animation:dirtyPulse 1.6s ease-in-out infinite}
-@keyframes dirtyPulse{0%,100%{opacity:1}50%{opacity:.35}}
-.topbar-iconbtns{display:flex;align-items:center;gap:2px;margin-left:2px}
-.topbar-iconbtns .icon-btn{width:32px;height:32px}
-.icon-btn{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--ink-soft);border:1px solid transparent;transition:background .15s,color .15s,border-color .15s;cursor:pointer}
-.icon-btn:hover{background:var(--pu-50);color:var(--pu-600);border-color:var(--pu-100)}
-.icon-btn svg{width:17px;height:17px}
-.menu-btn{display:none;width:34px;height:34px;border-radius:8px;place-items:center;color:var(--ink-soft);border:1px solid var(--line)}
-
-/* ===== Shell ===== */
-.shell{position:relative;display:grid;grid-template-columns:var(--sidebar-w,260px) 1fr;min-height:calc(100vh - 57px)}
-
-/* ===== Sidebar ===== */
-.sidebar{background:var(--surface);border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;position:sticky;top:57px;align-self:start;height:calc(100vh - 57px)}
-
-/* Sidebar drag-to-resize handle (desktop only) — sits over the sidebar/main border */
-.sb-resizer{display:none;position:absolute;top:0;bottom:0;left:var(--sidebar-w,260px);width:8px;margin-left:-4px;cursor:col-resize;z-index:60;background:transparent;transition:background .15s}
-.sb-resizer::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2px;height:26px;border-radius:2px;background:var(--line);transition:background .15s}
-.sb-resizer:hover,.sb-resizer.dragging{background:color-mix(in srgb,var(--accent) 16%,transparent)}
-.sb-resizer:hover::after,.sb-resizer.dragging::after{background:var(--accent)}
-.sb-section{font-size:11.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;font-weight:700;padding:8px 10px 4px;display:flex;align-items:center;justify-content:space-between}
-.sb-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:14px;color:var(--ink-soft);font-weight:500;cursor:pointer;transition:background .15s,color .15s;user-select:none}
-.sb-item:hover{background:var(--pu-50);color:var(--pu-600)}
-.sb-item.active{background:var(--pu-500);color:#fff;font-weight:600}
-.sb-item.active .sb-count{background:rgba(255,255,255,.2);color:#fff}
-.sb-item svg{width:15px;height:15px;flex-shrink:0}
-.sb-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sb-count{background:var(--pu-50);color:var(--pu-600);font-weight:700;font-size:11.5px;padding:2px 7px;border-radius:999px;font-family:var(--font-num);font-variant-numeric:tabular-nums}
-.sb-unit-name{flex:1;min-width:0;background:transparent;border:none;color:inherit;font-family:inherit;font-size:14px;font-weight:inherit;outline:none;cursor:pointer;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
-.sb-unit-name:focus{border-bottom:1px solid currentColor;cursor:text}
-.sb-del{opacity:.9;width:20px;height:20px;display:grid;place-items:center;border-radius:4px;flex-shrink:0;transition:opacity .15s,background .12s;border:none;background:transparent;cursor:pointer;padding:0}
-.sb-edit{color:color-mix(in srgb,var(--ink) 40%,var(--ink-faint))}
-.sb-edit:hover{background:color-mix(in srgb,var(--ink) 10%,transparent);color:var(--ink)}
-.sb-clone{color:color-mix(in srgb,var(--accent) 70%,var(--ink-faint))}
-.sb-clone:hover{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
-.sb-delx{color:color-mix(in srgb,var(--danger) 62%,var(--ink-faint))}
-.sb-delx:hover{background:var(--danger-bg);color:var(--danger)}
-.sb-item.active .sb-del{color:rgba(255,255,255,.85)}
-.sb-item.active .sb-del:hover{background:rgba(255,255,255,.18);color:#fff}
-.sb-add{margin-top:4px;padding:9px 10px;border:1.5px dashed var(--pu-200);color:var(--pu-600);border-radius:8px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;transition:all .15s;background:transparent;cursor:pointer;width:100%}
-.sb-add:hover{background:var(--pu-50);border-color:var(--pu-400);border-style:solid}
-.sb-add svg{width:14px;height:14px}
-.sb-divider{height:1px;background:var(--line);margin:8px 0}
-.sb-action{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13.5px;color:var(--ink-soft);font-weight:500;cursor:pointer;transition:background .15s;user-select:none;width:100%;text-align:left}
-.sb-action:hover{background:var(--pu-50);color:var(--pu-600)}
-.sb-action svg{width:14px;height:14px;flex-shrink:0}
-
-/* Sidebar collapse — icon rail */
-.sb-collapse-btn{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;cursor:pointer;color:var(--ink-faint);border:none;background:transparent;padding:0;flex-shrink:0;transition:color .15s,background .15s}
-.sb-collapse-btn:hover{color:var(--pu-600);background:var(--pu-50)}
-.sb-collapse-btn svg{transition:transform .22s ease}
-@media(min-width:901px){
-  .shell{transition:grid-template-columns .22s ease}
-  .sidebar{overflow:hidden;transition:padding .22s ease}
-  .sb-resizer{display:block}
-  .shell.sidebar-collapsed{grid-template-columns:52px 1fr}
-  .shell.sidebar-collapsed .sb-resizer{display:none}
-  .shell.resizing{transition:none}
-  .shell.resizing .sidebar{transition:none}
-  .shell.sidebar-collapsed .sidebar{padding:16px 5px 8px}
-  .shell.sidebar-collapsed .sb-collapse-btn svg{transform:rotate(180deg)}
-  .shell.sidebar-collapsed .sb-label,
-  .shell.sidebar-collapsed .sb-unit-name,
-  .shell.sidebar-collapsed .sb-count,
-  .shell.sidebar-collapsed .sb-del,
-  .shell.sidebar-collapsed .drag-handle,
-  .shell.sidebar-collapsed .sb-add-label{display:none}
-  .shell.sidebar-collapsed .sb-item{justify-content:center;padding:9px 0}
-  .shell.sidebar-collapsed .sb-action{justify-content:center;padding:8px 0}
-  .shell.sidebar-collapsed .sb-add{justify-content:center;padding:9px 0;border-radius:8px}
-  .shell.sidebar-collapsed .sb-section{display:none}
-  .shell.sidebar-collapsed .sb-nav-section{display:flex;justify-content:center;padding:8px 0 4px}
-  .shell.sidebar-collapsed .sb-nav-section>span{display:none}
-  .shell.sidebar-collapsed .sb-divider{margin:4px 0}
-}
-/* Flyout panel (unit items, collapsed mode) */
-.sb-unit-flyout{position:fixed;left:52px;z-index:300;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--pu-400);border-radius:0 8px 8px 0;padding:0 8px 0 10px;box-shadow:2px 4px 16px rgba(0,0,0,.12);min-width:190px;font-family:inherit}
-.sb-unit-flyout .sb-unit-name{flex:1;min-width:100px;border:none;background:transparent;color:var(--ink);font-size:14px;font-weight:500;padding:4px 0;outline:none;cursor:pointer;font-family:inherit}
-.sb-unit-flyout .sb-unit-name:focus{border-bottom:1px solid var(--pu-300);cursor:text}
-.sb-unit-flyout .sb-del{opacity:.9}
-/* Custom tooltip (other items, collapsed mode) */
-.sb-tip{position:fixed;left:60px;z-index:300;background:#1a1d2e;color:#fff;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap;pointer-events:none;transform:translateY(-50%);box-shadow:0 2px 8px rgba(0,0,0,.2)}
-
-/* ===== Main ===== */
-.main{padding:20px 24px 80px;width:100%;overflow:auto}
-.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-.page-head h1{font-size:21.5px;margin:0;letter-spacing:-.02em;font-weight:700}
-.page-head .sub{color:var(--ink-faint);font-size:14px;margin-top:3px}
-.head-actions{display:flex;gap:8px;flex-wrap:wrap}
-
-/* ===== Buttons ===== */
-.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);transition:all .15s;cursor:pointer;white-space:nowrap;font-family:inherit}
-.btn:hover{border-color:var(--pu-300);color:var(--pu-600);background:var(--pu-50)}
-.btn.primary{background:var(--pu-600);color:#fff;border-color:var(--pu-600)}
-.btn.primary:hover{background:var(--pu-700);border-color:var(--pu-700);color:#fff}
-.btn.gold{background:var(--gold);color:#1a1a1a;border-color:var(--gold)}
-.btn.gold:hover{background:#b8943e;border-color:#b8943e}
-.btn.ghost{background:transparent;border-color:transparent}
-.btn.ghost:hover{background:var(--pu-50);border-color:var(--pu-100)}
-.btn.danger{color:var(--danger);border-color:#f5d2d2}
-.btn.danger:hover{background:var(--danger-bg);border-color:#e8a3a3}
-.btn.save{background:#2563eb;color:#fff;border-color:#2563eb}
-.btn.save:hover{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
-.btn.primary-outline{background:#fff;color:var(--pu-600);border-color:var(--pu-200)}
-.btn.primary-outline:hover{background:var(--pu-50);border-color:var(--pu-300)}
-.btn.slate{background:#475569;color:#fff;border-color:#475569}
-.btn.slate:hover{background:#334155;border-color:#334155;color:#fff}
-.btn svg{width:14px;height:14px}
-.btn-sm{padding:5px 10px;font-size:13px;border-radius:6px}
-.btn-xs{padding:3px 8px;font-size:12px;border-radius:5px;gap:4px}
-.btn-xs svg{width:11px;height:11px}
-.icon-x{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;color:var(--ink-faint);cursor:pointer}
-.icon-x:hover{background:var(--danger-bg);color:var(--danger)}
-.icon-x svg{width:12px;height:12px}
-
-/* ===== Cards ===== */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
-.card+.card{margin-top:16px}
-.card-head{padding:13px 18px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between;gap:12px}
-.card-title{font-weight:700;font-size:15px;letter-spacing:-.005em;display:flex;align-items:center;gap:10px}
-.pill{background:var(--pu-50);color:var(--pu-700);font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
-.pill.gold{background:var(--gold-bg);color:#856404}
-.pill.gray{background:#f0f2f7;color:var(--ink-soft)}
-.card-body{padding:16px 18px}
-
-/* ===== Fields ===== */
-.field{display:flex;flex-direction:column;gap:5px}
-.field label{font-size:12px;color:var(--ink-faint);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-.input,.select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s;font-size:14px;font-family:inherit}
-.input:focus,.select:focus{outline:none;border-color:var(--pu-500);box-shadow:0 0 0 3px rgba(138,90,59,.16)}
-.input.compact{padding:6px 9px;font-size:14px}
-.input[type=number]{-moz-appearance:textfield;appearance:textfield}
-.input[type=number]::-webkit-outer-spin-button,.input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-/* Custom qty stepper — full-height up/down buttons flush to the field edge */
-.qtybox{position:relative;display:inline-flex;vertical-align:middle;align-self:flex-start;width:96px;flex:none}
-.input.qty{width:96px;height:38px;box-sizing:border-box;text-align:left;padding:0 36px 0 12px;font-family:var(--font-num);font-variant-numeric:tabular-nums}
-.qtybox .qsteps{position:absolute;top:1px;right:1px;bottom:1px;width:28px;display:flex;flex-direction:column;border-left:1px solid var(--pu-100);border-radius:0 6px 6px 0;overflow:hidden}
-.qtybox .qsteps button{flex:1;min-height:0;padding:0;border:0;background:#fff;color:var(--pu-600);cursor:pointer;display:flex;align-items:center;justify-content:center}
-.qtybox .qsteps button+button{border-top:1px solid var(--pu-100)}
-.qtybox .qsteps button:hover{background:var(--pu-50);color:var(--pu-800)}
-.qtybox .qsteps button:active{background:var(--pu-100)}
-.input.readonly{background:var(--panel);color:var(--ink-soft);cursor:default}
-.input-search{padding-left:32px}
-.search-icon-wrap{position:relative}
-.search-icon-wrap .s-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink-faint);pointer-events:none;width:14px;height:14px}
+/* ===== Handle variants (Standard / Gola) — kitchen only ===== */
 .handle-toggle{display:flex;gap:6px}
 .handle-btn{padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink-soft);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s,color .15s,border-color .15s;white-space:nowrap}
 .handle-btn:hover:not(:disabled):not(.active){border-color:var(--pu-300);color:var(--pu-600)}
 .handle-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .handle-btn:disabled{opacity:.4;cursor:not-allowed}
 
-/* ===== Meta grid ===== */
+/* ===== Project info grid ===== */
 .meta-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(90px,0.7fr);gap:14px}
-
-/* ===== Tabs ===== */
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tab{padding:10px 14px;border-bottom:2.5px solid transparent;font-size:14px;font-weight:600;color:var(--ink-faint);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none}
-.tab:hover{color:var(--pu-500)}
-.tab.active{color:var(--pu-700);border-bottom-color:var(--pu-600)}
-.tab-count{background:var(--line-soft);color:var(--ink-faint);font-size:11.5px;padding:1px 6px;border-radius:999px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700;margin-left:5px}
-.tab.active .tab-count{background:var(--pu-100);color:var(--pu-700)}
 
 /* ===== Add-item bar ===== */
 .add-bar{background:var(--pu-50);border:1px solid var(--pu-100);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
@@ -264,34 +36,7 @@ input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
 .add-bar .ab-btns .btn:not(.primary){border-color:var(--pu-300);color:var(--pu-700)}
 .add-bar .ab-btns .btn:not(.primary):hover{border-color:var(--pu-400);background:var(--pu-50);color:var(--pu-700)}
 
-/* ===== Search dropdown ===== */
-.search-picker{position:relative}
-.search-results{position:fixed;background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:9999;max-height:min(560px,70vh);overflow-y:auto;padding:5px;font-size:14px;min-width:320px}
-.search-row{padding:9px 11px;border-radius:7px;cursor:pointer;display:flex;align-items:flex-start;gap:10px;transition:background .12s}
-.search-row:hover,.search-row.kbd-hover{background:var(--pu-50)}
-.search-row .row-main{flex:1;min-width:0}
-.search-row .row-name{font-weight:600;font-size:15px;color:var(--ink)}
-.search-row .row-meta{font-size:13.5px;color:var(--ink-faint);margin-top:3px;line-height:1.35}
-.search-row .row-price{text-align:right;flex-shrink:0}
-.search-row .row-price .price{font-weight:700;color:var(--pu-700);font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:13.5px}
-.search-row .row-price .unit{font-size:11.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em}
-.search-empty{padding:16px;text-align:center;color:var(--ink-faint);font-size:14px}
-.search-row mark.s-hl{background:#F3D9A4;color:inherit;font-weight:700;border-radius:2px;padding:0 1px}
-
-/* ===== BOM table ===== */
-table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
-.bom-table thead th{text-align:left;font-weight:700;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);padding:9px 10px;border-bottom:1px solid var(--line);background:var(--pu-50)}
-.bom-table thead th:first-child{padding-left:14px;border-radius:8px 0 0 0}
-.bom-table thead th:last-child{padding-right:14px;border-radius:0 8px 0 0;text-align:right}
-.bom-table tbody td{padding:10px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
-.bom-table tbody td:first-child{padding-left:14px}
-.bom-table tbody td:last-child{padding-right:14px;text-align:right}
-.bom-table tbody tr:hover{background:#faf8ff}
-.bom-table tbody tr[data-id]{cursor:pointer}   /* click a blank cell to select the row */
-.bom-table tbody td.col-qty,.bom-table tbody td.col-finish,.bom-table tbody td.col-actions,.bom-table tbody td.col-drag,.bom-table tbody td:last-child{cursor:auto}
-.bom-table tfoot td{padding:10px;font-weight:700;border-top:2px solid var(--pu-200);background:var(--pu-50)}
-.bom-table tfoot td:first-child{padding-left:14px;border-radius:0 0 0 8px}
-.bom-table tfoot td:last-child{padding-right:14px;border-radius:0 0 8px 0;text-align:right;color:var(--pu-700);font-family:var(--font-num);font-variant-numeric:tabular-nums}
+/* ===== Item table columns ===== */
 .col-no{width:36px;text-align:center;color:var(--ink-faint)}
 .col-cat{width:110px}
 .col-finish{width:170px}
@@ -299,12 +44,8 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
 .col-price{width:130px;text-align:right}
 .col-total{width:150px;text-align:right}
 .col-actions{width:122px;text-align:right}
-.item-name{font-weight:600;color:var(--ink)}
-.item-sub{font-size:12px;color:var(--ink-faint);margin-top:2px}
-.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.02em;background:var(--pu-50);color:var(--pu-700);margin-left:4px;vertical-align:middle}
-.tag.custom{background:#fdf0ff;color:#7a1c8b}
-.tag.alt{background:#e0f2fe;color:#0369a1}
-.tag.gray{background:#f0f2f7;color:var(--ink-soft)}
+
+/* ===== Buffer + qty-0 row markers ===== */
 .tag.buffer{background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer);border:1px solid color-mix(in srgb,var(--buffer) 38%,transparent);letter-spacing:.05em}
 .tag.zero{background:#fdf3e3;color:#9a6a12;border:1px solid #e8d3a8;letter-spacing:.05em}
 /* Qty 0 — the row stays in the BOQ but adds nothing to any total; dim it so it reads as a placeholder */
@@ -314,22 +55,12 @@ tr.row-zero .input.qty{color:#9a6a12;border-color:#e8d3a8}
 /* Category cell: stack the category tag + CUSTOM + BUFFER pills vertically */
 .cat-stack{display:inline-flex;flex-direction:column;align-items:stretch;justify-content:center;gap:3px;vertical-align:middle}
 .cat-stack .tag{margin-left:0;text-align:center;display:block}
-/* Row actions — uniform segmented group (buffer / duplicate / delete), flush-joined like the qty stepper */
-.row-actions{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--surface);flex-shrink:0}
-.row-actions button{width:36px;height:34px;display:grid;place-items:center;border:0;background:transparent;cursor:pointer;transition:background .12s,color .12s;padding:0}
-.row-actions button+button{border-left:1px solid var(--line)}
-.row-actions button svg{width:16px;height:16px}
 .row-actions .act-buf{color:color-mix(in srgb,var(--buffer) 70%,var(--ink-faint))}
 .row-actions .act-buf:hover{background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer)}
 .row-actions .act-buf.on{background:color-mix(in srgb,var(--buffer) 16%,transparent);color:var(--buffer)}
-.row-actions .act-dup{color:color-mix(in srgb,var(--accent) 70%,var(--ink-faint))}
-.row-actions .act-dup:hover{background:var(--pu-50);color:var(--pu-700)}
-.row-actions .act-del{color:color-mix(in srgb,var(--danger) 62%,var(--ink-faint))}
-.row-actions .act-del:hover{background:var(--danger-bg);color:var(--danger)}
 .buffer-note{font-weight:600;font-size:12px;color:var(--buffer);margin-left:8px}
-.notes-input{width:100%;border:1px solid transparent;padding:4px 6px;border-radius:5px;font-size:13px;font-family:inherit;color:var(--ink-faint);background:transparent;transition:border-color .15s}
-.notes-input:hover{border-color:var(--line)}
-.notes-input:focus{outline:none;border-color:var(--pu-300);background:#fff}
+
+/* ===== In-place finish editor ===== */
 .editable-finish{cursor:pointer;display:flex;align-items:center;gap:4px}
 .editable-finish:hover{color:var(--pu-600)}
 .edit-pencil{opacity:0;width:12px;height:12px;color:var(--pu-400)}
@@ -337,69 +68,13 @@ tr.row-zero .input.qty{color:#9a6a12;border-color:#e8d3a8}
 .finish-val{font-size:13px;color:var(--ink-soft)}
 .thickness-badge{font-size:11px;color:var(--ink-faint);background:var(--line-soft);padding:1px 5px;border-radius:3px;margin-left:4px;font-family:var(--font-num);font-variant-numeric:tabular-nums}
 
-/* ===== Stat row ===== */
-.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
-.stat .stat-label{font-size:11.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px}
-.stat .stat-value{font-size:21.5px;font-weight:700;letter-spacing:-.02em;color:var(--ink);font-family:var(--font-num);font-variant-numeric:tabular-nums}
-.stat .stat-value .cur{font-size:12px;color:var(--ink-faint);font-weight:600;margin-right:3px;font-family:'Hanken Grotesk',sans-serif}
-.stat .stat-sub{font-size:12px;color:var(--ink-faint);margin-top:3px}
-.stat.accent{background:var(--sidebar);border-color:transparent}
-.stat.accent .stat-label,.stat.accent .stat-sub{color:rgba(255,255,255,.7)}
-.stat.accent .stat-value,.stat.accent .stat-value .cur{color:#fff}
-
-/* ===== Summary / totals table ===== */
-.matrix-table{width:100%;border-collapse:collapse;font-size:14px}
-.matrix-table thead th{background:var(--sidebar);color:#fff;text-align:left;padding:11px 14px;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
-.matrix-table thead th:last-child,.matrix-table thead th.num{text-align:right}
-.matrix-table thead th:first-child{border-radius:8px 0 0 0}
-.matrix-table thead th:last-child{border-radius:0 8px 0 0}
-.matrix-table tbody td{padding:11px 14px;border-bottom:1px solid var(--line-soft)}
-.matrix-table tbody td.num,.matrix-table tbody td:last-child{text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:600}
-.matrix-table tbody tr:hover{background:var(--pu-50)}
-.matrix-table tfoot tr.sub td{background:var(--pu-50);font-weight:700;padding:11px 14px;border-top:1px solid var(--pu-200)}
-.matrix-table tfoot tr.sub td.num,.matrix-table tfoot tr.sub td:last-child{text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums}
-.matrix-table tfoot tr.grand td{background:var(--sidebar);color:#fff;font-size:16px;font-weight:800;padding:15px 14px}
-.matrix-table tfoot tr.grand td.num,.matrix-table tfoot tr.grand td:last-child{text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums}
-.matrix-table tfoot tr.grand td:first-child{border-radius:0 0 0 8px}
-.matrix-table tfoot tr.grand td:last-child{border-radius:0 0 8px 0}
-
-/* ===== Acc category pills ===== */
+/* ===== Accessories category pills ===== */
 .cat-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .cat-pill{padding:5px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:600;color:var(--ink-soft);background:white;cursor:pointer;transition:all .15s}
 .cat-pill:hover{border-color:var(--pu-300);color:var(--pu-600)}
 .cat-pill.active{background:var(--pu-600);color:#fff;border-color:var(--pu-600)}
 
-/* ===== Modal ===== */
-.modal-backdrop{position:fixed;inset:0;background:rgba(12,14,20,.5);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(2px);padding:18px}
-.modal{background:#fff;border-radius:var(--radius-lg);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
-.modal-head{padding:17px 22px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between}
-.modal-head h2{margin:0;font-size:17.5px;font-weight:700;letter-spacing:-.01em}
-.modal-body{padding:18px 22px;display:flex;flex-direction:column;gap:12px}
-.modal-foot{padding:13px 22px;border-top:1px solid var(--line-soft);display:flex;justify-content:flex-end;gap:8px}
-
-/* ===== Toast ===== */
-.toast-stack{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-/* Drop-a-.smbq overlay — above modals (z 1000) so a drop works with one open, below toasts (2000) */
-.drop-zone{position:fixed;inset:0;z-index:1500;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ink) 42%,transparent);backdrop-filter:blur(3px);padding:18px}
-.drop-zone.on{display:flex}
-.drop-card{background:var(--surface);border:2px dashed var(--brass);border-radius:14px;padding:32px 44px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.24);max-width:min(430px,88vw);pointer-events:none}
-.drop-card svg{color:var(--brass);margin-bottom:8px}
-.drop-title{font-size:21px;font-weight:700;letter-spacing:-.01em;color:var(--ink);margin-bottom:5px}
-.drop-sub{font-size:13px;color:var(--ink-soft);line-height:1.5}
-.drop-sub strong{color:var(--brass)}
-.toast{background:var(--ink);color:#fff;padding:11px 16px;border-radius:9px;font-size:14px;font-weight:500;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:9px;animation:slideUp .22s ease-out;min-width:220px}
-.toast.success{background:var(--good)}
-.toast.warn{background:var(--warn)}
-.toast.error{background:var(--danger)}
-.toast svg{width:15px;height:15px;flex-shrink:0}
-@keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
-
-/* ===== Empty state ===== */
-.empty-state{padding:32px;text-align:center;color:var(--ink-faint);font-size:14px}
-.empty-state svg{width:36px;height:36px;margin-bottom:10px;opacity:.25}
-
-/* ===== DB editor ===== */
+/* ===== Legacy DB-editor leftovers (kept: reused by copy-to-unit) ===== */
 .db-cat-select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:14px;margin-bottom:12px}
 .db-items-wrap{max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
 .db-item{display:flex;gap:8px;align-items:center}
@@ -407,81 +82,41 @@ tr.row-zero .input.qty{color:#9a6a12;border-color:#e8d3a8}
 .db-item input.price-f{width:110px;flex:none;font-family:var(--font-num);font-variant-numeric:tabular-nums;text-align:right}
 .db-item .db-unit{font-size:12px;color:var(--ink-faint);min-width:24px}
 
-/* ===== Helpers ===== */
-.hidden{display:none!important}
-.row{display:flex;gap:10px;align-items:center}
-.row.wrap{flex-wrap:wrap}
-.spacer{flex:1}
-.muted{color:var(--ink-faint)}
-.right{text-align:right}
-
-/* ===== Responsive ===== */
+/* ===== Responsive — SM-specific columns and grids ===== */
 @media(max-width:900px){
-  .shell{grid-template-columns:1fr}
-  .sidebar{position:fixed;left:-280px;top:57px;bottom:0;width:280px;z-index:90;transition:left .25s;box-shadow:var(--shadow-lg)}
-  .sidebar.open{left:0}
-  .menu-btn{display:grid}
-  .bom-table thead th{font-size:10.5px;padding:7px 7px}
-  .bom-table tbody td{padding:8px 7px}
   .meta-grid{grid-template-columns:1fr 1fr}
-  .stat-row{grid-template-columns:1fr 1fr}
   .col-finish{display:none}
 }
 @media(max-width:540px){
   .meta-grid{grid-template-columns:1fr}
-  .stat-row{grid-template-columns:1fr}
-  .main{padding:14px 14px 80px}
   .add-bar{gap:8px}
   .col-cat{display:none}
   .col-price{display:none}
 }
-
-/* ===== Print / PDF ===== */
-/* Required project fields */
-.field label .req{color:var(--danger);font-weight:800}
-.input.field-error{border-color:var(--danger)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--danger) 20%,transparent)!important}
-/* Export choice modal option cards */
-.export-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:9px;background:var(--surface);cursor:pointer;transition:border-color .12s,background .12s}
-.export-opt:hover{border-color:var(--accent);background:var(--pu-50)}
-.export-opt .eo-icon{width:38px;height:38px;border-radius:8px;display:grid;place-items:center;flex-shrink:0}
-.export-opt .eo-text{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ink)}
-.export-opt .eo-text span{font-size:11.5px;color:var(--ink-faint);line-height:1.45}
-
-
 @media(max-width:700px){
   .add-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;padding:12px}
   .ab-cat,.ab-finish,.ab-handle,.ab-thickness{min-width:0}
-  .ab-cat{grid-column:1}.ab-finish{grid-column:2}
-  .ab-handle{grid-column:1}.ab-thickness{grid-column:2}
+  .ab-cat{grid-column:1}
+  .ab-finish{grid-column:2}
+  .ab-handle{grid-column:1}
+  .ab-thickness{grid-column:2}
   .ab-search{grid-column:1/-1}
-  .ab-price{grid-column:1}.ab-qty{grid-column:2}
+  .ab-price{grid-column:1}
+  .ab-qty{grid-column:2}
   .ab-btns{grid-column:1/-1;display:flex;gap:6px}
-  .btn,.icon-btn,.icon-x{min-height:38px}
-  .bom-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .bom-table-wrap .bom-table{min-width:680px}
 }
 @media(max-width:540px){
-  .stat-row{grid-template-columns:1fr 1fr !important}
-  .stat.accent{grid-column:1/-1}
   .meta-grid{grid-template-columns:1fr 1fr}
 }
-@media(max-width:480px){ .crumb,.rev-pill{display:none !important} }
-@media(max-width:400px){ .meta-grid{grid-template-columns:1fr} }
-.sb-overlay{display:none;position:fixed;inset:0;z-index:88;background:rgba(0,0,0,.35)}
-.notes-print-val{display:none;font-style:italic;color:#888;font-size:11.5px}
-@media(max-width:900px){
-  .input,.select,.input.compact,.notes-input,.sb-unit-name{font-size:17.5px}
-  .modal.modal-lg .modal-body{overflow-x:auto}
+@media(max-width:400px){
+  .meta-grid{grid-template-columns:1fr}
 }
-.sel-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--pu-75);border:1px solid var(--pu-200);border-radius:8px;margin-bottom:8px;flex-wrap:wrap}
-.sel-bar .sel-count{font-size:14px;font-weight:600;color:var(--pu-700);flex:1;min-width:120px}
-.sel-bar.hidden{display:none}
-/* Always-visible selection bar: dim + disable the actions when nothing is picked */
-.sel-bar.sel-empty{background:var(--panel);border-color:var(--line)}
-.sel-bar.sel-empty .sel-count{color:var(--ink2);font-weight:500}
-.sel-bar.sel-empty .sel-act{opacity:.4;pointer-events:none}
-.sel-bar .sel-div{width:1px;align-self:stretch;min-height:22px;background:var(--pu-200);margin:0 4px}
+
+/* ===== Print helpers ===== */
+.notes-print-val{display:none;font-style:italic;color:#888;font-size:11.5px}
 /* Group bands inside the item table */
+
+/* ===== Item groups ===== */
 .group-band>td{padding:6px 14px;background:var(--pu-50);border-top:2px solid var(--brass);border-bottom:1px solid var(--pu-200)}
 .group-band.other-band>td{background:var(--panel);border-top:1px dashed var(--line)}
 .group-head{display:flex;align-items:center;gap:9px}
@@ -498,26 +133,11 @@ tr.row-zero .input.qty{color:#9a6a12;border-color:#e8d3a8}
 .group-acts button{background:none;border:none;cursor:pointer;color:var(--ink2);padding:3px;border-radius:5px;display:inline-flex}
 .group-acts button:hover{background:var(--pu-100);color:var(--pu-700)}
 .bom-table tbody tr.row-hidden{display:none}
-.col-check{width:36px;padding-left:10px !important;padding-right:4px !important;text-align:center}
-.col-check input[type=checkbox]{width:15px;height:15px;accent-color:var(--pu-600);cursor:pointer;vertical-align:middle}
-tr.row-sel td{background:var(--pu-50)}
-.input.input-search{padding-left:34px}
-.col-drag{width:22px;padding:0 4px !important;text-align:center;cursor:grab}
-.col-drag:active{cursor:grabbing}
-.drag-handle{cursor:grab;color:var(--ink-faint);display:inline-flex;align-items:center;padding:3px;border-radius:4px;flex-shrink:0}
-.sb-item.active .drag-handle{color:rgba(255,255,255,.7)}
-.drag-handle:hover{color:var(--ink-soft);background:var(--pu-50)}
-.drag-handle:active{cursor:grabbing}
-tr.dragging{opacity:0.35}
-tr.drop-above{box-shadow:inset 0 2px 0 var(--pu-500)}
-tr.drop-below{box-shadow:inset 0 -2px 0 var(--pu-500)}
-.sb-item.dragging{opacity:0.4}
-.sb-item.drop-above{box-shadow:0 -2px 0 var(--pu-500)}
-.sb-item.drop-below{box-shadow:0 2px 0 var(--pu-500)}
+
+/* ===== Price-list chip ===== */
 .pl-newer-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:#fef3c7;color:#92400e;border:1px solid #f59e0b;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
-/* Large modal for DB editor */
-.modal.modal-lg{max-width:min(980px,94vw);width:min(980px,94vw)}
-.modal.modal-lg .modal-body{max-height:70vh;overflow-y:auto}
+
+/* ===== Copy-to-unit list rows ===== */
 .db-item-row{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;margin-bottom:4px;cursor:pointer;transition:background .12s,border-color .12s}
 .db-item-row:hover{background:var(--pu-50);border-color:var(--pu-200)}
 
@@ -636,15 +256,10 @@ let searchPools = {kit:[],wd:[],acc:[]};
 let revisionNumber = 1;
 let customModalSection = 'kitchen';
 let projectMeta = {name:'',client:'',pic:'',date:'',notes:'',priceListVersion:''};
-// Revisions & Alternatives + dirty tracking
-let alts = [{key:'A', name:'Initial scheme', versions:[]}];
-let _autosaveDebounce=null, _lastAutosaveAt=null;
-let _expOrient='portrait';   // PDF page orientation chosen in the export modal   // save-status chip + debounced autosave
-let activeAltKey = 'A', activeVerNum = null, dirty = false;
-// fileUnsaved = there are changes not yet written to a .smbq FILE. Distinct from `dirty`
-// (uncommitted working edits, cleared on version-commit) and from autosave (localStorage,
-// device-local). Only a real Save .smbq / file load clears it — drives the close warning.
-let fileUnsaved = false;
+let _expOrient='portrait';   // PDF page orientation chosen in the export modal
+// NB: `dirty`, `fileUnsaved`, `alts`, `activeAltKey`, `activeVerNum` and `_commit` are all
+// declared by the kit (src/kit/kit.js) — it owns the save-status machine, autosave and the
+// Revisions & Alternatives tree. Brand code still reads/assigns them freely.
 let selectedRows = {kitchen:new Set(),wardrobe:new Set(),accessories:new Set()};
 let dragUnit = null, dragRow = {sec:null, id:null};
 let _mousedownEl = null;
@@ -655,16 +270,43 @@ function updateRevPill(){ const p=document.getElementById('revPill'); if(p) p.te
 // ====================================================================
 // INIT
 // ====================================================================
+// Tell the kit how to reach SM's domain (see BOQ-SHARED-CHROME.md §3 / kit.js).
+KIT.register({
+  getState, applyLoadedState,
+  fileBaseName: () => { syncProjectMetaFromDOM(); return fileBaseNameDate(); },
+  stateHasContent: st => Boolean(
+    (st.units||[]).some(u=>u.items&&['kitchen','wardrobe','accessories'].some(sec=>(u.items[sec]||[]).length))
+    || ((st.project||{}).name||'').trim()),
+  stateSummary: st => {
+    const nu=(st.units||[]).length;
+    const ni=(st.units||[]).reduce((t,u)=>t+(u.items?['kitchen','wardrobe','accessories'].reduce((tt,sec)=>tt+(u.items[sec]||[]).length,0):0),0);
+    const pn=(st.project||{}).name;
+    return `${nu} unit${nu===1?'':'s'}, ${ni} item${ni===1?'':'s'}`+(pn?`, project “${pn}”`:'');
+  },
+  onSidebarToggle: () => { hideUnitFlyout(0); hideSbTip(); },
+  manualUrl: 'SM_BOQ_Manual_EN.html',
+  // --- Revisions & Alternatives: what a snapshot is, and what a version reports ---
+  snapshot: () => ({units, unitCounter, priceListVersion:projectMeta.priceListVersion}),
+  restoreSnapshot: snap => {
+    units=snap.units; unitCounter=snap.unitCounter||snap.units.length;
+    if(snap.priceListVersion) projectMeta.priceListVersion=snap.priceListVersion;
+    activeUnitId=(snap.units[0]&&snap.units[0].id)||null;
+    updateRevPill(); renderSidebarUnits(); showView('overview');
+  },
+  stats: () => ({total:grandNow(), unitsCount:units.length, itemsCount:itemsNow(),
+                 priceList:projectMeta.priceListVersion||PRICE_LIST_LATEST}),
+  bufferTotal: () => units.reduce((s,u)=>s+unitBufferTotal(u),0),
+  repaint: () => { if(currentView==='overview') renderOverview(); },
+  syncMeta: syncProjectMetaFromDOM,
+});
+
 projectMeta.priceListVersion = PRICE_LIST_LATEST;
 addUnit('Kitchen');
 dirty = false;
 fileUnsaved = false;   // fresh empty project — nothing to save yet
 showView('overview');
 updateRevPill();
-updateDirtyIndicator();
-updateAltVerChip();
-try{if(localStorage.getItem('sbCollapsed')==='1'&&window.innerWidth>900)document.querySelector('.shell').classList.add('sidebar-collapsed');}catch(e){}
-initSidebarResize();
+KIT.start();           // sidebar, drag-drop load, autosave loop, recover-unsaved-work offer
 document.addEventListener('click', globalClickClose);
 document.addEventListener('mousedown', e => { _mousedownEl = e.target; });
 // Rows are only draggable while their drag-handle is held (set in col-drag onmousedown), so
@@ -677,100 +319,13 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ---- Unsaved-work protection: autosave to localStorage + warn before closing ----
-const AUTOSAVE_KEY='smboq_autosave';
-function autosaveNow(){
-  try{
-    updateSaveStatus('saving');
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(Object.assign(getState(),{autosavedAt:new Date().toISOString()})));
-    _lastAutosaveAt=new Date();
-  }catch(e){}
-  setTimeout(()=>updateSaveStatus(), 400);
-}
-setInterval(()=>{ if(dirty) autosaveNow(); }, 30000);
-window.addEventListener('beforeunload', e=>{
-  if(dirty) autosaveNow();                                  // keep localStorage recovery current
-  if(fileUnsaved){ e.preventDefault(); e.returnValue=''; }  // warn until saved to a .smbq file
-});
-let _autosaveState=null, _autosaveOfferOpen=false;
-function restoreAutosave(){ _autosaveOfferOpen=false; closeModal(); if(_autosaveState){ applyLoadedState(_autosaveState); dirty=true; fileUnsaved=true; updateDirtyIndicator(); toast('Autosaved work restored'); _autosaveState=null; } }
-function discardAutosave(){ _autosaveOfferOpen=false; closeModal(); _autosaveState=null; try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){} toast('Autosave discarded','warn'); }
-(function offerAutosaveRestore(){
-  let st=null;
-  try{ st=JSON.parse(localStorage.getItem(AUTOSAVE_KEY)||'null'); }catch(e){}
-  if(!st) return;
-  const hasContent=(st.units||[]).some(u=>u.items&&['kitchen','wardrobe','accessories'].some(sec=>(u.items[sec]||[]).length))||((st.project||{}).name||'').trim();
-  if(!hasContent){ try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){} return; }
-  _autosaveState=st; _autosaveOfferOpen=true;
-  const when=st.autosavedAt?new Date(st.autosavedAt).toLocaleString():'earlier';
-  const n=(st.units||[]).reduce((t,u)=>t+(u.items?['kitchen','wardrobe','accessories'].reduce((tt,sec)=>tt+(u.items[sec]||[]).length,0):0),0);
-  showModal(`<div class="modal-head"><h2>Recover unsaved work?</h2></div>
-    <div class="modal-body"><p style="font-size:13px;color:var(--ink-soft);margin:0">
-      Unsaved work from <strong>${esc(when)}</strong> was auto-saved
-      (${(st.units||[]).length} unit${(st.units||[]).length===1?'':'s'}, ${n} item${n===1?'':'s'}${(st.project||{}).name?`, project \u201c${esc(st.project.name)}\u201d`:''}).
-      Restore it, or discard and start fresh?
-    </p></div>
-    <div class="modal-foot">
-      <button class="btn ghost" onclick="discardAutosave()">Discard</button>
-      <button class="btn primary" onclick="restoreAutosave()">Restore</button>
-    </div>`);
-})();
+// Autosave, the recover-unsaved-work offer and the beforeunload guard live in the kit.
 
 // ====================================================================
 // SIDEBAR / NAVIGATION
 // ====================================================================
-function toggleSidebar(){
-  const sb=document.getElementById('sidebar');
-  const ov=document.getElementById('sb-overlay');
-  const open=sb.classList.toggle('open');
-  if(ov) ov.style.display=open?'block':'none';
-}
-// Drag-to-resize the sidebar. Width persists in localStorage and survives collapse/expand.
-const SB_MIN_W=190, SB_MAX_W=460, SB_DEFAULT_W=260;
-function setSidebarWidth(px){
-  px=Math.max(SB_MIN_W,Math.min(SB_MAX_W,Math.round(px)));
-  document.querySelector('.shell').style.setProperty('--sidebar-w', px+'px');
-  return px;
-}
-function initSidebarResize(){
-  const shell=document.querySelector('.shell');
-  const resizer=document.getElementById('sb-resizer');
-  if(!shell||!resizer) return;
-  try{const s=parseInt(localStorage.getItem('sbWidth')); if(s) setSidebarWidth(s);}catch(e){}
-  let dragging=false;
-  const px=e=>(e.touches&&e.touches[0]?e.touches[0].clientX:e.clientX);
-  const onDown=e=>{
-    if(window.innerWidth<=900 || shell.classList.contains('sidebar-collapsed')) return;
-    dragging=true; resizer.classList.add('dragging'); shell.classList.add('resizing');
-    document.body.style.userSelect='none'; document.body.style.cursor='col-resize';
-    e.preventDefault();
-  };
-  const onMove=e=>{
-    if(!dragging) return;
-    setSidebarWidth(px(e)-shell.getBoundingClientRect().left);
-    if(e.cancelable) e.preventDefault();
-  };
-  const onUp=()=>{
-    if(!dragging) return;
-    dragging=false; resizer.classList.remove('dragging'); shell.classList.remove('resizing');
-    document.body.style.userSelect=''; document.body.style.cursor='';
-    const w=parseInt(getComputedStyle(shell).getPropertyValue('--sidebar-w'))||SB_DEFAULT_W;
-    try{localStorage.setItem('sbWidth', w);}catch(e){}
-  };
-  resizer.addEventListener('mousedown', onDown);
-  resizer.addEventListener('touchstart', onDown, {passive:false});
-  window.addEventListener('mousemove', onMove);
-  window.addEventListener('touchmove', onMove, {passive:false});
-  window.addEventListener('mouseup', onUp);
-  window.addEventListener('touchend', onUp);
-  resizer.addEventListener('dblclick', ()=>{ setSidebarWidth(SB_DEFAULT_W); try{localStorage.setItem('sbWidth', SB_DEFAULT_W);}catch(e){} });
-}
-function toggleSidebarCollapse(){
-  if(window.innerWidth<=900){return;}
-  const collapsed=document.querySelector('.shell').classList.toggle('sidebar-collapsed');
-  try{localStorage.setItem('sbCollapsed',collapsed?'1':'0');}catch(e){}
-  hideUnitFlyout(0);hideSbTip();
-}
+// toggleSidebar / setSidebarWidth / initSidebarResize / toggleSidebarCollapse live in
+// the kit; collapse calls back through KIT.hooks.onSidebarToggle (registered in INIT).
 let _sbFlyout=null,_sbFlyoutTimer=null,_sbTip=null,_sbTipTimer=null;
 function showUnitFlyout(el,uid){
   if(!document.querySelector('.shell').classList.contains('sidebar-collapsed'))return;
@@ -2122,293 +1677,14 @@ function confirmCustom(){
 // ====================================================================
 // REVISIONS & ALTERNATIVES + DIRTY TRACKING
 // ====================================================================
-function markDirty(){
-  fileUnsaved=true;   // any edit means the .smbq on disk is now stale
-  if(!dirty){ dirty=true; _lastAutosaveAt=null; }
-  updateSaveStatus();
-  clearTimeout(_autosaveDebounce);
-  _autosaveDebounce=setTimeout(()=>{ if(dirty) autosaveNow(); }, 2500);   // M365-style: autosave shortly after the edit
-}
-function updateSaveStatus(state){
-  const c=document.getElementById('saveStatus'); if(!c) return;
-  let txt, cls='rev-pill save-status', dot=false;
-  if(state==='saving'){ txt='Saving…'; cls+=' saving'; }
-  else if(!dirty){ txt='Saved'; cls+=' saved'; }
-  else if(_lastAutosaveAt){ txt='Autosaved '+_lastAutosaveAt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); cls+=' autosaved'; }
-  else { txt='Unsaved edits'; cls+=' unsaved'; dot=true; }
-  c.className=cls;
-  c.innerHTML=(dot?'<span class="dirty-dot"></span>':'')+esc(txt);
-}
-function updateDirtyIndicator(){ updateSaveStatus(); }   // legacy callers
-function updateAltVerChip(){ updateSaveStatus(); }       // legacy callers (chip replaced by save status)
+// markDirty / updateSaveStatus (+ the updateDirtyIndicator/updateAltVerChip aliases)
+// live in the kit — it owns `dirty`, `fileUnsaved` and the autosave debounce.
 function grandNow(){ return units.reduce((s,u)=>s+unitTotal(u),0); }
 function itemsNow(){ return units.reduce((sum,u)=>sum+['kitchen','wardrobe','accessories'].reduce((ss,sec)=>ss+u.items[sec].length,0),0); }
-function getActiveAlt(){ return alts.find(a=>a.key===activeAltKey) || alts[0]; }
-function nextAltKey(){ return String.fromCharCode(65+alts.length); }
-
-let _commit = {mode:'version', ready:false, nameError:false};
-function openCommitModal(){ _commit={mode:'version', ready:false, nameError:false}; bufferGateThenCommit(); }
-// #3: BOQs without buffer get a dedicated blue warning FIRST (Back / Continue), then the commit modal.
-function bufferGateThenCommit(){
-  if(units.some(u=>unitBufferTotal(u)>0)){ renderCommitModal(); return; }
-  showModal(`
-    <div class="modal-head"><h2>No buffer items</h2>
-      <button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-    </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding-top:22px;padding-bottom:8px">
-      <span style="width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:color-mix(in srgb,var(--buffer) 14%,transparent);border:1.5px solid color-mix(in srgb,var(--buffer) 40%,transparent);color:var(--buffer)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      </span>
-      <div style="font-size:16px;font-weight:800;color:var(--buffer)">This BOQ has no buffer items</div>
-      <div style="font-size:13px;color:var(--ink-soft);line-height:1.6;max-width:380px">Buffer items are insurance stock — counted in the quotation but excluded from the Sales Order. Consider marking spare items with the <strong style="color:var(--buffer)">shield button</strong> on the item rows before saving this version.</div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn ghost" onclick="closeModal()">Back</button>
-      <button class="btn" style="background:var(--buffer);border-color:var(--buffer);color:#fff" onclick="renderCommitModal()">Continue anyway</button>
-    </div>`);
-}
-function openNewAltModal(){ _commit={mode:'alt', ready:false, nameError:false}; bufferGateThenCommit(); }
-function commitToggleReady(){ _commit.ready=!_commit.ready; renderCommitModal(true); }
-function commitSwitchMode(){ _commit.mode=_commit.mode==='alt'?'version':'alt'; _commit.nameError=false; renderCommitModal(); }
-
-function renderCommitModal(keepInputs){
-  syncProjectMetaFromDOM();
-  const isAlt=_commit.mode==='alt';
-  const alt=getActiveAlt(), latest=alt.versions[0]||null;
-  const viewingOld=!!(latest&&activeVerNum&&activeVerNum<latest.ver);
-  const canOverwrite=!!(latest&&latest.status==='Draft'&&!viewingOld);
-  const nextKey=nextAltKey(), nextVer=(latest?latest.ver:0)+1, saveVer=canOverwrite?latest.ver:nextVer;
-  const prevNote=keepInputs?(document.getElementById('cmt-note')?.value||''):'';
-  const prevName=keepInputs?(document.getElementById('cmt-name')?.value||''):'';
-  const title=isAlt?'Save as New Alternative':(canOverwrite?'Update Draft Version':'Save New Version');
-  const headline=isAlt
-    ? ('Saves the working calculation as Alt '+nextKey+' · v1 — a separate option the client picks between. Alt '+alt.key+' keeps its own versions.')
-    : (canOverwrite
-      ? ('Alt '+alt.key+' · v'+latest.ver+' is still a draft, so saving updates it in place. No new version is created.')
-      : ('Saves the working calculation as Alt '+alt.key+' · v'+nextVer+'.'+(latest?(' v'+latest.ver+' stays in the history below it — the newest ready version is the one you quote.'):' This is the first saved version of this alternative.')));
-  const switchHint=isAlt?('Just updating Alt '+alt.key+' instead?'):'Offering the client a different scheme instead?';
-  const switchLabel=isAlt?((canOverwrite?'Update v':'Save as v')+saveVer+' of Alt '+alt.key):('Save as a new alternative (Alt '+nextKey+')');
-  const confirmLabel=isAlt?('Save Alt '+nextKey+' · v1'):((canOverwrite?'Update Alt ':'Save Alt ')+alt.key+' · v'+saveVer);
-  const countsLabel=units.length+' unit'+(units.length===1?'':'s')+' · '+itemsNow()+' items · pricelist '+(projectMeta.priceListVersion||PRICE_LIST_LATEST);
-  const nameBorder=_commit.nameError?'var(--danger)':'var(--line)';
-  const readyBox=`width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;border:1.5px solid ${_commit.ready?'var(--good)':'var(--line)'};background:${_commit.ready?'var(--good)':'var(--surface)'};color:#fff`;
-  showModal(`
-      <div class="modal-head"><h2>${esc(title)}</h2>
-        <button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-      </div>
-      <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 13px;background:var(--panel);border:1px solid var(--line);border-radius:8px">
-          <div><div style="font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.07em;font-weight:700">Working calculation</div>
-            <div style="font-size:11.5px;color:var(--ink-faint);margin-top:2px">${esc(countsLabel)}</div></div>
-          <div class="mono" style="font-weight:700;font-size:15px;color:var(--accent)">${fmt(grandNow())}</div>
-        </div>
-        <div style="font-size:12.5px;color:var(--ink-faint);line-height:1.6">${esc(headline)}</div>
-        ${isAlt?`<div class="field"><label>Alternative name</label>
-          <input class="input compact" id="cmt-name" placeholder="e.g. Dekton benchtop, Budget scheme…" value="${escAttr(prevName)}" style="border-color:${nameBorder}">
-          ${_commit.nameError?`<div style="font-size:11.5px;color:var(--danger);font-weight:600;margin-top:4px">Name this alternative before saving — e.g. "Dekton benchtop".</div>`:''}</div>`:''}
-        <div class="field"><label>What changed <span style="font-weight:600;text-transform:none;letter-spacing:0">(revision note)</span></label>
-          <input class="input compact" id="cmt-note" placeholder="e.g. Client removed island unit, switched finish to Collalto Gold" value="${escAttr(prevNote)}"></div>
-        <div onclick="commitToggleReady()" style="display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:var(--panel)">
-          <span style="${readyBox}">${_commit.ready?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="12" height="12"><path d="M20 6 9 17l-5-5"/></svg>':''}</span>
-          <div><div style="font-size:13px;font-weight:700">Ready for quotation</div>
-            <div style="font-size:11.5px;color:var(--ink-faint);margin-top:2px">Marks this version as final — the one to quote to the client. Untick to keep it as a draft — you can mark it ready later.</div></div>
-        </div>
-        <div style="font-size:12px;color:var(--ink-faint)">${esc(switchHint)} <span onclick="commitSwitchMode()" style="color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline">${esc(switchLabel)}</span></div>
-      </div>
-      <div class="modal-foot">
-        <button class="btn" onclick="closeModal()">Cancel</button>
-        <button class="btn primary" onclick="confirmCommit()">${esc(confirmLabel)}</button>
-      </div>`);
-}
-function confirmCommit(){
-  syncProjectMetaFromDOM();
-  const note=(document.getElementById('cmt-note')?.value||'').trim();
-  const name=(document.getElementById('cmt-name')?.value||'').trim();
-  const entry={
-    date:new Date().toISOString().split('T')[0],
-    status:_commit.ready?'Ready for quotation':'Draft',
-    note, total:grandNow(), unitsCount:units.length, itemsCount:itemsNow(),
-    priceList:projectMeta.priceListVersion||PRICE_LIST_LATEST,
-    snapshot:JSON.parse(JSON.stringify({units, unitCounter, priceListVersion:projectMeta.priceListVersion})),
-  };
-  if(_commit.mode==='alt'){
-    if(!name){ _commit.nameError=true; renderCommitModal(true); toast('Give the new alternative a name (e.g. "Dekton benchtop").','warn'); return; }
-    const key=nextAltKey();
-    alts=[...alts, {key, name, versions:[{...entry, ver:1}]}];
-    activeAltKey=key; activeVerNum=1; dirty=false;
-    toast('Saved as Alt '+key+' · v1 — '+name);
-  } else {
-    const alt=getActiveAlt(), latest=alt.versions[0];
-    const viewingOld=!!(latest&&activeVerNum&&activeVerNum<latest.ver);
-    if(latest && latest.status==='Draft' && !viewingOld){
-      alts=alts.map(a=> a.key!==alt.key ? a : {...a, versions:[{...entry, ver:latest.ver, note:note||latest.note}, ...a.versions.slice(1)]});
-      activeVerNum=latest.ver; dirty=false;
-      toast('Updated Alt '+alt.key+' · v'+latest.ver+' — draft updated in place, no new version');
-    } else {
-      const ver=(latest?latest.ver:0)+1;
-      alts=alts.map(a=> a.key!==alt.key ? a : {...a, versions:[{...entry, ver}, ...a.versions.map(v=>({...v, status:'Superseded'}))]});
-      activeVerNum=ver; dirty=false;
-      toast('Saved Alt '+alt.key+' · v'+ver+(ver>1?' — v'+(ver-1)+' kept in history':''));
-    }
-  }
-  closeModal(); updateDirtyIndicator(); updateAltVerChip(); renderOverview();
-}
-function loadVersion(altKey, ver){
-  if(dirty && !window.confirm('Discard unsaved edits and load Alt '+altKey+' · v'+ver+'?')) return;
-  const alt=alts.find(a=>a.key===altKey); const v=alt&&alt.versions.find(x=>x.ver===ver); if(!v) return;
-  const snap=JSON.parse(JSON.stringify(v.snapshot));
-  units=snap.units; unitCounter=snap.unitCounter||snap.units.length;
-  projectMeta.priceListVersion=snap.priceListVersion||projectMeta.priceListVersion;
-  activeUnitId=(snap.units[0]&&snap.units[0].id)||null;
-  activeAltKey=altKey; activeVerNum=ver; dirty=false;
-  updateRevPill(); updateDirtyIndicator(); updateAltVerChip();
-  renderSidebarUnits(); showView('overview');
-  const latest=alt.versions[0];
-  toast('Loaded Alt '+altKey+' · v'+ver+(latest&&latest.ver>ver?' (older version)':''));
-}
-function toggleReady(altKey){
-  alts=alts.map(a=>{
-    if(a.key!==altKey||!a.versions.length) return a;
-    const latest=a.versions[0];
-    const status=latest.status==='Ready for quotation'?'Draft':'Ready for quotation';
-    return {...a, versions:[{...latest, status}, ...a.versions.slice(1)]};
-  });
-  const alt=alts.find(a=>a.key===altKey);
-  if(alt&&alt.versions.length) toast('Alt '+altKey+' · v'+alt.versions[0].ver+' → '+alt.versions[0].status);
-  renderOverview();
-}
-function deleteAlt(key){
-  const alt=alts.find(a=>a.key===key); if(!alt) return;
-  if(alts.length<=1){ toast("A BOQ needs at least one alternative — you can't delete the last one",'warn'); return; }
-  const label='Alt '+key+(alt.name?' — '+alt.name:'');
-  if(!window.confirm('Delete '+label+'? Its saved versions will be removed. This can\'t be undone.')) return;
-  const remaining=alts.filter(a=>a.key!==key);
-  const relettered=remaining.map((a,i)=>({...a, key:String.fromCharCode(65+i)}));
-  const wasActive=activeAltKey===key;
-  const newActive=wasActive?relettered[0]:relettered[remaining.findIndex(a=>a.key===activeAltKey)];
-  alts=relettered; activeAltKey=(newActive&&newActive.key)||'A';
-  if(wasActive){
-    const latest=newActive&&newActive.versions[0];
-    activeVerNum=latest?latest.ver:null;
-    if(latest&&latest.snapshot){
-      const snap=JSON.parse(JSON.stringify(latest.snapshot));
-      units=snap.units; unitCounter=snap.unitCounter||snap.units.length;
-      activeUnitId=(snap.units[0]&&snap.units[0].id)||null; dirty=false;
-    }
-  }
-  updateRevPill(); updateDirtyIndicator(); updateAltVerChip();
-  renderSidebarUnits(); showView('overview'); toast('Deleted '+label);
-}
-function renameAlt(key,val){ const a=alts.find(a=>a.key===key); if(a){ a.name=val; markDirty(); if(currentView==='overview') renderOverview(); } }
-// Pencil button on an alternative row: swap the name <span> for an input (the row
-// itself stays clickable to switch alternatives).
-function editAltName(key){
-  const a=alts.find(x=>x.key===key); if(!a) return;
-  const span=document.getElementById('altname-'+key); if(!span) return;
-  const inp=document.createElement('input');
-  inp.type='text'; inp.value=a.name;
-  inp.style.cssText='min-width:140px;max-width:260px;background:var(--panel2);border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:6px;font-size:13.5px;font-weight:700;color:var(--ink);font-family:inherit;outline:none;padding:2px 8px';
-  inp.onclick=e=>e.stopPropagation();
-  let done=false;
-  const commit=()=>{ if(done) return; done=true; renameAlt(key,(inp.value||'').trim()||a.name); };
-  inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') commit(); if(e.key==='Escape'){ done=true; if(currentView==='overview') renderOverview(); } };
-  inp.onblur=commit;
-  span.replaceWith(inp); inp.focus(); inp.select();
-}
-function selectAlt(key){
-  if(key===activeAltKey) return;
-  const alt=alts.find(a=>a.key===key); if(!alt) return;
-  const latest=alt.versions[0];
-  if(latest){ loadVersion(key, latest.ver); return; }
-  if(dirty && !window.confirm('Switch to Alt '+key+'? Your unsaved edits stay in the editor and can be saved into Alt '+key+' as v1.')) return;
-  activeAltKey=key; activeVerNum=null;
-  updateAltVerChip(); renderOverview();
-  toast('Now editing Alt '+key+' — use "Save as v1" when ready');
-}
-function renderRevisionsPanel(){
-  const stColor=st=> st==='Ready for quotation'?'var(--good)':st==='Draft'?'var(--warn)':'var(--ink-faint)';
-  const pill=c=>`display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:${c};background:color-mix(in srgb,${c} 12%,transparent);border:1px solid color-mix(in srgb,${c} 30%,transparent);white-space:nowrap;flex-shrink:0`;
-  const alt=getActiveAlt(), activeLatest=alt.versions[0]||null;
-  const viewingOld=!!(activeLatest&&activeVerNum&&activeVerNum<activeLatest.ver);
-  const canOverwrite=!!(activeLatest&&activeLatest.status==='Draft'&&!viewingOld);
-  const nextVer=(activeLatest?activeLatest.ver:0)+1, saveVer=canOverwrite?activeLatest.ver:nextVer;
-  const saveBtnLabel=canOverwrite?('Update v'+saveVer):('Save as v'+nextVer);
-  const dirtyColor=dirty?'var(--warn)':'var(--ink-faint)';
-  const workingLabel='Editing Alt '+alt.key+(activeVerNum?' · v'+activeVerNum:' · no saved version yet')+(dirty?' · unsaved edits':'');
-  const workingChip=`display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-num);font-variant-numeric:tabular-nums;white-space:nowrap;color:${dirtyColor};background:color-mix(in srgb,${dirtyColor} 10%,transparent);border:1px solid color-mix(in srgb,${dirtyColor} 30%,transparent)`;
-  const altRows=alts.map(a=>{
-    const latest=a.versions[0]||null;
-    const isActive=a.key===activeAltKey;
-    const badgeStyle=`display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:10.5px;font-weight:800;letter-spacing:.06em;font-family:var(--font-num);font-variant-numeric:tabular-nums;flex-shrink:0;background:${isActive?'var(--accent)':'color-mix(in srgb,var(--ink-faint) 14%,transparent)'};color:${isActive?'var(--on-accent)':'var(--ink-faint)'}`;
-    const rowStyle=`display:flex;flex-direction:column;gap:8px;padding:11px 13px;border-radius:10px;cursor:${isActive?'default':'pointer'};border:1px solid ${isActive?'color-mix(in srgb,var(--accent) 45%,transparent)':'var(--line)'};background:${isActive?'color-mix(in srgb,var(--accent) 6%,transparent)':'transparent'};margin-bottom:8px`;
-    const verChips=a.versions.slice().reverse().map(v=>{
-      const isLoaded=isActive&&activeVerNum===v.ver, isLatest=latest&&v.ver===latest.ver;
-      const chip=`padding:3px 11px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-num);font-variant-numeric:tabular-nums;cursor:pointer;white-space:nowrap;flex-shrink:0;border:1px solid ${isLoaded?'var(--accent)':(isLatest?'color-mix(in srgb,var(--accent) 42%,transparent)':'var(--line)')};background:${isLoaded?'var(--accent)':'transparent'};color:${isLoaded?'var(--on-accent)':(isLatest?'var(--accent)':'var(--ink-faint)')}`;
-      const title='Alt '+a.key+' · v'+v.ver+' · '+v.status+' · '+fmtDate(v.date)+' · '+fmt(v.total)+(v.note?' — '+v.note:'');
-      const dstyle='font-size:12.5px;color:var(--accent);cursor:pointer;font-family:var(--font-num);font-variant-numeric:tabular-nums;border-bottom:1px dashed var(--accent);padding-bottom:1px;flex-shrink:0';
-      return `<span style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0">
-        <button style="${chip}" title="${escAttr(title)}" onclick="event.stopPropagation();loadVersion('${a.key}',${v.ver})">v${v.ver}</button>
-        <span id="vdate-${a.key}-${v.ver}" style="${dstyle}" title="Click to edit this version's date" onclick="event.stopPropagation();editVersionDate('${a.key}',${v.ver})">${esc(fmtDate(v.date)||'—')}</span>
-      </span>`;
-    }).join('');
-    const metaLine=latest?('latest v'+latest.ver+(latest.note?' — '+esc(latest.note):'')):'no versions yet — use "Save as v1"';
-    const readyLabel=latest&&latest.status==='Ready for quotation'?'Back to Draft':'Mark Ready';
-    return `<div style="${rowStyle}" ${isActive?'':`onclick="selectAlt('${a.key}')"`} title="${isActive?'':'Click to switch to this alternative'}">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span style="${badgeStyle}">ALT ${a.key}</span>
-        <span id="altname-${a.key}" style="font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${esc(a.name)}</span>
-        <button class="sb-del sb-edit" onclick="event.stopPropagation();editAltName('${a.key}')" title="Rename this alternative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
-        <span style="flex:1"></span>
-        <span style="${pill(latest?stColor(latest.status):'var(--ink-faint)')}">${latest?esc(latest.status):'Not saved yet'}</span>
-        <span class="mono" style="font-weight:700;font-size:13px;color:var(--accent)">${latest?fmt(latest.total):'—'}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        ${verChips}
-        <span style="font-size:11.5px;color:var(--ink-faint)">${metaLine}</span>
-        <span style="flex:1"></span>
-        ${latest?`<button class="btn btn-xs" onclick="event.stopPropagation();toggleReady('${a.key}')">${readyLabel}</button>`:''}
-        ${alts.length<=1?'':`<button class="btn btn-xs danger" onclick="event.stopPropagation();deleteAlt('${a.key}')" title="Delete this alternative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`}
-      </div>
-    </div>`;
-  }).join('');
-  const oldBanner=viewingOld?`<div style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--warn-bg);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:8px;flex-wrap:wrap;margin-bottom:10px">
-    <span style="font-size:12.5px;color:var(--warn);font-weight:600;flex:1;min-width:200px">Viewing older version Alt ${alt.key} · v${activeVerNum}. Saving will add a new version on top of the latest.</span>
-    <button class="btn btn-xs" onclick="loadVersion('${alt.key}',${activeLatest.ver})">Load latest</button></div>`:'';
-  return `<div class="card" style="margin-bottom:16px">
-    <div class="card-head"><div class="row" style="gap:10px;flex-wrap:wrap;align-items:center">
-        <div class="card-title">Revisions &amp; Alternatives</div>
-        <span style="${workingChip}">${esc(workingLabel)}</span></div>
-      <div class="row" style="gap:8px">
-        <button class="btn btn-sm primary-outline" onclick="openNewAltModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Alternative</button>
-        <button class="btn btn-sm primary" onclick="openCommitModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M20 6 9 17l-5-5"/></svg>${saveBtnLabel}</button>
-      </div>
-    </div>
-    <div class="card-body">
-      <div style="font-size:12px;color:var(--ink-faint);line-height:1.6;margin-bottom:10px"><b style="color:var(--ink)">How it works:</b> build the calculation, then <b style="color:var(--ink)">save it as a version</b> (while a version is still a draft, saving updates it in place; once it's marked Ready, saving creates v2, v3… — the newest is the one you quote). Offering the client a different scheme? Save it as a <b style="color:var(--ink)">new alternative</b> (Alt B) — alternatives sit side by side and the client picks one. Everything travels inside the <b style="color:var(--ink)">.smbq</b> file.</div>
-      ${oldBanner}
-      ${altRows}
-    </div>
-  </div>`;
-}
-// Per-version quotation date (shown in exports). Editable inline in the Revisions panel.
-function editVersionDate(altKey,ver){
-  const span=document.getElementById('vdate-'+altKey+'-'+ver); if(!span) return;
-  const a=alts.find(x=>x.key===altKey); const v=a&&a.versions.find(x=>x.ver===ver); if(!v) return;
-  const inp=document.createElement('input'); inp.type='date'; inp.value=v.date||'';
-  inp.style.cssText='font-size:12.5px;font-family:var(--font-num);width:128px;height:24px;box-sizing:border-box;padding:1px 6px;border:1px solid var(--accent);border-radius:5px;background:#fff;color:var(--ink)';
-  inp.onclick=e=>e.stopPropagation();
-  let done=false;
-  const commit=()=>{ if(done) return; done=true; if(inp.value&&inp.value!==v.date) setVersionDate(altKey,ver,inp.value); else renderOverview(); };
-  inp.onchange=commit; inp.onblur=commit;
-  inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') commit(); if(e.key==='Escape'){ done=true; renderOverview(); } };
-  span.replaceWith(inp); inp.focus();
-}
-function setVersionDate(altKey,ver,val){
-  if(!val) return;
-  const a=alts.find(x=>x.key===altKey); const v=a&&a.versions.find(x=>x.ver===ver); if(!v) return;
-  v.date=val; fileUnsaved=true; autosaveNow(); renderOverview();
-  toast('Alt '+altKey+' · v'+ver+' dated '+fmtDate(val));
-}
+// The Revisions & Alternatives engine lives in the kit: the alts/versions tree,
+// the commit rules, loadVersion, renderRevisionsPanel and the per-version date editor.
+// It owns `alts`, `activeAltKey`, `activeVerNum` and `_commit`, and reaches SM through
+// KIT.hooks snapshot / restoreSnapshot / stats / bufferTotal / repaint / syncMeta.
 
 // ====================================================================
 // SAVE / LOAD
@@ -2418,56 +1694,8 @@ function getState(){
   return{version:3, revisionNumber, project:projectMeta, units, unitCounter,
     alts, activeAltKey, activeVerNum, savedAt:new Date().toISOString()};
 }
-// --- Native "Save As" dialog (showSaveFilePicker, Chrome/Edge) -------------
-// The picker MUST be opened immediately on the user's click (browsers only honor
-// it within the user-activation window), so saving is two-phase:
-//   pickSaveHandle(filename)  → open the dialog FIRST, returns {mode, handle}
-//   writePicked(pick, blob)   → later, write the generated file into the handle
-// mode: 'picker' (dialog OK), 'cancelled' (user closed it), 'fallback' (no API /
-// blocked, e.g. file:// pages — writePicked does a plain download instead).
-async function pickSaveHandle(filename){
-  if(!window.showSaveFilePicker) return {mode:'fallback',filename};
-  const ext=filename.slice(filename.lastIndexOf('.'));
-  const types={
-    '.pdf':[{description:'PDF document',accept:{'application/pdf':['.pdf']}}],
-    '.xlsx':[{description:'Excel workbook',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}],
-    '.smbq':[{description:'SM BOQ project',accept:{'application/json':['.smbq']}}],
-  };
-  try{
-    const handle=await window.showSaveFilePicker({suggestedName:filename,types:types[ext]});
-    return {mode:'picker',handle,filename};
-  }catch(e){
-    if(e&&e.name==='AbortError') return {mode:'cancelled',filename};
-    return {mode:'fallback',filename};   // SecurityError etc. → plain download
-  }
-}
-async function writePicked(pick, blob){
-  if(pick.mode==='cancelled') return false;
-  if(pick.mode==='picker'){
-    const w=await pick.handle.createWritable(); await w.write(blob); await w.close();
-    return true;
-  }
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download=pick.filename;
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
-  return true;
-}
-// Back-compat one-shot helper (dialog + write in one call)
-async function saveBlobAs(blob, filename){
-  return writePicked(await pickSaveHandle(filename), blob);
-}
-async function saveFile(){
-  syncProjectMetaFromDOM();
-  const fname=fileBaseNameDate()+'.smbq';   // whole project (all alts & versions) — no Alt segment
-  const pick=await pickSaveHandle(fname);   // dialog first, while the click is fresh
-  if(pick.mode==='cancelled'){ toast('Save cancelled','warn'); return; }
-  const s=getState();
-  await writePicked(pick, new Blob([JSON.stringify(s,null,2)],{type:'application/json'}));
-  fileUnsaved=false;   // now safely on disk
-  toast('Saved '+fname);
-  try{localStorage.removeItem(AUTOSAVE_KEY);}catch(e){}
-}
+// pickSaveHandle / writePicked / saveBlobAs / saveFile live in the kit; they reach
+// SM through KIT.hooks.getState + fileBaseName.
 // Restore a full saved state (used by loadFile and the autosave recovery).
 function applyLoadedState(st){
   if(st.project){
@@ -2487,65 +1715,8 @@ function applyLoadedState(st){
   renderSidebarUnits();showView('overview');
 }
 
-// Shared by the Load .smbq picker and the drag-and-drop handler below.
-function readSmbqFile(file){
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      applyLoadedState(JSON.parse(e.target.result));
-      // Opening a file supersedes a still-open "Recover unsaved work?" offer — otherwise
-      // the modal stays up over the loaded project and Restore would clobber it.
-      if(_autosaveOfferOpen){ _autosaveOfferOpen=false; _autosaveState=null; closeModal(); }
-      toast('Loaded: '+file.name);
-    }catch(err){toast('Failed to load: '+err.message,'error',5000);}
-  };
-  reader.onerror=()=>toast('Could not read '+file.name,'error',5000);
-  reader.readAsText(file);
-}
-function loadFile(input){
-  const file=input.files[0];
-  if(file) readSmbqFile(file);
-  input.value='';
-}
-
-// ---- Drag & drop a .smbq anywhere on the page ----
-// Only file drags count: an internal row-reorder drag carries no 'Files' type, so the
-// overlay never fires on it. Chrome emits dragenter/dragleave for every child element the
-// pointer crosses, so a depth counter (not a boolean) decides when the overlay goes away.
-let _dragDepth=0, _pendingDrop=null;
-function dragHasFile(e){
-  const t=e.dataTransfer&&e.dataTransfer.types;
-  return !!t && Array.prototype.indexOf.call(t,'Files')!==-1;
-}
-function showDropZone(on){ document.getElementById('dropZone')?.classList.toggle('on',on); }
-window.addEventListener('dragenter', e=>{ if(!dragHasFile(e))return; e.preventDefault(); _dragDepth++; showDropZone(true); });
-window.addEventListener('dragover',  e=>{ if(!dragHasFile(e))return; e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
-window.addEventListener('dragleave', e=>{ if(!dragHasFile(e))return; _dragDepth=Math.max(0,_dragDepth-1); if(!_dragDepth) showDropZone(false); });
-window.addEventListener('drop', e=>{
-  if(!dragHasFile(e))return;
-  e.preventDefault(); _dragDepth=0; showDropZone(false);
-  const files=Array.from(e.dataTransfer.files||[]);
-  if(!files.length) return;
-  if(files.length>1){ toast('Drop one .smbq file at a time','warn',4000); return; }
-  const f=files[0];
-  if(!/\.(smbq|json)$/i.test(f.name)){ toast(`"${f.name}" is not a .smbq file`,'error',5000); return; }
-  // A stray drag shouldn't silently bin unsaved work — confirm first when the file on disk is stale.
-  if(fileUnsaved) confirmDropLoad(f); else readSmbqFile(f);
-});
-function confirmDropLoad(f){
-  _pendingDrop=f;
-  showModal(`<div class="modal-head"><h2>Open dropped file?</h2></div>
-    <div class="modal-body"><p style="font-size:13px;color:var(--ink-soft);margin:0">
-      Opening <strong>${esc(f.name)}</strong> replaces the project currently open, which has
-      changes not yet saved to a <code>.smbq</code> file. Save first if you need to keep them.
-    </p></div>
-    <div class="modal-foot">
-      <button class="btn ghost" onclick="cancelDropLoad()">Cancel</button>
-      <button class="btn primary" onclick="acceptDropLoad()">Open anyway</button>
-    </div>`);
-}
-function acceptDropLoad(){ const f=_pendingDrop; _pendingDrop=null; closeModal(); if(f) readSmbqFile(f); }
-function cancelDropLoad(){ _pendingDrop=null; closeModal(); }
+// readProjectFile / loadFile and the whole drag-and-drop-to-load flow live in the kit;
+// they call KIT.hooks.applyLoadedState and use BRAND.fileExt for the file-type check.
 
 // ====================================================================
 // SWITCH PRICE LIST
@@ -2621,7 +1792,7 @@ function requireProjectFields(){
 // Export filename: project name, date, quotation version, mode — Windows-safe.
 // dateStr defaults to today (used for .smbq saves + working-copy exports).
 function fileBaseNameDate(dateStr){
-  const date=fmtDate(dateStr||new Date().toISOString().slice(0,10));
+  const date=fmtDateFile(dateStr||new Date().toISOString().slice(0,10));   // YYYYMMDD — sorts chronologically
   const name=(projectMeta.name||'BOQ').trim().replace(/\s*[–—]\s*/g,'_').replace(/\s+-\s+/g,'_');
   return (name+'_'+date).replace(/[\\/:*?"<>|]/g,'-');
 }
@@ -3185,39 +2356,14 @@ async function savePDF(incBuf=true, orient='portrait', sets=null){
   }catch(err){ toast('PDF export failed: '+err.message,'error',5000); }
 }
 
-// ====================================================================
-// MODAL
-// ====================================================================
-function showModal(html, cls){
-  const mount=document.getElementById('modal-mount');
-  mount.innerHTML=`<div class="modal-backdrop" onclick="if(event.target===this)closeModal()"><div class="modal${cls?' '+cls:''}">${html}</div></div>`;
-}
-function closeModal(){document.getElementById('modal-mount').innerHTML=''}
 
-// ====================================================================
-// TOAST
-// ====================================================================
-function toast(msg,type='success',dur=2500){
-  const stack=document.getElementById('toast-stack');
-  const t=document.createElement('div'); t.className='toast '+(type||'success');
-  const icons={success:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`,warn:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,error:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`};
-  t.innerHTML=(icons[type]||icons.success);
-  const sp=document.createElement('span'); sp.textContent=msg; t.appendChild(sp);
-  stack.appendChild(t); setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(10px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},dur);
-}
+// showModal / closeModal / toast live in the kit.
 
 // ====================================================================
 // HELPERS
 // ====================================================================
-function el(id){return document.getElementById(id)}
-function fmt(n){return'Rp '+Math.round(n).toLocaleString('id-ID')}
-// Dates are stored/edited as ISO (YYYY-MM-DD, what <input type=date> needs) but displayed DD-MM-YYYY.
-function fmtDate(iso){ if(!iso) return ''; const p=String(iso).split('-'); return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:String(iso); }
-// Open the user manual — shipped next to the tool as SM_BOQ_Manual_EN.html (has an EN/ID switcher).
-function openManual(){ window.open('SM_BOQ_Manual_EN.html','_blank','noopener'); }
-function fmtShort(n){if(n>=1e9)return'Rp '+(n/1e9).toFixed(1)+'B';if(n>=1e6)return'Rp '+(n/1e6).toFixed(1)+'M';return'Rp '+Math.round(n).toLocaleString('id-ID')}
-function fmtNum(n){return Math.round(n).toLocaleString('id-ID')}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+// el / fmt / fmtNum / fmtShort / fmtDate / esc / escAttr / openManual live in the kit
+// (openManual opens KIT.hooks.manualUrl, registered in INIT).
 
 // Qty may be 0: the row stays in the BOQ (placeholder / to-be-confirmed) but contributes
 // nothing to any total. A plain `parseFloat(v)||fallback` would silently turn 0 into the
@@ -3225,20 +2371,7 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function normQty(v,fallback){const n=Math.round(parseFloat(v)*100)/100;return isFinite(n)&&n>=0?n:fallback}
 function warnZeroQty(){toast('Qty is 0 — the item stays in the BOQ but adds nothing to the total','warn',5000)}
 
-// Custom qty stepper: paired up/down buttons injected next to a qty <input>, wrapped in .qtybox
-const QSTEPS='<span class="qsteps">'
-  +'<button type="button" tabindex="-1" onclick="stepQty(this,1)" aria-label="Increase quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6L6 2L10 6"/></svg></button>'
-  +'<button type="button" tabindex="-1" onclick="stepQty(this,-1)" aria-label="Decrease quantity"><svg viewBox="0 0 12 8" width="11" height="7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2L6 6L10 2"/></svg></button>'
-  +'</span>';
-function stepQty(btn,d){
-  const inp=btn.closest('.qtybox')?.querySelector('input'); if(!inp) return;
-  let v=parseFloat(inp.value); if(!isFinite(v)) v=0;
-  v=Math.round((v+d)*100)/100;   // step by whole units but preserve 2-decimal fractions (e.g. 1.23 → 2.23)
-  const min=parseFloat(inp.min); if(isFinite(min)&&v<min) v=min; else if(v<0) v=0;
-  inp.value=v;
-  inp.dispatchEvent(new Event('change',{bubbles:true}));
-}
-function escAttr(s){return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+// The qty stepper (QSTEPS markup + stepQty) lives in the kit.
 
 </script>
 </body>

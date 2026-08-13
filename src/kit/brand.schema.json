@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BOQ tool brand config",
+  "type": "object",
+  "required": ["brandKey", "brandName", "toolName", "fileExt", "docPrefix", "palette"],
+  "additionalProperties": false,
+  "properties": {
+    "brandKey": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,4}$",
+      "description": "Short brand tag; also the ERP envelope brand field. SM | CL | BT"
+    },
+    "brandName": { "type": "string", "description": "Stella Mobili" },
+    "toolName":  { "type": "string", "description": "BOQ Tool — used in the topbar + title" },
+    "fileExt":   { "type": "string", "pattern": "^\\.[a-z]{3,5}$", "description": ".smbq" },
+    "docPrefix": { "type": "string", "description": "BOQ-SM → BOQ-SM-YY-###-v{n}" },
+    "unitNoun": {
+      "type": "string",
+      "description": "What this brand calls a section of a project — 'unit' (SM, a room) or 'area' (CL/BT). Used in the commit modal's counts line. Default: unit."
+    },
+    "autosaveKey": {
+      "type": "string",
+      "description": "localStorage key for the autosave. Only set it to keep an existing key alive across the kit migration; otherwise the kit uses boq_autosave_<brandKey>."
+    },
+    "logo": {
+      "type": "object",
+      "description": "Paths relative to the tool's src/ directory",
+      "properties": {
+        "svg": { "type": "string" },
+        "png": { "type": "string" }
+      }
+    },
+    "palette": {
+      "type": "object",
+      "required": ["bg", "panel", "panel2", "ink", "line", "accent", "onAccent", "sidebar"],
+      "additionalProperties": false,
+      "properties": {
+        "bg":         { "$ref": "#/definitions/hex" },
+        "panel":      { "$ref": "#/definitions/hex" },
+        "panel2":     { "$ref": "#/definitions/hex" },
+        "surface":    { "$ref": "#/definitions/hex" },
+        "ink":        { "$ref": "#/definitions/hex" },
+        "inkSoft":    { "$ref": "#/definitions/hex" },
+        "inkFaint":   { "$ref": "#/definitions/hex" },
+        "ink2":       { "$ref": "#/definitions/hex" },
+        "line":       { "$ref": "#/definitions/hex" },
+        "lineSoft":   { "$ref": "#/definitions/hex" },
+        "accent":     { "$ref": "#/definitions/hex", "description": "Buttons/links. Must reach 4.5:1 against onAccent." },
+        "accentDeep": { "$ref": "#/definitions/hex", "description": "Hover/press" },
+        "onAccent":   { "$ref": "#/definitions/hex" },
+        "brand":      { "$ref": "#/definitions/hex", "description": "Logo colour — brand mark only, not required to pass contrast" },
+        "brass":      { "$ref": "#/definitions/hex", "description": "Secondary mark: rev pills, Excel button" },
+        "brassBg":    { "$ref": "#/definitions/hex" },
+        "sidebar":    { "$ref": "#/definitions/hex" },
+        "sidebarInk": { "$ref": "#/definitions/hex" },
+        "shadowRgb":  { "type": "string", "pattern": "^\\d{1,3},\\d{1,3},\\d{1,3}$",
+                        "description": "Shadow tint as 'r,g,b' — kit.css builds all three shadows from it" },
+        "scale": {
+          "type": "object",
+          "description": "Brand ramp 50..900. Emitted as --c-<step>.",
+          "additionalProperties": { "$ref": "#/definitions/hex" }
+        },
+        "scaleAlias": {
+          "type": "string",
+          "pattern": "^[a-z]{1,3}$",
+          "description": "Legacy per-tool scale prefix also emitted (SM 'pu', CL 'b', BT 'g')"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "hex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+  }
+}

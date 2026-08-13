@@ -19,6 +19,8 @@ TEMPLATE = f"{ROOT}/src/StellaMobili_BOM_Tool_Ref.html"
 PL_DIR   = f"{ROOT}/price-data/price_lists"
 OUT_HTML = f"{ROOT}/StellaMobili_BOM_Tool.html"
 MARKER   = "/*__PRICE_DATA_INJECTION__*/"
+KIT_DIR  = f"{ROOT}/src/kit"
+BRAND_CFG = f"{ROOT}/src/brand.config.json"
 
 # ── 1. Load ALL versioned price JSONs ─────────────────────────────────────
 def load_pl(tp, ver):
@@ -138,6 +140,64 @@ assets_injection = (
 )
 output = output.replace(ASSETS_MARKER, assets_injection)
 print(f"Brand assets inlined: logos {sum(len(v) for v in logos.values())/1024:.0f} KB + fonts {sum(len(v) for v in fonts_vfs.values())/1024:.0f} KB (base64)")
+
+# ── 3e. Inline the shared chrome (boq-kit) + this brand's config ───────────
+# src/kit/ is a vendored copy of the boq-kit repo (refresh: python src/sync_kit.py).
+# The kit CSS goes in BEFORE the template's own <style> so a brand rule can still
+# override a kit rule. See docs/BOQ-SHARED-CHROME.md §4.
+KIT_MARKER = "<!--__KIT_INJECTION__-->"
+if output.count(KIT_MARKER) != 1:
+    raise RuntimeError(
+        f"Expected exactly 1 kit marker {KIT_MARKER!r} in {TEMPLATE}, "
+        f"found {output.count(KIT_MARKER)}"
+    )
+if not os.path.isdir(KIT_DIR):
+    raise FileNotFoundError(f"No vendored kit at {KIT_DIR} — run: python src/sync_kit.py")
+
+with open(BRAND_CFG, encoding="utf-8") as f:
+    brand = json.load(f)
+kit_version = txt(f"{KIT_DIR}/KIT_VERSION").strip()
+
+# palette key -> CSS custom property. Extra aliases keep legacy rules working.
+_TOKEN_ALIASES = {"brass": ["--brass", "--gold"], "brassBg": ["--brass-bg", "--gold-bg"]}
+def _css_vars(pal):
+    out = []
+    for k, v in pal.items():
+        if k in ("scale", "scaleAlias"):
+            continue
+        names = _TOKEN_ALIASES.get(k, ["--" + re.sub(r'(?<!^)(?=[A-Z])', '-', k).lower()])
+        out += [f"{n}:{v}" for n in names]
+    scale, alias = pal.get("scale", {}), pal.get("scaleAlias")
+    for step, v in scale.items():
+        out.append(f"--c-{step}:{v}")
+        if alias:
+            out.append(f"--{alias}-{step}:{v}")
+    return out
+
+brand_css = ":root{" + ";".join(_css_vars(brand["palette"])) + "}"
+# Self-hosted UI font — the tool must not depend on the Google Fonts CDN at runtime.
+screen_font = (
+    "@font-face{font-family:'Hanken Grotesk';font-style:normal;"
+    "font-weight:400 800;font-display:swap;"
+    "src:url(data:font/woff2;base64," + b64(f"{KIT_DIR}/fonts/HankenGrotesk-Latin.woff2")
+    + ") format('woff2');}"
+)
+kit_injection = (
+    "<style>\n" + screen_font + "\n"
+    + "/* ===== brand tokens (src/brand.config.json) ===== */\n" + brand_css + "\n"
+    + txt(f"{KIT_DIR}/kit.css") + "\n</style>\n"
+    + "<script>const KIT_VERSION=" + json.dumps(kit_version) + ";"
+    + "const BRAND=" + json.dumps({k: brand[k] for k in
+        ("brandKey", "brandName", "toolName", "fileExt", "docPrefix", "autosaveKey",
+         "unitNoun")
+        if k in brand}) + ";</script>\n"
+    + "<script>\n" + txt(f"{KIT_DIR}/kit.js") + "\n</script>\n"
+    + "<script>\n" + txt(f"{KIT_DIR}/kit-export.js") + "\n</script>\n"
+    + "<script>\n" + txt(f"{KIT_DIR}/bridge.js") + "\n</script>"
+)
+output = output.replace(KIT_MARKER, kit_injection)
+print(f"Kit {kit_version} inlined: {len(kit_injection)/1024:.0f} KB "
+      f"({brand['brandKey']} · {brand['brandName']})")
 
 with open(OUT_HTML, "w", encoding="utf-8") as f:
     f.write(output)
