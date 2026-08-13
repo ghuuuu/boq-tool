@@ -27,6 +27,9 @@ const KIT = {
     stateSummary:     () => '',            // (state) "1 unit, 2 items"
     onSidebarToggle:  null,                // called after collapse/expand
     manualUrl:        null,                // Help button target
+    // --- embedded in a host (bridge.js) ------------------------------------
+    lockedFields:     [],                  // element ids the host owns, e.g. ['projName']
+    hideWhenEmbedded: null,                // selector for UI the host replaces (exports)
     // --- Revisions & Alternatives ------------------------------------------
     snapshot:         () => ({}),          // → deep-copyable image of the working calc
     restoreSnapshot:  () => {},            // (snap) put it back + repaint the tool
@@ -702,4 +705,7 @@ KIT.start = function(){
   });
   updateSaveStatus();
   offerAutosaveRestore();
+  // bridge.js sets this when the tool is inside a host; it needs document.body
+  // and the hooks registered above, so it cannot run at parse time.
+  if (typeof KIT.onStart === 'function') { try { KIT.onStart(); } catch(e){} }
 };
