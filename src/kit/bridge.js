@@ -91,8 +91,8 @@ const EMBEDDED = (function(){
      those fields are read-only here. The views re-render constantly, so re-apply
      whenever the DOM changes rather than once at startup. */
   function lockProjectFields(){
-    (KIT.hooks.lockedFields || []).forEach(function(id){
-      var el = document.getElementById(id);
+    (KIT.hooks.lockedFields || []).forEach(function(sel){
+      var el = document.querySelector(sel);   // a selector, so a tool can point at whatever its markup uses
       if (el && !el.readOnly) {
         el.readOnly = true;
         el.style.opacity = '0.65';
