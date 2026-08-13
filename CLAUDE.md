@@ -35,7 +35,14 @@ price-data/price_lists/            # Price data, one JSON per section per versio
     wardrobe_v26.06.02.json         wardrobe_<ver>.json
     accessories_v26.06.02.json      accessories_<ver>.json
     index.json                      { latest, versions[] } registry
-src/build_tool.py           # Build: inject price_lists + vendored libs + brand assets into the template
+src/build_tool.py           # Build: inject price_lists + vendored libs + brand assets + the kit into the template
+src/kit/                    # VENDORED shared chrome from the boq-kit repo — never hand-edit.
+                            #   kit.css (tokens + topbar/sidebar/buttons/cards/tables/modals/toasts),
+                            #   kit.js / kit-export.js / bridge.js, fonts/HankenGrotesk-Latin.woff2.
+                            #   Refresh: python src/sync_kit.py   (see docs/BOQ-SHARED-CHROME.md)
+src/brand.config.json       # Stella Mobili's brand values (palette, logo, file ext, doc prefix).
+                            #   The ONLY per-brand styling file — the build turns it into :root tokens.
+src/sync_kit.py             # Pull the latest boq-kit into src/kit/ (refuses to clobber local edits)
 src/vendor/exceljs.min.js   # ExcelJS 4.4.0 (inlined into the build; keeps Excel export offline)
 src/vendor/pdfmake.min.js + vfs_fonts.js   # pdfmake 0.2.10 + Roboto (offline PDF download)
 src/vendor/fonts/*.ttf      # Libre Franklin 400/600 + Libre Caslon Text 400/700 (PDF export fonts, OFL)
@@ -63,8 +70,21 @@ Then writes `StellaMobili_BOM_Tool.html`, also replacing `/*__EXCELJS_INJECTION_
 build time**, so the built file needs no server or internet. (The template alone won't run standalone — the marker is a
 placeholder, not real data. Always run the tool from the built output.)
 
+A fifth marker, `<!--__KIT_INJECTION__-->` (an HTML comment, because it injects both CSS
+and JS), is replaced with the **shared chrome**: the self-hosted Hanken Grotesk `@font-face`,
+a `:root` block generated from `src/brand.config.json`, `src/kit/kit.css`, then
+`const KIT_VERSION` + `const BRAND` and `kit.js` / `kit-export.js` / `bridge.js`. It sits
+**before** the template's own `<style>`, so a brand rule can still override a kit rule.
+The brand palette is emitted under generic names (`--c-50…900`) **plus** SM's legacy alias
+(`--pu-50…900`, via `"scaleAlias": "pu"`), which is why existing SM rules still work.
+
 ### To make changes
 - **UI / logic** → edit `src/StellaMobili_BOM_Tool_Ref.html`, then `python src/build_tool.py`.
+- **Shared chrome** (topbar, sidebar, buttons, cards, tables, modals, toasts) → this lives in
+  the **`boq-kit` repo** (`C:/Projects/boq-kit`), not here. Edit it there, bump its
+  `KIT_VERSION`, then `python src/sync_kit.py && python src/build_tool.py`. A change there
+  is a change to **every** brand's BOQ tool — read `docs/BOQ-SHARED-CHROME.md` first.
+- **Brand colours** → `src/brand.config.json` only. Never re-declare kit tokens in the template.
 - **Prices** → edit/add `price-data/price_lists/*_v*.json` (and `index.json`), then rebuild.
 - Adding a new version: drop `kitchen_vX.json` / `wardrobe_vX.json` / `accessories_vX.json`
   into `price_lists/`; the build auto-detects it and the newest becomes `PRICE_LIST_LATEST`.
@@ -81,10 +101,11 @@ The entire app is **one HTML file**. Structure inside the file:
 
 ```
 <head>
-  Google Fonts (Newsreader + Hanken Grotesk + IBM Plex Mono)
   <script> ExcelJS (inlined at build time — offline xlsx export)
   <script> pdfmake + Roboto fonts (inlined at build time — offline direct PDF download)
-  <style> — all CSS
+  <style> Hanken Grotesk @font-face (self-hosted woff2) + brand :root + kit.css   ← kit
+  <script> KIT_VERSION + BRAND, kit.js, kit-export.js, bridge.js                  ← kit
+  <style> — SM-specific CSS only (add bar, handle buttons, groups, buffer, columns)
 </head>
 <body>
   Topbar (brand, breadcrumb, save-status chip, tool-version chip, pricelist chip)
@@ -106,7 +127,8 @@ The entire app is **one HTML file**. Structure inside the file:
 
 **No framework. No bundler. Vanilla JS + CSS custom properties.**
 
-When editing: the CSS variables section at the top of `<style>` controls all colors.
+When editing: colours live in `src/brand.config.json`; the shared chrome CSS lives in the
+kit (`boq-kit/kit.css`); the template's own `<style>` now holds **only SM-specific** rules.
 The JS is structured as clearly labelled sections with `// ===` dividers.
 
 ---
@@ -128,6 +150,13 @@ library, same layout patterns. The only difference is the color palette.
 > print design — `docs/design/boq-format/BOQ-FORMAT-SPEC.md` (ink `#1F1812`, brass
 > `#8C6830`, hairline `#E6E1D8`, Libre Caslon + Libre Franklin, real logos). The
 > on-screen tokens below apply to the UI only. No legacy purple remains anywhere.
+
+> **Where the tokens live now (2026-08-13):** these values are no longer typed into the
+> template — they come from `src/brand.config.json`, which the build turns into a `:root`
+> block. The scale is emitted twice: generically as `--c-50…900` (what the shared kit CSS
+> uses) and as `--pu-50…900` (SM's legacy alias, so old rules keep working). Semantic
+> states (`--good/--warn/--danger/--buffer`), shadows, radii and motion are **suite-wide
+> constants defined in `boq-kit/kit.css`** — identical in every brand's tool.
 
 ```css
 /* Semantic tokens (design language) */
@@ -154,9 +183,12 @@ The only design element **not** ported is **dark mode** (`--font-display` Space 
 accent `#E0A64B`) — the user opted out of a theme toggle.
 
 ### Typography (synced from Claude Design, 2026-07)
-- Body/UI: `Hanken Grotesk` (Google Fonts) — was `Manrope`
-- Numbers/code: `IBM Plex Mono` — was `JetBrains Mono`
-- Display (available, `--font-display`): `Newsreader` — reserved for headings/hero
+- Body/UI: `Hanken Grotesk` — **self-hosted** (`boq-kit/fonts/HankenGrotesk-Latin.woff2`,
+  variable 400–800, inlined as base64 at build). The Google Fonts `<link>` was removed on
+  2026-08-13, so the tool no longer touches the network at runtime for anything.
+- Numbers/prices: `--font-num` = Hanken Grotesk with tabular figures (defined in the kit)
+- `IBM Plex Mono` and `Newsreader` were listed here but **never actually used** by any rule;
+  they were dropped with the CDN link. Nothing on screen changed.
 - Note: this no longer matches Spectral BOM's typography (that was the old shared system)
 
 ### Layout
@@ -372,6 +404,17 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 
 ## Key Functions Reference
 
+> **Where a function lives (since 2026-08-13).** Rows marked **KIT** are defined in
+> `src/kit/kit.js` (the shared chrome, master copy in the `boq-kit` repo) — editing them
+> changes **every** brand's BOQ tool, and they must not learn anything about kitchens,
+> finishes or price lists. They reach SM's domain only through `KIT.hooks`, registered in
+> INIT: `getState`, `applyLoadedState`, `fileBaseName`, `stateHasContent`, `stateSummary`,
+> `onSidebarToggle`, `manualUrl`, and — for the Revisions & Alternatives engine —
+> `snapshot`, `restoreSnapshot`, `stats`, `bufferTotal`, `repaint`, `syncMeta`.
+> The kit also **owns** `dirty`, `fileUnsaved`, `alts`, `activeAltKey`, `activeVerNum`
+> and `_commit`; brand code still assigns them freely (and the MulyaOne bridge still
+> finds them by name). Everything unmarked is SM's own.
+
 | Function | What it does |
 |---|---|
 | `showView(name, unitId)` | Switch main view, update breadcrumb + sidebar |
@@ -390,37 +433,36 @@ compat, no longer incremented) — the alt/version label supersedes it in the UI
 | `validateGola(item, f, v)` | Returns `{ok, reason}` — blocks invalid gola |
 | `setKitVariant(v)` | Handle toggle: sets the hidden `#kit-variant` value + active button styling (Standard/Gola). All pricing code still reads `#kit-variant.value` |
 | `refreshKitHandle()` / `kitGolaAvailable()` / `kitStandardAvailable()` | Show/hide the Standard & Gola buttons per category+finish — a handle button is hidden when no item has items for it; the active variant auto-switches to whichever one is available. Called from `onKitFinishChange` |
-| `markDirty()` / `updateDirtyIndicator()` | Sets the `dirty` flag on any mutation + shows the topbar "Unsaved edits" pulse. Cleared by `confirmCommit` / `loadVersion` / `loadFile` |
-| `updateSaveStatus()` | Topbar save-status chip: Unsaved edits → Saving… → Autosaved HH:MM → Saved (updateDirtyIndicator/updateAltVerChip are legacy aliases) |
-| `renderRevisionsPanel()` | Returns HTML for the Revisions & Alternatives card (injected into `renderOverview`) |
-| `openCommitModal()` / `openNewAltModal()` / `renderCommitModal()` | Build/show the Save-version / Save-as-alternative modal (`_commit` holds transient mode/ready) |
-| `confirmCommit()` | Commits the working calc into `alts[]` (draft-in-place vs new version vs new alternative) |
-| `loadVersion(altKey, ver)` | Restores a version's `snapshot` into the live state |
-| `toggleReady(altKey)` / `selectAlt(key)` / `renameAlt(key,val)` / `deleteAlt(key)` | Alternatives management |
+| **KIT** `markDirty()` / `updateDirtyIndicator()` | Sets the `dirty` flag on any mutation + shows the topbar "Unsaved edits" pulse. Cleared by `confirmCommit` / `loadVersion` / `loadFile` |
+| **KIT** `updateSaveStatus()` | Topbar save-status chip: Unsaved edits → Saving… → Autosaved HH:MM → Saved (updateDirtyIndicator/updateAltVerChip are legacy aliases) |
+| **KIT** `renderRevisionsPanel()` | Returns HTML for the Revisions & Alternatives card (injected into `renderOverview`) |
+| **KIT** `openCommitModal()` / `openNewAltModal()` / `renderCommitModal()` | Build/show the Save-version / Save-as-alternative modal (`_commit` holds transient mode/ready) |
+| **KIT** `confirmCommit()` | Commits the working calc into `alts[]` (draft-in-place vs new version vs new alternative) |
+| **KIT** `loadVersion(altKey, ver)` | Restores a version's `snapshot` into the live state |
+| **KIT** `toggleReady(altKey)` / `selectAlt(key)` / `renameAlt(key,val)` / `deleteAlt(key)` | Alternatives management |
 | `addRow(sec)` | Validate + push row to unit.items[sec] |
 | `refreshTable(sec)` | Rebuild ONLY the items table (`#tab-table`), leaving the Add Bar intact — used by all row mutations so the PIC's category/finish/handle selections stay put. Full `renderTabContent` is only for tab-switch/unit-view init |
 | `toggleRowBuffer(sec,id)` | Flip a row's `buffer` flag (insurance stock — see State Model) |
 | `editFinish(cell, sec, id)` | In-place finish editor (replaces cell with <select>) |
 | `showCopyToUnit(sec)` | Show unit picker modal for copying selected rows |
 | `copyToUnit(sec, targetId)` | Copy selected rows from current unit to target unit |
-| `saveFile()` | Save .smbq (named via `fileBaseNameDate()`); clears the localStorage autosave |
-| `pickSaveHandle(fname)` / `writePicked(pick,blob)` | Two-phase native Save As (showSaveFilePicker): dialog opens FIRST on the click, file written after generation. Used by saveFile/exportExcel/savePDF. **`file://` pages have no picker API** (Chrome limitation) → silent fallback to instant download; the manuals point users to Chrome's "Ask where to save each file" setting |
-| `autosaveNow()` / `applyLoadedState(st)` | Unsaved-work protection: state autosaved to `localStorage.smboq_autosave` every 30s while dirty + on beforeunload (which also warns); on startup a modal offers restore/discard. `applyLoadedState` is shared by loadFile and the restore |
-| `fileBaseNameDate(dateStr)` / `exportFileBase(incBuf,sets)` | Filename builder: `{Name}_{date}` + optional `_Alt_A-B-C` (only when SOME alternatives are exported; omitted when all are) + `_BOQ(Buffer)`/`_BOQ`. `dateStr` defaults to today (used for `.smbq` saves + working-copy exports); a single-set export passes that version's date. Dashes in name collapse to `_` |
-| `setDate(set)` / `editVersionDate(k,v)` / `setVersionDate(k,v,val)` | **Per-version quotation date.** Each committed version stores its own `date` (defaults to today at commit); editable inline in the Revisions & Alternatives panel (click the date next to a `v#` chip). Exports (PDF `pushLetterhead`/`metaCells`, Excel `addBrandHeader`) print `setDate(set)` — the version's date, or today for the working copy. There is no longer a project-level date field |
+| **KIT** `saveFile()` | Save .smbq (named via `fileBaseNameDate()`); clears the localStorage autosave |
+| **KIT** `pickSaveHandle(fname)` / `writePicked(pick,blob)` | Two-phase native Save As (showSaveFilePicker): dialog opens FIRST on the click, file written after generation. Used by saveFile/exportExcel/savePDF. **`file://` pages have no picker API** (Chrome limitation) → silent fallback to instant download; the manuals point users to Chrome's "Ask where to save each file" setting |
+| **KIT** `autosaveNow()` · `applyLoadedState(st)` (SM-side) | Unsaved-work protection: state autosaved to `localStorage[BRAND.autosaveKey]` (SM keeps the original `smboq_autosave`) every 30s while dirty + on beforeunload (which also warns); on startup a modal offers restore/discard, described via the `stateHasContent`/`stateSummary` hooks. `applyLoadedState` stays SM-side (it knows units/groups/alts) and is shared by loadFile and the restore |
+| `fileBaseNameDate(dateStr)` / `exportFileBase(incBuf,sets)` | Filename builder: `{Name}_{date}` where date is `fmtDateFile` = **YYYYMMDD** (`20261201`), so a folder of exports sorts chronologically by name. Documents themselves print `01 Dec 2026` + optional `_Alt_A-B-C` (only when SOME alternatives are exported; omitted when all are) + `_BOQ(Buffer)`/`_BOQ`. `dateStr` defaults to today (used for `.smbq` saves + working-copy exports); a single-set export passes that version's date. Dashes in name collapse to `_` |
+| `setDate(set)` (SM) / **KIT** `editVersionDate(k,v)` / `setVersionDate(k,v,val)` | **Per-version quotation date.** Each committed version stores its own `date` (defaults to today at commit); editable inline in the Revisions & Alternatives panel (click the date next to a `v#` chip). Exports (PDF `pushLetterhead`/`metaCells`, Excel `addBrandHeader`) print `setDate(set)` — the version's date, or today for the working copy. There is no longer a project-level date field |
 | `setUnits(altKey,ver)` / `setLabel(s)` / `defaultSets()` / `setsHaveBuffer(sets)` | Export **sets**: `{altKey, ver}` where ver is a saved version number or `'working'` (live calc, active alt only). setUnits resolves the units array (snapshot vs live) |
 | `openExportModal(kind)` / `getExportSets()` / `confirmExport(kind,incBuf)` | Export picker: per-alternative checkbox + version dropdown (default: active alt, working copy when dirty else latest version), Select all, A4 orientation (PDF), buffer chooser. Multi-set export = ONE document: PDF repeats the full letterhead (logos + project meta, with THAT alternative's own version in the Version cell) atop each set — each on a new page — followed by an "Alternative K — name / ALT K vN" title bar + per-set grand totals, so every alternative reads as a standalone BOQ; Excel gets `Summary K` + `K · Unit` sheets per set |
-| `loadFile(input)` | Parse .smbq, restore full state |
+| **KIT** `loadFile(input)` | Parse .smbq, restore full state |
 | `openExportModal(kind)` | Buffer-mode chooser (with buffer=quotation / without=SO); skipped when no buffer items |
 | `exportExcel(incBuf)` | ExcelJS (inlined at build) — Summary + per-unit sheets styled to BOQ-FORMAT-SPEC (dual-logo header rows 1–5, ink/brass/hairline); NB `addBrandHeader` adds logos LAST (an ExcelJS image anchor counts as a row and would shift addRow) |
 | `savePDF(incBuf)` / `buildPdfDoc(incBuf)` | pdfmake (inlined at build) — direct .pdf download, A4 portrait per `docs/design/boq-format/BOQ-FORMAT-SPEC.md`: dual-logo letterhead, Libre Caslon/Franklin, meta band, per-unit sections, buffer rows tinted; no print dialog |
-| `showModal(html)` | Mount modal HTML into #modal-mount |
-| `closeModal()` | Clear #modal-mount |
-| `toast(msg, type, dur)` | Animated toast notification |
-| `fmt(n)` | `"Rp 1.234.567"` — Indonesian locale |
-| `fmtShort(n)` | `"Rp 1.2M"` — for stat cards |
-| `esc(s)` | HTML-escape for innerHTML |
-| `escAttr(s)` | Attribute-safe escape |
+| **KIT** `showModal(html)` | Mount modal HTML into #modal-mount |
+| **KIT** `closeModal()` | Clear #modal-mount |
+| **KIT** `toast(msg, type, dur)` | Animated toast notification |
+| **KIT** `fmt(n)` | `"Rp 1.234.567"` — Indonesian locale. **The only money formatter.** BOQ figures are never abbreviated or rounded for display; there is deliberately no `fmtShort` |
+| **KIT** `esc(s)` | HTML-escape for innerHTML |
+| **KIT** `escAttr(s)` | Attribute-safe escape |
 
 ---
 

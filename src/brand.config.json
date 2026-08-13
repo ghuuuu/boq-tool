@@ -1,0 +1,47 @@
+{
+  "brandKey": "SM",
+  "brandName": "Stella Mobili",
+  "toolName": "BOQ Tool",
+  "fileExt": ".smbq",
+  "docPrefix": "BOQ-SM",
+  "autosaveKey": "smboq_autosave",
+  "logo": {
+    "svg": "assets/stella-mobili-logo.svg",
+    "png": "assets/stella-mobili-logo.png"
+  },
+  "palette": {
+    "bg": "#F1ECE1",
+    "panel": "#FBF9F4",
+    "panel2": "#FFFFFF",
+    "surface": "#FFFFFF",
+    "ink": "#26221B",
+    "inkSoft": "#4A4438",
+    "inkFaint": "#7A7264",
+    "ink2": "#7A7264",
+    "line": "#E4DCCC",
+    "lineSoft": "#EFE9DC",
+    "accent": "#8A5A3B",
+    "accentDeep": "#79492F",
+    "onAccent": "#FFFFFF",
+    "brand": "#8A5A3B",
+    "brass": "#A6803E",
+    "brassBg": "#F7F1E4",
+    "sidebar": "#26221B",
+    "sidebarInk": "#C7BCA6",
+    "shadowRgb": "50,40,24",
+    "scale": {
+      "50": "#F1E9DB",
+      "75": "#ECE2CF",
+      "100": "#E4DCCC",
+      "200": "#D8C7A6",
+      "300": "#C2A377",
+      "400": "#A6803E",
+      "500": "#8A5A3B",
+      "600": "#79492F",
+      "700": "#5E3A24",
+      "800": "#3E2718",
+      "900": "#26221B"
+    },
+    "scaleAlias": "pu"
+  }
+}

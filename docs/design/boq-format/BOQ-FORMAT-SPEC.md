@@ -34,6 +34,8 @@ Note: the top-left logo is per-brand (7 brands); MULYA always sits top-right.
 
 Portrait: its own band under the header rule, 6 columns
 (PROJECT | CLIENT | PIC | DATE | VERSION | PRICE LIST), hairline rule below.
+DATE prints **DD Mon YYYY** (`02 Jun 2026`) — never a purely numeric date, which is
+read day-first in some markets and month-first in others.
 Landscape: same 6 cells sit inline centered inside the header band (between the logos).
 - Label: 7.5px/5.6pt, uppercase, brass, semibold, characterSpacing 0.9pt.
 - Value: 11px/8.25pt, ink, medium, 2px/1.5pt above-gap.
