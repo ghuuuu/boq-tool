@@ -505,7 +505,7 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--c-500)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
 </style>
-<script>const KIT_VERSION="1.8.1";const BRAND={"brandKey": "SM", "brandName": "Stella Mobili", "toolName": "BOQ Tool", "fileExt": ".smbq", "docPrefix": "BOQ-SM", "autosaveKey": "smboq_autosave"};</script>
+<script>const KIT_VERSION="1.9.1";const BRAND={"brandKey": "SM", "brandName": "Stella Mobili", "toolName": "BOQ Tool", "fileExt": ".smbq", "docPrefix": "BOQ-SM", "autosaveKey": "smboq_autosave"};</script>
 <script>
 /* ============================================================
    boq-kit · kit.js — shared chrome behaviour
@@ -537,7 +537,7 @@ const KIT = {
     onSidebarToggle:  null,                // called after collapse/expand
     manualUrl:        null,                // Help button target
     // --- embedded in a host (bridge.js) ------------------------------------
-    lockedFields:     [],                  // element ids the host owns, e.g. ['projName']
+    lockedFields:     [],                  // CSS selectors the host owns, e.g. ['#projName']
     hideWhenEmbedded: null,                // selector for UI the host replaces (exports)
     // --- Revisions & Alternatives ------------------------------------------
     snapshot:         () => ({}),          // → deep-copyable image of the working calc
@@ -1327,8 +1327,8 @@ const EMBEDDED = (function(){
      those fields are read-only here. The views re-render constantly, so re-apply
      whenever the DOM changes rather than once at startup. */
   function lockProjectFields(){
-    (KIT.hooks.lockedFields || []).forEach(function(id){
-      var el = document.getElementById(id);
+    (KIT.hooks.lockedFields || []).forEach(function(sel){
+      var el = document.querySelector(sel);   // a selector, so a tool can point at whatever its markup uses
       if (el && !el.readOnly) {
         el.readOnly = true;
         el.style.opacity = '0.65';
@@ -1667,7 +1667,7 @@ KIT.register({
   manualUrl: 'SM_BOQ_Manual_EN.html',
   // When embedded in MulyaOne: the project record owns these fields, and the host
   // exports server-side, so the tool's own export buttons would dead-end.
-  lockedFields: ['projName','projClient','projPIC'],
+  lockedFields: ['#projName','#projClient','#projPIC'],
   hideWhenEmbedded: 'button[onclick*="openExportModal"]',
   // --- Revisions & Alternatives: what a snapshot is, and what a version reports ---
   snapshot: () => ({units, unitCounter, priceListVersion:projectMeta.priceListVersion}),

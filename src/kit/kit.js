@@ -28,7 +28,7 @@ const KIT = {
     onSidebarToggle:  null,                // called after collapse/expand
     manualUrl:        null,                // Help button target
     // --- embedded in a host (bridge.js) ------------------------------------
-    lockedFields:     [],                  // element ids the host owns, e.g. ['projName']
+    lockedFields:     [],                  // CSS selectors the host owns, e.g. ['#projName']
     hideWhenEmbedded: null,                // selector for UI the host replaces (exports)
     // --- Revisions & Alternatives ------------------------------------------
     snapshot:         () => ({}),          // → deep-copyable image of the working calc

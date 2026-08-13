@@ -287,7 +287,7 @@ KIT.register({
   manualUrl: 'SM_BOQ_Manual_EN.html',
   // When embedded in MulyaOne: the project record owns these fields, and the host
   // exports server-side, so the tool's own export buttons would dead-end.
-  lockedFields: ['projName','projClient','projPIC'],
+  lockedFields: ['#projName','#projClient','#projPIC'],
   hideWhenEmbedded: 'button[onclick*="openExportModal"]',
   // --- Revisions & Alternatives: what a snapshot is, and what a version reports ---
   snapshot: () => ({units, unitCounter, priceListVersion:projectMeta.priceListVersion}),
