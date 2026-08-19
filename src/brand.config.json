@@ -4,6 +4,7 @@
   "toolName": "BOQ Tool",
   "fileExt": ".smbq",
   "docPrefix": "BOQ-SM",
+  "unitNoun": "unit",
   "autosaveKey": "smboq_autosave",
   "logo": {
     "svg": "assets/stella-mobili-logo.svg",
