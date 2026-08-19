@@ -201,7 +201,17 @@ detail: `MulyaOne/docs/design/10-sm-boq.md`.
 
 ---
 
-## 7. Drift status (in sync as of 2026-08-13)
+## 7. Drift status (in sync as of 2026-08-19)
+
+> **2026-08-19 — both sides redeployed on kit 1.10.2.** SM's template dropped the handling
+> code that moved into the kit (reorder, duplicate/copy, export guards, price-list switch);
+> it therefore *requires* kit ≥ 1.10, and copying the template into MulyaOne without the kit
+> would break the embed. Both were copied and `scripts/build-boq-tool.py` re-run —
+> `lib/boq/sm-boq-tool.html` is 3.67 MB on kit 1.10.2, markers all consumed. Beyond Teak was
+> rebuilt and re-copied the same day (`lib/boq/bt-boq-tool.html`), and **CDN Lighting joined
+> the kit** (v1.1.0) — it now has `getState()`, so it is embeddable for the first time.
+
+### The 2026-08-13 entry
 
 Standalone and the embed are both **v1.6.0** on **boq-kit 1.7.0**, and the template copies
 are byte-identical. The v1.5.2 → v1.6.0 delta is the **shared-chrome migration**: the

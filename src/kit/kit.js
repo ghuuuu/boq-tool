@@ -37,6 +37,29 @@ const KIT = {
     bufferTotal:      null,                // → number; null = no buffer concept, skip the gate
     repaint:          () => {},            // repaint the view hosting the revisions panel
     syncMeta:         () => {},            // flush project fields from the DOM into state
+    // --- Handling: reorder / duplicate / copy (kit 1.10) --------------------
+    rowList:          () => null,          // (sectionKey, containerId?) -> the row array
+    containerList:    () => [],            // -> the array of units/areas
+    containerRowArrays: () => [],          // (container) -> every row array inside it
+    selection:        () => [],            // (sectionKey) -> the rows currently ticked
+    scrubCopy:        r => r,              // (row, 'duplicate'|'copy') fix a copy up
+    newId:            () => 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+    afterRows:        () => {},            // (sectionKey) repaint after a row change
+    afterContainers:  () => {},            // (focusId) repaint after a container change
+    // --- Export guards (kit 1.10) ------------------------------------------
+    requiredFields:   [],                  // [{sel,label,value()}] — blocked when empty
+    goHome:           null,                // show the view those fields live on
+    // --- Price list (kit 1.10) ---------------------------------------------
+    priceListVersions: () => [],
+    priceListLatest:   () => '',
+    priceListCurrent:  () => '',
+    repriceAll:        () => ({updated:0, notFound:0}),
+    // --- Export picker (kit 1.11) ------------------------------------------
+    exportUnits:      () => [],            // (altKey, ver|'working') -> units/areas
+    totalOf:          () => 0,             // (units) -> money total
+    itemCountOf:      () => 0,             // (units) -> line count
+    exportOptions:    () => [],            // (kind) -> [{key,label,choices,default}]
+    runExport:        () => {}             // (kind, sets, opts) render + download
   },
   register(h){ Object.assign(KIT.hooks, h); },
   started: false,
@@ -686,6 +709,382 @@ function setVersionDate(altKey,ver,val){
   const a=alts.find(x=>x.key===altKey); const v=a&&a.versions.find(x=>x.ver===ver); if(!v) return;
   v.date=val; fileUnsaved=true; autosaveNow(); KIT.hooks.repaint();
   toast('Alt '+altKey+' · v'+ver+' dated '+fmtDate(val));
+}
+
+/* ====================================================================
+   HANDLING — reorder, duplicate, copy between containers
+   --------------------------------------------------------------------
+   A BOQ is a list of containers (SM: units/rooms, BT & CL: areas), each
+   holding lists of rows per section. Every tool needs the same four gestures
+   on those lists, so the kit owns them and the brand only says WHICH list:
+
+     KIT.hooks.rowList(key, containerId)  -> the array of rows (containerId
+                                             omitted = the container on screen)
+     KIT.hooks.containerList()            -> the array of containers
+     KIT.hooks.newId(prefix)              -> a fresh row/container id
+     KIT.hooks.afterRows(key)             -> repaint after a row change
+     KIT.hooks.afterContainers(focusId)   -> repaint after a container change
+     KIT.hooks.selection()                -> the rows currently ticked
+     KIT.hooks.containerRowArrays(c)      -> every row array inside a container
+
+   A drag starts only from a grip (.col-drag on a row, .drag-handle on a
+   container), so dragging a select or an input inside a row still does what
+   that control expects.
+   ==================================================================== */
+let _mousedownEl = null;
+document.addEventListener('mousedown', e => { _mousedownEl = e.target; });
+let _drag = {kind:null, key:null, id:null};
+
+const KIT_GRIP = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><circle cx="9" cy="5" r="1.6"/><circle cx="15" cy="5" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="19" r="1.6"/><circle cx="15" cy="19" r="1.6"/></svg>';
+/** A row's grip cell, and a container's grip handle. Markup, so brands can inline them. */
+// Harvested from the Stella Mobili tool: the element is draggable only while the
+// grip is held. Without this, a click inside a text input lands the caret inside a
+// draggable ancestor and the browser starts a drag instead of an edit.
+const _GRIP_DOWN = 'onmousedown="kitGripDown(this)"';
+function gripCell(){ return '<td class="col-drag" title="Drag to reorder" '+_GRIP_DOWN+'>'+KIT_GRIP+'</td>'; }
+function gripHandle(){ return '<span class="drag-handle" title="Drag to reorder" onclick="event.stopPropagation()" '+_GRIP_DOWN+'>'+KIT_GRIP+'</span>'; }
+function kitGripDown(el){
+  _mousedownEl = el;                                  // the two guards agree
+  const d = el.closest('[data-drag-kind]'); if(d) d.draggable = true;
+}
+document.addEventListener('mouseup', () => {
+  document.querySelectorAll('[data-drag-kind][draggable="true"]').forEach(el=>{ el.draggable=false; });
+});
+
+/**
+ * Attributes that make an element draggable-in-place. Put them on the <tr>
+ * (kind 'row', key = section) or the sidebar item (kind 'container').
+ */
+function dragAttrs(kind, key, id){
+  return 'draggable="false" data-drag-kind="'+escAttr(kind)+'" data-drag-key="'+escAttr(key==null?'':key)
+       + '" data-drag-id="'+escAttr(id)+'" ondragstart="kitDragStart(event)" ondragover="kitDragOver(event)"'
+       + ' ondrop="kitDrop(event)" ondragend="kitDragEnd()"';
+}
+function _dragEls(kind){ return document.querySelectorAll('[data-drag-kind="'+kind+'"]'); }
+function _dragEl(kind, id){ return document.querySelector('[data-drag-kind="'+kind+'"][data-drag-id="'+id+'"]'); }
+function _dragData(e){
+  const el = e.currentTarget;
+  return {el, kind:el.getAttribute('data-drag-kind'), key:el.getAttribute('data-drag-key'),
+          id:el.getAttribute('data-drag-id')};
+}
+function kitDragStart(e){
+  if(!_mousedownEl || !_mousedownEl.closest('.col-drag,.drag-handle')){ e.preventDefault(); return; }
+  _mousedownEl = null;
+  const d = _dragData(e);
+  _drag = {kind:d.kind, key:d.key, id:d.id};
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', d.id);
+  setTimeout(()=>{ const el=_dragEl(d.kind, d.id); if(el) el.classList.add('dragging'); }, 0);
+}
+function kitDragOver(e){
+  const d = _dragData(e);
+  if(d.kind !== _drag.kind || d.key !== _drag.key) return;   // only within the same list
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  _dragEls(d.kind).forEach(el=>el.classList.remove('drop-above','drop-below'));
+  if(d.id === _drag.id) return;
+  const r = d.el.getBoundingClientRect();
+  d.el.classList.add(e.clientY < r.top + r.height/2 ? 'drop-above' : 'drop-below');
+}
+function kitDrop(e){
+  const d = _dragData(e);
+  _dragEls(d.kind).forEach(el=>el.classList.remove('drop-above','drop-below'));
+  if(d.kind !== _drag.kind || d.key !== _drag.key || d.id === _drag.id) return;
+  e.preventDefault();
+  const list = d.kind==='container' ? KIT.hooks.containerList() : KIT.hooks.rowList(d.key);
+  if(!Array.isArray(list)) return;
+  const srcIdx = list.findIndex(x=>String(x.id)===String(_drag.id));
+  if(srcIdx < 0) return;
+  const rect = d.el.getBoundingClientRect();
+  const after = e.clientY > rect.top + rect.height/2;
+  const [moved] = list.splice(srcIdx, 1);
+  const tgtIdx = list.findIndex(x=>String(x.id)===String(d.id));
+  if(tgtIdx < 0){ list.splice(srcIdx, 0, moved); return; }   // target vanished — put it back
+  list.splice(after ? tgtIdx+1 : tgtIdx, 0, moved);
+  markDirty();
+  const kind = d.kind, key = d.key;
+  _drag = {kind:null, key:null, id:null};
+  if(kind==='container') KIT.hooks.afterContainers(null); else KIT.hooks.afterRows(key);
+}
+function kitDragEnd(){
+  _drag = {kind:null, key:null, id:null};
+  document.querySelectorAll('[data-drag-kind]').forEach(el=>
+    el.classList.remove('dragging','drop-above','drop-below'));
+}
+
+/** A copy of the row, directly below it — the fastest way to quote a near-identical line. */
+function duplicateRow(key, id){
+  const list = KIT.hooks.rowList(key);
+  if(!Array.isArray(list)) return;
+  const i = list.findIndex(r=>String(r.id)===String(id));
+  if(i < 0) return;
+  const copy = KIT.hooks.scrubCopy(JSON.parse(JSON.stringify(list[i])), 'duplicate');
+  copy.id = KIT.hooks.newId('row');
+  list.splice(i+1, 0, copy);
+  markDirty(); KIT.hooks.afterRows(key);
+  toast('Line duplicated');
+}
+
+/** The whole container again — same rows, new ids, "(copy)" appended. */
+function duplicateContainer(id){
+  const list = KIT.hooks.containerList();
+  const i = list.findIndex(c=>String(c.id)===String(id));
+  if(i < 0) return;
+  const copy = JSON.parse(JSON.stringify(list[i]));
+  copy.id = KIT.hooks.newId('container');
+  copy.name = (list[i].name||'') + ' (copy)';
+  (KIT.hooks.containerRowArrays(copy)||[]).forEach(rows =>
+    rows.forEach(r => { r.id = KIT.hooks.newId('row'); }));
+  list.splice(i+1, 0, copy);
+  markDirty(); KIT.hooks.afterContainers(copy.id);
+  toast('Duplicated: ' + copy.name);
+}
+
+/** Copy the ticked rows into another container — they stay here too. */
+function openCopyToContainer(key){
+  const sel = KIT.hooks.selection(key) || [];
+  if(!sel.length) return;
+  const noun = (typeof BRAND!=='undefined' && BRAND.unitNoun) || 'container';
+  const here = KIT.hooks.rowList(key);
+  const others = (KIT.hooks.containerList()||[]).filter(c => (KIT.hooks.containerRowArrays(c)||[]).indexOf(here) < 0);
+  if(!others.length){ toast('There is only one ' + noun + ' — add another first','warn'); return; }
+  _copyKey = key;
+  showModal(
+    '<div class="modal-head"><h2>Copy ' + sel.length + ' line' + (sel.length===1?'':'s') + ' to another ' + esc(noun) + '</h2>'
+    + '<button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>'
+    + '<div class="modal-body"><div class="field"><label>Destination ' + esc(noun) + '</label>'
+    + '<select class="select" id="copyDest">' + others.map(c=>'<option value="'+escAttr(c.id)+'">'+esc(c.name)+'</option>').join('') + '</select></div>'
+    + '<div class="hint" style="margin-top:8px">The lines stay where they are — this copies them.</div></div>'
+    + '<div class="modal-foot"><button class="btn" onclick="closeModal()">Cancel</button>'
+    + '<button class="btn primary" onclick="confirmCopyToContainer()">Copy</button></div>');
+}
+let _copyKey = null;
+function confirmCopyToContainer(){
+  const destId = (document.getElementById('copyDest')||{}).value;
+  const dest = (KIT.hooks.containerList()||[]).find(c=>String(c.id)===String(destId));
+  const target = KIT.hooks.rowList(_copyKey, destId);
+  const sel = KIT.hooks.selection(_copyKey) || [];
+  if(!dest || !Array.isArray(target) || !sel.length){ closeModal(); return; }
+  sel.forEach(r => {
+    const c = KIT.hooks.scrubCopy(JSON.parse(JSON.stringify(r)), 'copy');
+    c.id = KIT.hooks.newId('row'); target.push(c);
+  });
+  closeModal(); markDirty(); KIT.hooks.afterContainers(null); KIT.hooks.afterRows(_copyKey);
+  toast('Copied ' + sel.length + ' line' + (sel.length===1?'':'s') + ' to ' + dest.name);
+}
+
+/* ====================================================================
+   EXPORT GUARDS — the two reminders every tool needs
+   KIT.hooks.requiredFields -> [{sel, label, value()}]   (host-owned fields)
+   KIT.hooks.goHome()       -> show the view those fields live on
+   ==================================================================== */
+function requireProjectFields(){
+  const fields = KIT.hooks.requiredFields || [];
+  const missing = fields.filter(f => !String(f.value()||'').trim());
+  if(!missing.length) return true;
+  toast('Required before export: ' + missing.map(f=>f.label).join(', '), 'warn', 3500);
+  if(typeof KIT.hooks.goHome === 'function') KIT.hooks.goHome();
+  setTimeout(()=>{
+    missing.forEach(f=>{
+      const e = document.querySelector(f.sel);
+      if(e){ e.classList.add('field-error'); setTimeout(()=>e.classList.remove('field-error'), 3000); }
+    });
+    const first = document.querySelector(missing[0].sel);
+    if(first) first.focus();
+  }, 80);
+  return false;
+}
+function warnZeroQty(){
+  toast('Qty is 0 — the line stays in the BOQ but adds nothing to the total','warn',5000);
+}
+
+/* ====================================================================
+   PRICE LIST — versioned, switched deliberately
+   The registry, the record on the project and the picker are the same in
+   every tool; re-pricing a row is not, so that is the brand's hook.
+     KIT.hooks.priceListVersions() -> [version, ...]   (newest last)
+     KIT.hooks.priceListLatest()   -> version
+     KIT.hooks.priceListCurrent()  -> the version this BOQ is quoted from
+     KIT.hooks.repriceAll(version) -> {updated, notFound}  — brand-specific
+   ==================================================================== */
+function priceListOptions(){
+  const cur = KIT.hooks.priceListCurrent();
+  return (KIT.hooks.priceListVersions()||[]).map(v =>
+    '<option value="'+escAttr(v)+'"'+(v===cur?' selected':'')+'>'+esc(v)+'</option>').join('');
+}
+function priceListNewerChip(){
+  const cur = KIT.hooks.priceListCurrent(), latest = KIT.hooks.priceListLatest();
+  return (cur && latest && cur !== latest)
+    ? '<span class="chip" style="background:var(--warn-bg);color:var(--warn);font-weight:700">Newer list available: '+esc(latest)+'</span>'
+    : '';
+}
+function switchPriceList(v){
+  if(!v || v === KIT.hooks.priceListCurrent()) return;
+  if((KIT.hooks.priceListVersions()||[]).indexOf(v) < 0){ toast('Price list version not found','error'); return; }
+  const r = KIT.hooks.repriceAll(v) || {};
+  markDirty();
+  const label = v === KIT.hooks.priceListLatest() ? v : v + ' (not latest)';
+  const updated = r.updated||0, notFound = r.notFound||0;
+  toast('Switched to ' + label + ': ' + updated + ' line' + (updated===1?'':'s') + ' re-priced'
+        + (notFound ? ' · ' + notFound + ' not in this list' : ''), updated ? 'success' : 'warn', 4000);
+}
+
+/* ====================================================================
+   THE ENVELOPE — the outer shape of a save file / host payload
+   --------------------------------------------------------------------
+   Every tool writes the same wrapper and each contributes its own payload
+   (SM: units, BT & CL: areas). Additive on purpose: a brand keeps whatever
+   legacy keys its old files carried, so a `.smbq` / `.btbq` / `.clbq` already
+   on disk still opens, and MulyaOne — which reads all three — keeps working.
+
+     getState()        -> buildEnvelope({ ...the brand's payload })
+     applyLoaded(d)    -> restoreEnvelope(d) for the alternatives tree
+   ==================================================================== */
+const ENVELOPE_FORMAT = 3;
+
+function buildEnvelope(payload){
+  const brandName = (typeof BRAND!=='undefined' && BRAND.brandName) || '';
+  const toolName  = (typeof BRAND!=='undefined' && BRAND.toolName)  || 'BOQ';
+  return Object.assign({
+    tool:        (brandName ? brandName + ' ' : '') + toolName,
+    brand:       (typeof BRAND!=='undefined' && BRAND.brandKey) || '',
+    format:      ENVELOPE_FORMAT,
+    savedAt:     new Date().toISOString(),
+    toolVersion: (typeof TOOL_VERSION!=='undefined' ? TOOL_VERSION : ''),
+    kitVersion:  (typeof KIT_VERSION!=='undefined' ? KIT_VERSION : ''),
+    // The alternatives tree travels with every save, whatever the brand.
+    alts, activeAltKey, activeVerNum,
+  }, payload || {});
+}
+
+/**
+ * Put the alternatives tree back. Tolerates every shape written so far:
+ * a file with no tree at all (format 1, or SM before alternatives existed)
+ * seeds the single "Initial scheme" Alt A rather than failing.
+ */
+function restoreEnvelope(d){
+  d = d || {};
+  alts = (Array.isArray(d.alts) && d.alts.length) ? d.alts
+       : [{key:'A', name:'Initial scheme', versions:[]}];
+  activeAltKey = d.activeAltKey || alts[0].key;
+  activeVerNum = (d.activeVerNum !== undefined) ? d.activeVerNum : null;
+}
+
+/* ====================================================================
+   EXPORT PICKER — which alternative, which version, which options
+   --------------------------------------------------------------------
+   An "export set" is one alternative at one version: {altKey, ver} where ver is
+   a number or 'working' (the calc on screen). A document covers one or more.
+
+     KIT.hooks.exportUnits(altKey, ver) -> that set's units/areas
+     KIT.hooks.totalOf(units)           -> its money total
+     KIT.hooks.itemCountOf(units)       -> its line count
+     KIT.hooks.exportOptions()          -> [{key,label,choices:[{value,label}],default}]
+     KIT.hooks.runExport(kind, sets, opts) -> render + download (brand-owned)
+   ==================================================================== */
+let _exportKind = 'pdf';
+
+function defaultExportSets(){ return [{altKey: activeAltKey, ver: 'working'}]; }
+function setUnits(s){ return KIT.hooks.exportUnits(s.altKey, s.ver) || []; }
+function setLabel(s){ return 'Alt ' + s.altKey + (s.ver === 'working' ? ' · current' : ' · v' + s.ver); }
+function setsTotal(sets){ return (sets||[]).reduce((t,s)=>t + (KIT.hooks.totalOf(setUnits(s))||0), 0); }
+function setsItemCount(sets){ return (sets||[]).reduce((t,s)=>t + (KIT.hooks.itemCountOf(setUnits(s))||0), 0); }
+
+/** The VERSION line a document prints. One set names its alternative; several list them. */
+function setsVersionLabel(sets){
+  sets = (sets && sets.length) ? sets : defaultExportSets();
+  if(sets.length <= 1){
+    const one = sets[0], a = alts.find(x=>x.key===one.altKey);
+    return setLabel(one) + (one.ver==='working' && dirty ? ' (unsaved edits)' : '')
+         + (a && a.name ? ' — ' + a.name : '');
+  }
+  return sets.map(s => s.altKey + (s.ver==='working' ? '·cur' : '·v'+s.ver)).join(' + ');
+}
+
+/** `_Alt_A-B_` when a document covers only some alternatives; nothing when it covers all. */
+function exportAltSegment(sets){
+  sets = (sets && sets.length) ? sets : defaultExportSets();
+  const keys = [...new Set(sets.map(s=>s.altKey))].sort();
+  const all  = alts.map(a=>a.key).sort();
+  return keys.length && keys.length < all.length ? '_Alt_' + keys.join('-') : '';
+}
+
+function openExportModal(kind){
+  if(!requireProjectFields()) return;
+  _exportKind = kind;
+  const rows = alts.map(a=>{
+    const isActive = a.key === activeAltKey;
+    const opts = [];
+    if(isActive) opts.push('<option value="working">current' + (dirty ? ' (unsaved edits)' : '') + '</option>');
+    a.versions.forEach((v,i)=>opts.push('<option value="'+v.ver+'"'+((!isActive&&i===0)?' selected':'')
+      + '>v'+v.ver+(i===0?' (latest)':'')+' · '+esc(v.status==='Ready for quotation'?'Ready':v.status)+'</option>'));
+    if(!opts.length) opts.push('<option value="working">nothing saved yet</option>');
+    const total = KIT.hooks.totalOf(KIT.hooks.exportUnits(a.key, isActive ? 'working' : (a.versions[0]||{}).ver));
+    return '<label style="display:flex;flex-direction:row;align-items:center;gap:10px;padding:9px 11px;'
+      + 'border:1px solid var(--line);border-radius:9px;margin-bottom:7px;cursor:pointer">'
+      + '<input type="checkbox" class="exp-alt" data-alt="'+escAttr(a.key)+'"'+(isActive?' checked':'')+'/>'
+      + '<span style="flex:1;min-width:0"><span style="display:block;font-weight:700;font-size:13px">ALT '+esc(a.key)+'</span>'
+      + '<span style="display:block;font-size:12px;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.name||'')+'</span></span>'
+      + '<select class="select compact exp-ver" data-alt="'+escAttr(a.key)+'" style="flex:0 0 195px;max-width:195px"'
+      + ' onclick="event.preventDefault();event.stopPropagation()">'+opts.join('')+'</select>'
+      + '<span class="mono" style="font-size:12.5px;color:var(--accent);font-weight:700;min-width:96px;text-align:right">'+fmt(total||0)+'</span>'
+      + '</label>';
+  }).join('');
+  // An option is a select by default. `style:'cards'` gives it a stacked choice
+  // with room to explain itself — Stella Mobili's buffer question reads
+  // "With buffer — for Quotation" / "Without buffer — for Sales Order", and that
+  // sentence is the whole point of asking.
+  const extras = (KIT.hooks.exportOptions(kind) || []).map(o => {
+    if(o.style === 'cards'){
+      return '<div class="field" style="margin-top:12px"><label>'+esc(o.label)+'</label>'
+        + '<div style="display:flex;flex-direction:column;gap:7px">'
+        + o.choices.map(c =>
+            '<label style="display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;cursor:pointer">'
+            + '<input type="radio" name="expopt-'+escAttr(o.key)+'" class="exp-opt-radio" data-key="'+escAttr(o.key)+'"'
+            + ' value="'+escAttr(c.value)+'"'+(c.value===o.default?' checked':'')+' style="margin-top:2px">'
+            + '<span><strong style="font-size:13px">'+esc(c.label)+'</strong>'
+            + (c.hint ? '<span style="display:block;font-size:11.5px;color:var(--ink-faint);line-height:1.5;margin-top:2px">'+esc(c.hint)+'</span>' : '')
+            + '</span></label>').join('')
+        + '</div></div>';
+    }
+    return '<div class="field" style="margin-top:10px;max-width:260px"><label>'+esc(o.label)+'</label>'
+      + '<select class="select compact exp-opt" data-key="'+escAttr(o.key)+'">'
+      + o.choices.map(c=>'<option value="'+escAttr(c.value)+'"'+(c.value===o.default?' selected':'')+'>'+esc(c.label)+'</option>').join('')
+      + '</select></div>';
+  }).join('');
+  showModal(
+    '<div class="modal-head"><h2>Export '+(kind==='pdf'?'PDF':'Excel')+'</h2>'
+    + '<button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>'
+    + '<div class="modal-body"><div class="hint" style="margin-bottom:9px">Which alternative should the client see?'
+    + ' Tick more than one to put them side by side in the same document.</div>'
+    + rows + extras + '</div>'
+    + '<div class="modal-foot"><button class="btn" onclick="closeModal()">Cancel</button>'
+    + '<button class="btn primary" onclick="confirmExport()">Export '+(kind==='pdf'?'PDF':'Excel')+'</button></div>');
+}
+
+function getExportSets(){
+  const boxes = [...document.querySelectorAll('.exp-alt')];
+  if(!boxes.length) return defaultExportSets();          // picker not open → what's on screen
+  const sets = [];
+  boxes.forEach(cb=>{
+    if(!cb.checked) return;
+    const k = cb.dataset.alt;
+    const sel = document.querySelector('.exp-ver[data-alt="'+k+'"]');
+    const v = sel ? sel.value : 'working';
+    sets.push({altKey:k, ver: v==='working' ? 'working' : parseInt(v,10)});
+  });
+  return sets.length ? sets : null;
+}
+
+function confirmExport(){
+  const sets = getExportSets();
+  if(!sets){ toast('Tick at least one alternative','warn'); return; }
+  if(setsItemCount(sets) === 0){ toast('Those alternatives have no lines to export','warn'); return; }
+  const opts = {};
+  document.querySelectorAll('.exp-opt').forEach(sel => { opts[sel.dataset.key] = sel.value; });
+  document.querySelectorAll('.exp-opt-radio:checked').forEach(r => { opts[r.dataset.key] = r.value; });
+  const kind = _exportKind;
+  closeModal();
+  KIT.hooks.runExport(kind, sets, opts);
 }
 
 /* ====================================================================

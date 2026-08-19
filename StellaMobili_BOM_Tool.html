@@ -297,10 +297,11 @@ input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
 /* ===== Tabs ===== */
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
-.tab{padding:10px 14px;border-bottom:2.5px solid transparent;font-size:14px;font-weight:600;color:var(--ink-faint);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none}
+.tab{display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:2.5px solid transparent;font-size:14px;font-weight:600;color:var(--ink-faint);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none}
+.tab svg{width:15px;height:15px;flex-shrink:0}   /* a tab may carry an icon; without this it renders at the SVG default size */
 .tab:hover{color:var(--c-500)}
 .tab.active{color:var(--c-700);border-bottom-color:var(--c-600)}
-.tab-count{background:var(--line-soft);color:var(--ink-faint);font-size:11.5px;padding:1px 6px;border-radius:999px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700;margin-left:5px}
+.tab-count{background:var(--line-soft);color:var(--ink-faint);font-size:11.5px;padding:1px 6px;border-radius:999px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700}
 .tab.active .tab-count{background:var(--c-100);color:var(--c-700)}
 
 /* ===== Search dropdown ===== */
@@ -505,7 +506,7 @@ tr.drop-below{box-shadow:inset 0 -2px 0 var(--c-500)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
 </style>
-<script>const KIT_VERSION="1.9.1";const BRAND={"brandKey": "SM", "brandName": "Stella Mobili", "toolName": "BOQ Tool", "fileExt": ".smbq", "docPrefix": "BOQ-SM", "autosaveKey": "smboq_autosave"};</script>
+<script>const KIT_VERSION="1.13.0";const BRAND={"brandKey": "SM", "brandName": "Stella Mobili", "toolName": "BOQ Tool", "fileExt": ".smbq", "docPrefix": "BOQ-SM", "autosaveKey": "smboq_autosave", "unitNoun": "unit"};</script>
 <script>
 /* ============================================================
    boq-kit · kit.js — shared chrome behaviour
@@ -546,6 +547,29 @@ const KIT = {
     bufferTotal:      null,                // → number; null = no buffer concept, skip the gate
     repaint:          () => {},            // repaint the view hosting the revisions panel
     syncMeta:         () => {},            // flush project fields from the DOM into state
+    // --- Handling: reorder / duplicate / copy (kit 1.10) --------------------
+    rowList:          () => null,          // (sectionKey, containerId?) -> the row array
+    containerList:    () => [],            // -> the array of units/areas
+    containerRowArrays: () => [],          // (container) -> every row array inside it
+    selection:        () => [],            // (sectionKey) -> the rows currently ticked
+    scrubCopy:        r => r,              // (row, 'duplicate'|'copy') fix a copy up
+    newId:            () => 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+    afterRows:        () => {},            // (sectionKey) repaint after a row change
+    afterContainers:  () => {},            // (focusId) repaint after a container change
+    // --- Export guards (kit 1.10) ------------------------------------------
+    requiredFields:   [],                  // [{sel,label,value()}] — blocked when empty
+    goHome:           null,                // show the view those fields live on
+    // --- Price list (kit 1.10) ---------------------------------------------
+    priceListVersions: () => [],
+    priceListLatest:   () => '',
+    priceListCurrent:  () => '',
+    repriceAll:        () => ({updated:0, notFound:0}),
+    // --- Export picker (kit 1.11) ------------------------------------------
+    exportUnits:      () => [],            // (altKey, ver|'working') -> units/areas
+    totalOf:          () => 0,             // (units) -> money total
+    itemCountOf:      () => 0,             // (units) -> line count
+    exportOptions:    () => [],            // (kind) -> [{key,label,choices,default}]
+    runExport:        () => {}             // (kind, sets, opts) render + download
   },
   register(h){ Object.assign(KIT.hooks, h); },
   started: false,
@@ -1198,6 +1222,382 @@ function setVersionDate(altKey,ver,val){
 }
 
 /* ====================================================================
+   HANDLING — reorder, duplicate, copy between containers
+   --------------------------------------------------------------------
+   A BOQ is a list of containers (SM: units/rooms, BT & CL: areas), each
+   holding lists of rows per section. Every tool needs the same four gestures
+   on those lists, so the kit owns them and the brand only says WHICH list:
+
+     KIT.hooks.rowList(key, containerId)  -> the array of rows (containerId
+                                             omitted = the container on screen)
+     KIT.hooks.containerList()            -> the array of containers
+     KIT.hooks.newId(prefix)              -> a fresh row/container id
+     KIT.hooks.afterRows(key)             -> repaint after a row change
+     KIT.hooks.afterContainers(focusId)   -> repaint after a container change
+     KIT.hooks.selection()                -> the rows currently ticked
+     KIT.hooks.containerRowArrays(c)      -> every row array inside a container
+
+   A drag starts only from a grip (.col-drag on a row, .drag-handle on a
+   container), so dragging a select or an input inside a row still does what
+   that control expects.
+   ==================================================================== */
+let _mousedownEl = null;
+document.addEventListener('mousedown', e => { _mousedownEl = e.target; });
+let _drag = {kind:null, key:null, id:null};
+
+const KIT_GRIP = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><circle cx="9" cy="5" r="1.6"/><circle cx="15" cy="5" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="19" r="1.6"/><circle cx="15" cy="19" r="1.6"/></svg>';
+/** A row's grip cell, and a container's grip handle. Markup, so brands can inline them. */
+// Harvested from the Stella Mobili tool: the element is draggable only while the
+// grip is held. Without this, a click inside a text input lands the caret inside a
+// draggable ancestor and the browser starts a drag instead of an edit.
+const _GRIP_DOWN = 'onmousedown="kitGripDown(this)"';
+function gripCell(){ return '<td class="col-drag" title="Drag to reorder" '+_GRIP_DOWN+'>'+KIT_GRIP+'</td>'; }
+function gripHandle(){ return '<span class="drag-handle" title="Drag to reorder" onclick="event.stopPropagation()" '+_GRIP_DOWN+'>'+KIT_GRIP+'</span>'; }
+function kitGripDown(el){
+  _mousedownEl = el;                                  // the two guards agree
+  const d = el.closest('[data-drag-kind]'); if(d) d.draggable = true;
+}
+document.addEventListener('mouseup', () => {
+  document.querySelectorAll('[data-drag-kind][draggable="true"]').forEach(el=>{ el.draggable=false; });
+});
+
+/**
+ * Attributes that make an element draggable-in-place. Put them on the <tr>
+ * (kind 'row', key = section) or the sidebar item (kind 'container').
+ */
+function dragAttrs(kind, key, id){
+  return 'draggable="false" data-drag-kind="'+escAttr(kind)+'" data-drag-key="'+escAttr(key==null?'':key)
+       + '" data-drag-id="'+escAttr(id)+'" ondragstart="kitDragStart(event)" ondragover="kitDragOver(event)"'
+       + ' ondrop="kitDrop(event)" ondragend="kitDragEnd()"';
+}
+function _dragEls(kind){ return document.querySelectorAll('[data-drag-kind="'+kind+'"]'); }
+function _dragEl(kind, id){ return document.querySelector('[data-drag-kind="'+kind+'"][data-drag-id="'+id+'"]'); }
+function _dragData(e){
+  const el = e.currentTarget;
+  return {el, kind:el.getAttribute('data-drag-kind'), key:el.getAttribute('data-drag-key'),
+          id:el.getAttribute('data-drag-id')};
+}
+function kitDragStart(e){
+  if(!_mousedownEl || !_mousedownEl.closest('.col-drag,.drag-handle')){ e.preventDefault(); return; }
+  _mousedownEl = null;
+  const d = _dragData(e);
+  _drag = {kind:d.kind, key:d.key, id:d.id};
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', d.id);
+  setTimeout(()=>{ const el=_dragEl(d.kind, d.id); if(el) el.classList.add('dragging'); }, 0);
+}
+function kitDragOver(e){
+  const d = _dragData(e);
+  if(d.kind !== _drag.kind || d.key !== _drag.key) return;   // only within the same list
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  _dragEls(d.kind).forEach(el=>el.classList.remove('drop-above','drop-below'));
+  if(d.id === _drag.id) return;
+  const r = d.el.getBoundingClientRect();
+  d.el.classList.add(e.clientY < r.top + r.height/2 ? 'drop-above' : 'drop-below');
+}
+function kitDrop(e){
+  const d = _dragData(e);
+  _dragEls(d.kind).forEach(el=>el.classList.remove('drop-above','drop-below'));
+  if(d.kind !== _drag.kind || d.key !== _drag.key || d.id === _drag.id) return;
+  e.preventDefault();
+  const list = d.kind==='container' ? KIT.hooks.containerList() : KIT.hooks.rowList(d.key);
+  if(!Array.isArray(list)) return;
+  const srcIdx = list.findIndex(x=>String(x.id)===String(_drag.id));
+  if(srcIdx < 0) return;
+  const rect = d.el.getBoundingClientRect();
+  const after = e.clientY > rect.top + rect.height/2;
+  const [moved] = list.splice(srcIdx, 1);
+  const tgtIdx = list.findIndex(x=>String(x.id)===String(d.id));
+  if(tgtIdx < 0){ list.splice(srcIdx, 0, moved); return; }   // target vanished — put it back
+  list.splice(after ? tgtIdx+1 : tgtIdx, 0, moved);
+  markDirty();
+  const kind = d.kind, key = d.key;
+  _drag = {kind:null, key:null, id:null};
+  if(kind==='container') KIT.hooks.afterContainers(null); else KIT.hooks.afterRows(key);
+}
+function kitDragEnd(){
+  _drag = {kind:null, key:null, id:null};
+  document.querySelectorAll('[data-drag-kind]').forEach(el=>
+    el.classList.remove('dragging','drop-above','drop-below'));
+}
+
+/** A copy of the row, directly below it — the fastest way to quote a near-identical line. */
+function duplicateRow(key, id){
+  const list = KIT.hooks.rowList(key);
+  if(!Array.isArray(list)) return;
+  const i = list.findIndex(r=>String(r.id)===String(id));
+  if(i < 0) return;
+  const copy = KIT.hooks.scrubCopy(JSON.parse(JSON.stringify(list[i])), 'duplicate');
+  copy.id = KIT.hooks.newId('row');
+  list.splice(i+1, 0, copy);
+  markDirty(); KIT.hooks.afterRows(key);
+  toast('Line duplicated');
+}
+
+/** The whole container again — same rows, new ids, "(copy)" appended. */
+function duplicateContainer(id){
+  const list = KIT.hooks.containerList();
+  const i = list.findIndex(c=>String(c.id)===String(id));
+  if(i < 0) return;
+  const copy = JSON.parse(JSON.stringify(list[i]));
+  copy.id = KIT.hooks.newId('container');
+  copy.name = (list[i].name||'') + ' (copy)';
+  (KIT.hooks.containerRowArrays(copy)||[]).forEach(rows =>
+    rows.forEach(r => { r.id = KIT.hooks.newId('row'); }));
+  list.splice(i+1, 0, copy);
+  markDirty(); KIT.hooks.afterContainers(copy.id);
+  toast('Duplicated: ' + copy.name);
+}
+
+/** Copy the ticked rows into another container — they stay here too. */
+function openCopyToContainer(key){
+  const sel = KIT.hooks.selection(key) || [];
+  if(!sel.length) return;
+  const noun = (typeof BRAND!=='undefined' && BRAND.unitNoun) || 'container';
+  const here = KIT.hooks.rowList(key);
+  const others = (KIT.hooks.containerList()||[]).filter(c => (KIT.hooks.containerRowArrays(c)||[]).indexOf(here) < 0);
+  if(!others.length){ toast('There is only one ' + noun + ' — add another first','warn'); return; }
+  _copyKey = key;
+  showModal(
+    '<div class="modal-head"><h2>Copy ' + sel.length + ' line' + (sel.length===1?'':'s') + ' to another ' + esc(noun) + '</h2>'
+    + '<button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>'
+    + '<div class="modal-body"><div class="field"><label>Destination ' + esc(noun) + '</label>'
+    + '<select class="select" id="copyDest">' + others.map(c=>'<option value="'+escAttr(c.id)+'">'+esc(c.name)+'</option>').join('') + '</select></div>'
+    + '<div class="hint" style="margin-top:8px">The lines stay where they are — this copies them.</div></div>'
+    + '<div class="modal-foot"><button class="btn" onclick="closeModal()">Cancel</button>'
+    + '<button class="btn primary" onclick="confirmCopyToContainer()">Copy</button></div>');
+}
+let _copyKey = null;
+function confirmCopyToContainer(){
+  const destId = (document.getElementById('copyDest')||{}).value;
+  const dest = (KIT.hooks.containerList()||[]).find(c=>String(c.id)===String(destId));
+  const target = KIT.hooks.rowList(_copyKey, destId);
+  const sel = KIT.hooks.selection(_copyKey) || [];
+  if(!dest || !Array.isArray(target) || !sel.length){ closeModal(); return; }
+  sel.forEach(r => {
+    const c = KIT.hooks.scrubCopy(JSON.parse(JSON.stringify(r)), 'copy');
+    c.id = KIT.hooks.newId('row'); target.push(c);
+  });
+  closeModal(); markDirty(); KIT.hooks.afterContainers(null); KIT.hooks.afterRows(_copyKey);
+  toast('Copied ' + sel.length + ' line' + (sel.length===1?'':'s') + ' to ' + dest.name);
+}
+
+/* ====================================================================
+   EXPORT GUARDS — the two reminders every tool needs
+   KIT.hooks.requiredFields -> [{sel, label, value()}]   (host-owned fields)
+   KIT.hooks.goHome()       -> show the view those fields live on
+   ==================================================================== */
+function requireProjectFields(){
+  const fields = KIT.hooks.requiredFields || [];
+  const missing = fields.filter(f => !String(f.value()||'').trim());
+  if(!missing.length) return true;
+  toast('Required before export: ' + missing.map(f=>f.label).join(', '), 'warn', 3500);
+  if(typeof KIT.hooks.goHome === 'function') KIT.hooks.goHome();
+  setTimeout(()=>{
+    missing.forEach(f=>{
+      const e = document.querySelector(f.sel);
+      if(e){ e.classList.add('field-error'); setTimeout(()=>e.classList.remove('field-error'), 3000); }
+    });
+    const first = document.querySelector(missing[0].sel);
+    if(first) first.focus();
+  }, 80);
+  return false;
+}
+function warnZeroQty(){
+  toast('Qty is 0 — the line stays in the BOQ but adds nothing to the total','warn',5000);
+}
+
+/* ====================================================================
+   PRICE LIST — versioned, switched deliberately
+   The registry, the record on the project and the picker are the same in
+   every tool; re-pricing a row is not, so that is the brand's hook.
+     KIT.hooks.priceListVersions() -> [version, ...]   (newest last)
+     KIT.hooks.priceListLatest()   -> version
+     KIT.hooks.priceListCurrent()  -> the version this BOQ is quoted from
+     KIT.hooks.repriceAll(version) -> {updated, notFound}  — brand-specific
+   ==================================================================== */
+function priceListOptions(){
+  const cur = KIT.hooks.priceListCurrent();
+  return (KIT.hooks.priceListVersions()||[]).map(v =>
+    '<option value="'+escAttr(v)+'"'+(v===cur?' selected':'')+'>'+esc(v)+'</option>').join('');
+}
+function priceListNewerChip(){
+  const cur = KIT.hooks.priceListCurrent(), latest = KIT.hooks.priceListLatest();
+  return (cur && latest && cur !== latest)
+    ? '<span class="chip" style="background:var(--warn-bg);color:var(--warn);font-weight:700">Newer list available: '+esc(latest)+'</span>'
+    : '';
+}
+function switchPriceList(v){
+  if(!v || v === KIT.hooks.priceListCurrent()) return;
+  if((KIT.hooks.priceListVersions()||[]).indexOf(v) < 0){ toast('Price list version not found','error'); return; }
+  const r = KIT.hooks.repriceAll(v) || {};
+  markDirty();
+  const label = v === KIT.hooks.priceListLatest() ? v : v + ' (not latest)';
+  const updated = r.updated||0, notFound = r.notFound||0;
+  toast('Switched to ' + label + ': ' + updated + ' line' + (updated===1?'':'s') + ' re-priced'
+        + (notFound ? ' · ' + notFound + ' not in this list' : ''), updated ? 'success' : 'warn', 4000);
+}
+
+/* ====================================================================
+   THE ENVELOPE — the outer shape of a save file / host payload
+   --------------------------------------------------------------------
+   Every tool writes the same wrapper and each contributes its own payload
+   (SM: units, BT & CL: areas). Additive on purpose: a brand keeps whatever
+   legacy keys its old files carried, so a `.smbq` / `.btbq` / `.clbq` already
+   on disk still opens, and MulyaOne — which reads all three — keeps working.
+
+     getState()        -> buildEnvelope({ ...the brand's payload })
+     applyLoaded(d)    -> restoreEnvelope(d) for the alternatives tree
+   ==================================================================== */
+const ENVELOPE_FORMAT = 3;
+
+function buildEnvelope(payload){
+  const brandName = (typeof BRAND!=='undefined' && BRAND.brandName) || '';
+  const toolName  = (typeof BRAND!=='undefined' && BRAND.toolName)  || 'BOQ';
+  return Object.assign({
+    tool:        (brandName ? brandName + ' ' : '') + toolName,
+    brand:       (typeof BRAND!=='undefined' && BRAND.brandKey) || '',
+    format:      ENVELOPE_FORMAT,
+    savedAt:     new Date().toISOString(),
+    toolVersion: (typeof TOOL_VERSION!=='undefined' ? TOOL_VERSION : ''),
+    kitVersion:  (typeof KIT_VERSION!=='undefined' ? KIT_VERSION : ''),
+    // The alternatives tree travels with every save, whatever the brand.
+    alts, activeAltKey, activeVerNum,
+  }, payload || {});
+}
+
+/**
+ * Put the alternatives tree back. Tolerates every shape written so far:
+ * a file with no tree at all (format 1, or SM before alternatives existed)
+ * seeds the single "Initial scheme" Alt A rather than failing.
+ */
+function restoreEnvelope(d){
+  d = d || {};
+  alts = (Array.isArray(d.alts) && d.alts.length) ? d.alts
+       : [{key:'A', name:'Initial scheme', versions:[]}];
+  activeAltKey = d.activeAltKey || alts[0].key;
+  activeVerNum = (d.activeVerNum !== undefined) ? d.activeVerNum : null;
+}
+
+/* ====================================================================
+   EXPORT PICKER — which alternative, which version, which options
+   --------------------------------------------------------------------
+   An "export set" is one alternative at one version: {altKey, ver} where ver is
+   a number or 'working' (the calc on screen). A document covers one or more.
+
+     KIT.hooks.exportUnits(altKey, ver) -> that set's units/areas
+     KIT.hooks.totalOf(units)           -> its money total
+     KIT.hooks.itemCountOf(units)       -> its line count
+     KIT.hooks.exportOptions()          -> [{key,label,choices:[{value,label}],default}]
+     KIT.hooks.runExport(kind, sets, opts) -> render + download (brand-owned)
+   ==================================================================== */
+let _exportKind = 'pdf';
+
+function defaultExportSets(){ return [{altKey: activeAltKey, ver: 'working'}]; }
+function setUnits(s){ return KIT.hooks.exportUnits(s.altKey, s.ver) || []; }
+function setLabel(s){ return 'Alt ' + s.altKey + (s.ver === 'working' ? ' · current' : ' · v' + s.ver); }
+function setsTotal(sets){ return (sets||[]).reduce((t,s)=>t + (KIT.hooks.totalOf(setUnits(s))||0), 0); }
+function setsItemCount(sets){ return (sets||[]).reduce((t,s)=>t + (KIT.hooks.itemCountOf(setUnits(s))||0), 0); }
+
+/** The VERSION line a document prints. One set names its alternative; several list them. */
+function setsVersionLabel(sets){
+  sets = (sets && sets.length) ? sets : defaultExportSets();
+  if(sets.length <= 1){
+    const one = sets[0], a = alts.find(x=>x.key===one.altKey);
+    return setLabel(one) + (one.ver==='working' && dirty ? ' (unsaved edits)' : '')
+         + (a && a.name ? ' — ' + a.name : '');
+  }
+  return sets.map(s => s.altKey + (s.ver==='working' ? '·cur' : '·v'+s.ver)).join(' + ');
+}
+
+/** `_Alt_A-B_` when a document covers only some alternatives; nothing when it covers all. */
+function exportAltSegment(sets){
+  sets = (sets && sets.length) ? sets : defaultExportSets();
+  const keys = [...new Set(sets.map(s=>s.altKey))].sort();
+  const all  = alts.map(a=>a.key).sort();
+  return keys.length && keys.length < all.length ? '_Alt_' + keys.join('-') : '';
+}
+
+function openExportModal(kind){
+  if(!requireProjectFields()) return;
+  _exportKind = kind;
+  const rows = alts.map(a=>{
+    const isActive = a.key === activeAltKey;
+    const opts = [];
+    if(isActive) opts.push('<option value="working">current' + (dirty ? ' (unsaved edits)' : '') + '</option>');
+    a.versions.forEach((v,i)=>opts.push('<option value="'+v.ver+'"'+((!isActive&&i===0)?' selected':'')
+      + '>v'+v.ver+(i===0?' (latest)':'')+' · '+esc(v.status==='Ready for quotation'?'Ready':v.status)+'</option>'));
+    if(!opts.length) opts.push('<option value="working">nothing saved yet</option>');
+    const total = KIT.hooks.totalOf(KIT.hooks.exportUnits(a.key, isActive ? 'working' : (a.versions[0]||{}).ver));
+    return '<label style="display:flex;flex-direction:row;align-items:center;gap:10px;padding:9px 11px;'
+      + 'border:1px solid var(--line);border-radius:9px;margin-bottom:7px;cursor:pointer">'
+      + '<input type="checkbox" class="exp-alt" data-alt="'+escAttr(a.key)+'"'+(isActive?' checked':'')+'/>'
+      + '<span style="flex:1;min-width:0"><span style="display:block;font-weight:700;font-size:13px">ALT '+esc(a.key)+'</span>'
+      + '<span style="display:block;font-size:12px;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.name||'')+'</span></span>'
+      + '<select class="select compact exp-ver" data-alt="'+escAttr(a.key)+'" style="flex:0 0 195px;max-width:195px"'
+      + ' onclick="event.preventDefault();event.stopPropagation()">'+opts.join('')+'</select>'
+      + '<span class="mono" style="font-size:12.5px;color:var(--accent);font-weight:700;min-width:96px;text-align:right">'+fmt(total||0)+'</span>'
+      + '</label>';
+  }).join('');
+  // An option is a select by default. `style:'cards'` gives it a stacked choice
+  // with room to explain itself — Stella Mobili's buffer question reads
+  // "With buffer — for Quotation" / "Without buffer — for Sales Order", and that
+  // sentence is the whole point of asking.
+  const extras = (KIT.hooks.exportOptions(kind) || []).map(o => {
+    if(o.style === 'cards'){
+      return '<div class="field" style="margin-top:12px"><label>'+esc(o.label)+'</label>'
+        + '<div style="display:flex;flex-direction:column;gap:7px">'
+        + o.choices.map(c =>
+            '<label style="display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;cursor:pointer">'
+            + '<input type="radio" name="expopt-'+escAttr(o.key)+'" class="exp-opt-radio" data-key="'+escAttr(o.key)+'"'
+            + ' value="'+escAttr(c.value)+'"'+(c.value===o.default?' checked':'')+' style="margin-top:2px">'
+            + '<span><strong style="font-size:13px">'+esc(c.label)+'</strong>'
+            + (c.hint ? '<span style="display:block;font-size:11.5px;color:var(--ink-faint);line-height:1.5;margin-top:2px">'+esc(c.hint)+'</span>' : '')
+            + '</span></label>').join('')
+        + '</div></div>';
+    }
+    return '<div class="field" style="margin-top:10px;max-width:260px"><label>'+esc(o.label)+'</label>'
+      + '<select class="select compact exp-opt" data-key="'+escAttr(o.key)+'">'
+      + o.choices.map(c=>'<option value="'+escAttr(c.value)+'"'+(c.value===o.default?' selected':'')+'>'+esc(c.label)+'</option>').join('')
+      + '</select></div>';
+  }).join('');
+  showModal(
+    '<div class="modal-head"><h2>Export '+(kind==='pdf'?'PDF':'Excel')+'</h2>'
+    + '<button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>'
+    + '<div class="modal-body"><div class="hint" style="margin-bottom:9px">Which alternative should the client see?'
+    + ' Tick more than one to put them side by side in the same document.</div>'
+    + rows + extras + '</div>'
+    + '<div class="modal-foot"><button class="btn" onclick="closeModal()">Cancel</button>'
+    + '<button class="btn primary" onclick="confirmExport()">Export '+(kind==='pdf'?'PDF':'Excel')+'</button></div>');
+}
+
+function getExportSets(){
+  const boxes = [...document.querySelectorAll('.exp-alt')];
+  if(!boxes.length) return defaultExportSets();          // picker not open → what's on screen
+  const sets = [];
+  boxes.forEach(cb=>{
+    if(!cb.checked) return;
+    const k = cb.dataset.alt;
+    const sel = document.querySelector('.exp-ver[data-alt="'+k+'"]');
+    const v = sel ? sel.value : 'working';
+    sets.push({altKey:k, ver: v==='working' ? 'working' : parseInt(v,10)});
+  });
+  return sets.length ? sets : null;
+}
+
+function confirmExport(){
+  const sets = getExportSets();
+  if(!sets){ toast('Tick at least one alternative','warn'); return; }
+  if(setsItemCount(sets) === 0){ toast('Those alternatives have no lines to export','warn'); return; }
+  const opts = {};
+  document.querySelectorAll('.exp-opt').forEach(sel => { opts[sel.dataset.key] = sel.value; });
+  document.querySelectorAll('.exp-opt-radio:checked').forEach(r => { opts[r.dataset.key] = r.value; });
+  const kind = _exportKind;
+  closeModal();
+  KIT.hooks.runExport(kind, sets, opts);
+}
+
+/* ====================================================================
    START — called as the last line of the tool's INIT, once the brand code
    has registered its hooks and rendered its first view.
    ==================================================================== */
@@ -1224,13 +1624,207 @@ KIT.start = function(){
 /* ============================================================
    boq-kit · kit-export.js — shared export chrome
    ------------------------------------------------------------
-   Letterhead (brand logo left / MULYA right), meta band, page furniture,
-   export-set picker, buffer chooser, filename convention — per
-   docs/design/boq-format/BOQ-FORMAT-SPEC.md.
+   The parts of a BOQ document that must be identical whichever brand issued
+   it: the letterhead (brand logo left, MULYA right), the caption type scale,
+   the meta label/value pair, the rules and the page footer — for both
+   renderers, pdfmake and ExcelJS.
 
-   The *body* of each document (columns, bands, totals) stays brand-side.
-   Moving in during Phase 0c.
+   The *body* of each document (its columns, bands and totals) stays brand-side:
+   Stella Mobili quotes rooms of cabinetry, Beyond Teak metres of profile, CDN
+   Lighting fittings on a quotation sheet, and those tables are not the same
+   document. What follows is the paper they are printed on.
+
+   Sizes are pdfmake points, from docs/design/boq-format/BOQ-FORMAT-SPEC.md
+   (CSS px × 0.75). Stella Mobili's PDF is the reference implementation, so its
+   numbers are the defaults here.
    ============================================================ */
+
+/* ===== The company, once =====
+   Every brand's document carries the same issuer. It used to be typed into
+   three templates; Beyond Teak's said "Jl. Tegalsari no. 39", which is not the
+   address MulyaOne prints on its own contracts and invoices. */
+const MULYA_LEGAL = 'PT. MITRA USAHA LANCAR JAYA';
+const MULYA_ADDR  = 'JL. TEGALSARI 37, SURABAYA';
+const MULYA_LINE  = MULYA_LEGAL + ' · ' + MULYA_ADDR;
+
+/* ===== Print tokens =====
+   Ink, muted grey and hairline are fixed by the spec; the accent is the
+   brand's own (SM brass, BT green, CL bronze) and is passed in. */
+function docTokens(over){
+  return Object.assign({
+    ink:    '#1F1812',
+    gray:   '#7A7166',
+    hair:   '#E6E1D8',
+    accent: '#8C6830',
+  }, over || {});
+}
+
+/* ====================================================================
+   PDF (pdfmake)
+   ==================================================================== */
+
+/** The small uppercase line under a logo, and the label of a meta cell. */
+function pdfCaption(text, t, align){
+  const n = {text: String(text||''), fontSize:6, color:(t||docTokens()).accent,
+             characterSpacing:0.6, margin:[0,6.75,0,0]};
+  if(align) n.alignment = align;   // left is pdfmake's default; don't write it
+  return n;
+}
+
+/** A horizontal rule the width of the content column. */
+function pdfRule(cw, t, opts){
+  const o = opts || {}, tok = t || docTokens();
+  const y = o.y == null ? 7.5 : o.y;
+  return {canvas:[{type:'line', x1:0, y1:y, x2:cw, y2:y,
+                   lineWidth: o.width == null ? 1.1 : o.width,
+                   lineColor: o.color || tok.ink}], margin: o.margin};
+}
+
+/**
+ * Brand logo left with its caption, MULYA right with the company line, and the
+ * rule under both. `middle` (optional) is dropped between them — the landscape
+ * BOQ puts its meta cells there.
+ *
+ *   pdfLetterhead({brandLogo:{svg,height,width}, brandLine:'BILL OF QUANTITIES',
+ *                  mulyaLogo:{svg,height,width}, cw, tokens})  ->  [columns, rule]
+ */
+function pdfLetterhead(o){
+  const t  = o.tokens || docTokens();
+  const left = [o.brandLogo];
+  if(o.brandLine) left.push(pdfCaption(o.brandLine, t));
+  const mulya = Object.assign({}, o.mulyaLogo); mulya.alignment = 'right';
+  const right = [mulya];
+  (o.mulyaLines || [MULYA_LINE]).forEach(line => right.push(pdfCaption(line, t, 'right')));
+
+  const cols = [{width: o.middle ? 'auto' : '*', stack: left}];
+  if(o.middle) cols.push(o.middle);
+  cols.push({width: o.middle ? 'auto' : 'auto', stack: right});
+
+  const head = {columns: cols};
+  if(o.margin) head.margin = o.margin;
+  return [head, pdfRule(o.cw, t, {y: o.ruleY, width: o.ruleWidth, color: o.ruleColor})];
+}
+
+/** One meta pair: tiny uppercase label over its value. */
+function pdfMetaCell(label, value, t){
+  const tok = t || docTokens();
+  return {stack:[
+    {text:String(label||'').toUpperCase(), fontSize:5.6, bold:true, color:tok.accent, characterSpacing:0.9},
+    {text:String(value == null || value === '' ? '—' : value), fontSize:8.25, color:tok.ink, margin:[0,1.5,0,0]},
+  ]};
+}
+
+/**
+ * The meta band: cells across the content width, hairline under it.
+ * `cells` is [[label,value], …] or ready-made cell nodes.
+ */
+function pdfMetaBand(cells, cw, t, o){
+  const tok = t || docTokens(), opts = o || {};
+  const nodes = cells.map(c => Array.isArray(c) ? pdfMetaCell(c[0], c[1], tok) : c);
+  const widths = opts.widths || nodes.map(()=> 'auto');
+  const band = {margin: opts.margin || [0,6.75,0,0], columnGap: opts.columnGap == null ? 10.5 : opts.columnGap,
+                columns: nodes.map((n,i)=>Object.assign({width: widths[i] || 'auto'}, n))};
+  const out = [band];
+  if(opts.rule !== false) out.push(pdfRule(cw, tok, {y:6.75, width:0.4, color:tok.hair}));
+  return out;
+}
+
+/**
+ * The page footer the spec asks for: hairline, the document's own caption on
+ * the left, `page / pages` on the right.
+ */
+function pdfFooter(caption, cw, t, o){
+  const tok = t || docTokens(), opts = o || {};
+  return function(cur, cnt){
+    return {margin: opts.margin || [32,6,32,0], stack:[
+      pdfRule(cw, tok, {y:0, width:0.4, color:tok.hair}),
+      {margin:[0, opts.gap == null ? 4 : opts.gap, 0, 0], columns:[
+        {text: String(caption||''), fontSize:6, color:tok.gray, characterSpacing:0.45},
+        {text: cur + ' / ' + cnt, fontSize:6, color:tok.gray, alignment:'right'},
+      ]},
+    ]};
+  };
+}
+
+/* ====================================================================
+   Excel (ExcelJS)
+   The worksheet is written top-down, so each builder takes the current row and
+   returns the next one.
+   ==================================================================== */
+
+/** ARGB for ExcelJS from a #rrggbb token. */
+function argb(hex){ return 'FF' + String(hex||'').replace('#','').toUpperCase(); }
+
+/**
+ * Logos, title and subtitle across the sheet.
+ *   xlsxLetterhead(ws, wb, {row, lastCol:'K', brandPng, mulyaPng, title, subtitle, tokens})
+ */
+function xlsxLetterhead(ws, wb, o){
+  const t = o.tokens || docTokens();
+  let R = o.row || 1;
+  try{
+    if(o.brandPng){
+      const id = wb.addImage({base64:o.brandPng, extension:'png'});
+      ws.addImage(id, {tl:{col:0.15, row:(R-1)+0.25}, ext:o.brandExt || {width:145, height:46}});
+    }
+    if(o.mulyaPng){
+      const id = wb.addImage({base64:o.mulyaPng, extension:'png'});
+      ws.addImage(id, {tl:{col:(o.mulyaCol==null?8.85:o.mulyaCol), row:(R-1)+0.5}, ext:o.mulyaExt || {width:96, height:39}});
+    }
+  }catch(e){}
+  ws.getRow(R).height = 20; ws.getRow(R+1).height = 16; ws.getRow(R+2).height = 16;
+  R += 3;
+  const put = (row, val, font) => {
+    ws.mergeCells('A'+row+':'+(o.lastCol||'K')+row);
+    const c = ws.getRow(row).getCell(1); c.value = val; c.font = font; return c;
+  };
+  if(o.title){
+    put(R, o.title, {name:'Calibri', bold:true, size:16, color:{argb:argb(t.ink)}});
+    ws.getRow(R).height = 22; R++;
+  }
+  if(o.subtitle){
+    put(R, o.subtitle, {name:'Calibri', size:10, color:{argb:argb(t.gray)}});
+    R++;
+  }
+  return R + 1;
+}
+
+/**
+ * The meta block: two label/value pairs per row, as every tool already writes it.
+ *   xlsxMetaBlock(ws, {row, rows:[[l,v,l2,v2], …], tokens, lastCol})
+ */
+function xlsxMetaBlock(ws, o){
+  const t = o.tokens || docTokens();
+  // Which columns a pair occupies. The default is the BOQ sheet's; CDN Lighting's
+  // quotation sheet is narrower on the left, so it passes its own.
+  const L = Object.assign({label1:1, value1:2, value1Span:['B','E'],
+                           label2:6, value2:7, value2Span:['G', o.lastCol||'K']}, o.layout||{});
+  let R = o.row;
+  const lab = {name:'Calibri', bold:true, size:9, color:{argb:argb(t.accent)}};
+  const val = {name:'Calibri', size:10, color:{argb:argb(t.ink)}};
+  const dash = v => (v == null || v === '') ? '—' : v;
+  (o.rows||[]).forEach(m => {
+    const set = (col, v, f) => { const c = ws.getRow(R).getCell(col); c.value = v; c.font = f; return c; };
+    set(L.label1, m[0], lab);
+    ws.mergeCells(L.value1Span[0]+R+':'+L.value1Span[1]+R); set(L.value1, dash(m[1]), val);
+    if(m.length > 2 && (m[2] !== '' || m[3] !== '')){
+      set(L.label2, m[2], lab);
+      ws.mergeCells(L.value2Span[0]+R+':'+L.value2Span[1]+R); set(L.value2, dash(m[3]), val);
+    }
+    R++;
+  });
+  return R;
+}
+
+/** The line every sheet closes with. */
+function xlsxFootNote(ws, o){
+  const t = o.tokens || docTokens();
+  ws.mergeCells('A'+o.row+':'+(o.lastCol||'K')+o.row);
+  const c = ws.getRow(o.row).getCell(1);
+  c.value = o.text;
+  c.font = {name:'Calibri', italic:true, size:8, color:{argb:argb(t.gray)}};
+  return o.row + 1;
+}
 
 </script>
 <script>
@@ -1636,13 +2230,10 @@ let searchPools = {kit:[],wd:[],acc:[]};
 let revisionNumber = 1;
 let customModalSection = 'kitchen';
 let projectMeta = {name:'',client:'',pic:'',date:'',notes:'',priceListVersion:''};
-let _expOrient='portrait';   // PDF page orientation chosen in the export modal
 // NB: `dirty`, `fileUnsaved`, `alts`, `activeAltKey`, `activeVerNum` and `_commit` are all
 // declared by the kit (src/kit/kit.js) — it owns the save-status machine, autosave and the
 // Revisions & Alternatives tree. Brand code still reads/assigns them freely.
 let selectedRows = {kitchen:new Set(),wardrobe:new Set(),accessories:new Set()};
-let dragUnit = null, dragRow = {sec:null, id:null};
-let _mousedownEl = null;
 
 function getPD(){ return ALL_PRICE_DATA[projectMeta.priceListVersion] || ALL_PRICE_DATA[PRICE_LIST_LATEST]; }
 function updateRevPill(){ const p=document.getElementById('revPill'); if(p) p.textContent='Pricelist '+(projectMeta.priceListVersion||PRICE_LIST_LATEST); }
@@ -1682,6 +2273,97 @@ KIT.register({
   bufferTotal: () => units.reduce((s,u)=>s+unitBufferTotal(u),0),
   repaint: () => { if(currentView==='overview') renderOverview(); },
   syncMeta: syncProjectMetaFromDOM,
+  // --- Handling: which list is being reordered / duplicated / copied into ---
+  rowList: (sec, unitId) => {
+    const u = unitId ? units.find(x=>x.id===unitId) : getUnit();
+    return u ? u.items[sec] : null;
+  },
+  containerList: () => units,
+  containerRowArrays: u => ['kitchen','wardrobe','accessories'].map(sec => u.items[sec]),
+  selection: sec => {
+    const u = getUnit(); if(!u) return [];
+    const ids = selectedRows[sec] || new Set();
+    return u.items[sec].filter(r => ids.has(String(r.id)));
+  },
+  // A copy lands ungrouped: item groups are a per-unit arrangement, and a
+  // duplicate inside a group would otherwise silently join it.
+  scrubCopy: (r, mode) => { r.altGroup=null; if(mode==='copy') r.groupId=null; return r; },
+  newId: kind => kind==='container' ? ('u'+(++unitCounter)) : (Date.now()+Math.random()),
+  afterRows: sec => {
+    const u=getUnit(); if(u) reflowSection(u,sec);   // keep group members contiguous
+    refreshTable(sec); updateTabCounts(); renderSidebarUnits();
+  },
+  afterContainers: focusId => {
+    renderSidebarUnits();
+    if(currentView==='overview') renderOverview();
+    else if(focusId) showView('unit', focusId);
+  },
+  // --- Export guards: the letterhead needs these three ---
+  requiredFields: [
+    {sel:'#projName',   label:'Project Name', value:()=>{ syncProjectMetaFromDOM(); return projectMeta.name; }},
+    {sel:'#projClient', label:'Client',       value:()=>projectMeta.client},
+    {sel:'#projPIC',    label:'PIC',          value:()=>projectMeta.pic},
+  ],
+  goHome: () => { if(currentView!=='overview') showView('overview'); },
+  // --- Export: the kit asks which alternative, SM renders the document ---
+  exportUnits: (altKey, ver) => {
+    if(ver==='working' || ver==null) return units;
+    const a = alts.find(x=>x.key===altKey);
+    const v = a && a.versions.find(x=>x.ver===+ver);
+    return (v && v.snapshot && v.snapshot.units) || [];
+  },
+  totalOf:     us => (us||[]).reduce((t,u)=>t+unitTotal(u),0),
+  itemCountOf: us => (us||[]).reduce((t,u)=>t+['kitchen','wardrobe','accessories']
+                       .reduce((n,sec)=>n+(u.items[sec]||[]).length,0),0),
+  // The buffer question only makes sense when something exportable has buffer rows,
+  // and it is worth asking in full sentences — it decides Quotation vs Sales Order.
+  exportOptions: kind => {
+    const out = [];
+    if(kind==='pdf') out.push({key:'orient', label:'Page', default:'portrait', choices:[
+      {value:'portrait',  label:'A4 Portrait  ·  two-line items, compact notes'},
+      {value:'landscape', label:'A4 Landscape  ·  one-line items'}]});
+    const anyBuffer = anyBufferItems() || alts.some(a=>a.versions.some(v=>
+      ((v.snapshot&&v.snapshot.units)||[]).some(u=>unitBufferTotal(u)>0)));
+    if(anyBuffer) out.push({key:'buffer', label:'Buffer items', style:'cards', default:'incl', choices:[
+      {value:'incl', label:'With buffer — for Quotation',
+       hint:'All items included. Buffer rows are marked; totals shown both incl. and excl. buffer.'},
+      {value:'excl', label:'Without buffer — for Sales Order',
+       hint:'For ordering to Stella Mobili Jakarta. Buffer rows are left out entirely.'}]});
+    return out;
+  },
+  runExport: (kind, sets, opts) => {
+    const incBuf = opts.buffer !== 'excl';
+    return kind==='pdf' ? savePDF(incBuf, opts.orient||'portrait', sets) : exportExcel(incBuf, sets);
+  },
+  // --- Price list: the kit owns the picker, SM owns the maths ---
+  priceListVersions: () => PRICE_LIST_VERSIONS,
+  priceListLatest:   () => PRICE_LIST_LATEST,
+  priceListCurrent:  () => projectMeta.priceListVersion || PRICE_LIST_LATEST,
+  repriceAll: v => {
+    const pd=ALL_PRICE_DATA[v];
+    let updated=0, notFound=0;
+    units.forEach(unit=>{
+      ['kitchen','wardrobe','accessories'].forEach(sec=>{
+        unit.items[sec].forEach(r=>{
+          if(r.custom) return;
+          const dataPool=sec==='accessories'?pd.accessories:(sec==='kitchen'?pd.kitchen:pd.wardrobe);
+          const catItems=(dataPool[r.category])||[];
+          const descItem=catItems.find(it=>it.desc===r.desc);
+          if(!descItem){notFound++;return;}
+          let key;
+          if(sec==='accessories') key='(No Finish)__standard';
+          else if(sec==='kitchen') key=r.finish+'__'+(r.variant||'standard');
+          else key=r.finish+'__standard';
+          const newPrice=descItem.prices[key]||(sec!=='accessories'?descItem.prices[r.finish+'__standard']:null);
+          if(newPrice){r.price=newPrice;updated++;} else notFound++;
+        });
+      });
+    });
+    projectMeta.priceListVersion=v;
+    updateRevPill(); renderOverview();
+    if(currentView==='unit') renderUnitView(activeUnitId);
+    return {updated, notFound};
+  },
 });
 
 projectMeta.priceListVersion = PRICE_LIST_LATEST;
@@ -1692,10 +2374,6 @@ showView('overview');
 updateRevPill();
 KIT.start();           // sidebar, drag-drop load, autosave loop, recover-unsaved-work offer
 document.addEventListener('click', globalClickClose);
-document.addEventListener('mousedown', e => { _mousedownEl = e.target; });
-// Rows are only draggable while their drag-handle is held (set in col-drag onmousedown), so
-// clicking inputs never lands the caret inside a draggable ancestor. Reset on any mouseup.
-document.addEventListener('mouseup', () => { document.querySelectorAll('tr[data-id][draggable="true"]').forEach(tr=>tr.draggable=false); });
 document.addEventListener('keydown', e => {
   if(e.key==='Escape'){
     ['kit','wd','acc'].forEach(p=>hideDropdown(p));
@@ -1722,7 +2400,7 @@ function showUnitFlyout(el,uid){
   fly.style.top=rect.top+'px';
   fly.style.height=rect.height+'px';
   fly.innerHTML=`<input class="sb-unit-name" type="text" value="${escAttr(u.name)}" onclick="event.stopPropagation()" onchange="renameUnit('${u.id}',this.value)">
-    <button class="sb-del sb-clone" onclick="event.stopPropagation();cloneUnit('${u.id}')" title="Clone unit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+    <button class="sb-del sb-clone" onclick="event.stopPropagation();duplicateContainer('${u.id}')" title="Clone unit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
     <button class="sb-del sb-delx" onclick="event.stopPropagation();deleteUnit('${u.id}')" title="Delete unit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
   fly.addEventListener('mouseenter',()=>clearTimeout(_sbFlyoutTimer));
   fly.addEventListener('mouseleave',()=>hideUnitFlyout(0));
@@ -1774,19 +2452,16 @@ function renderSidebarUnits(){
   const wrap = document.getElementById('sidebar-units');
   wrap.innerHTML = units.map(u => {
     const total = unitTotal(u), cnt = ['kitchen','wardrobe','accessories'].reduce((s,sec)=>s+u.items[sec].length,0);
-    return `<div class="sb-item" draggable="true" onclick="showView('unit','${u.id}')" data-nav="unit" data-unit="${u.id}"
+    return `<div class="sb-item" onclick="showView('unit','${u.id}')" data-nav="unit" data-unit="${u.id}"
       onmouseenter="showUnitFlyout(this,'${u.id}')" onmouseleave="hideUnitFlyout(100)"
-      ondragstart="unitDragStart(event,'${u.id}')" ondragover="unitDragOver(event,'${u.id}')"
-      ondrop="unitDrop(event,'${u.id}')" ondragend="unitDragEnd()">
-      <span class="drag-handle" onclick="event.stopPropagation()" title="Drag to reorder">
-        <svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14"><circle cx="2" cy="2" r="1.3"/><circle cx="6" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="6" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="6" cy="12" r="1.3"/></svg>
-      </span>
+      ${dragAttrs('container','',u.id)}>
+      ${gripHandle()}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" flex-shrink="0"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       <span class="sb-unit-name" id="sbname-${u.id}">${esc(u.name)}</span>
       <button class="sb-del sb-edit" onclick="event.stopPropagation();editUnitName('${u.id}')" title="Rename unit" style="margin-right:2px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
       </button>
-      <button class="sb-del sb-clone" onclick="event.stopPropagation();cloneUnit('${u.id}')" title="Clone unit" style="margin-right:2px">
+      <button class="sb-del sb-clone" onclick="event.stopPropagation();duplicateContainer('${u.id}')" title="Clone unit" style="margin-right:2px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
       </button>
       <button class="sb-del sb-delx" onclick="event.stopPropagation();deleteUnit('${u.id}')" title="Delete unit">
@@ -1822,22 +2497,6 @@ function deleteUnit(id){
   markDirty();
   renderSidebarUnits();
   showView('overview');
-}
-function cloneUnit(id){
-  const src=units.find(u=>u.id===id); if(!src) return;
-  unitCounter++;
-  const newId='u'+unitCounter;
-  const cloned=JSON.parse(JSON.stringify(src));
-  cloned.id=newId; cloned.name=src.name+' (copy)';
-  ['kitchen','wardrobe','accessories'].forEach(sec=>{
-    cloned.items[sec].forEach(r=>{ r.id=Date.now()+Math.random(); });
-  });
-  const srcIdx=units.findIndex(u=>u.id===id);
-  units.splice(srcIdx+1,0,cloned);
-  markDirty();
-  renderSidebarUnits();
-  if(currentView==='overview') renderOverview();
-  toast('Cloned: '+cloned.name);
 }
 function renameUnit(id,val){const u=units.find(u=>u.id===id);if(u){u.name=val;markDirty();renderSidebarUnits();if(currentView!=='unit') renderOverview();}}
 // Pencil button in the sidebar: swap the name <span> for an input, commit on Enter/blur.
@@ -1966,7 +2625,6 @@ function renderOverview(){
   const grand = units.reduce((s,u)=>s+unitTotal(u),0);
   const {name:projName,client,pic,notes,priceListVersion} = projectMeta;
   const isOld = priceListVersion && priceListVersion !== PRICE_LIST_LATEST;
-  const plOpts = PRICE_LIST_VERSIONS.map(v=>`<option${v===priceListVersion?' selected':''}>${v}</option>`).join('');
   const newerChip = isOld ? `<span class="pl-newer-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${PRICE_LIST_LATEST} available</span>` : '';
   const e = document.getElementById('view-overview');
   e.innerHTML = `
@@ -1999,7 +2657,7 @@ function renderOverview(){
           <div class="field"><label>Client <span class="req">*</span></label><input class="input compact" type="text" id="projClient" placeholder="Client name" oninput="onMetaInput()" value="${esc(client)}"></div>
           <div class="field"><label>PIC <span class="req">*</span></label><input class="input compact" type="text" id="projPIC" placeholder="PIC name" oninput="onMetaInput()" value="${esc(pic)}"></div>
           <div class="field"><label>Notes to SM Jakarta</label><input class="input compact" type="text" id="projNotes" placeholder="Revision notes, special requests..." oninput="onMetaInput()" value="${esc(notes)}"></div>
-          <div class="field"><label>Price List</label><div style="display:flex;align-items:center;gap:8px"><select class="select compact" id="projPL" onchange="switchPriceList(this.value)">${plOpts}</select>${newerChip}</div></div>
+          <div class="field"><label>Price List</label><div style="display:flex;align-items:center;gap:8px"><select class="select compact" id="projPL" onchange="switchPriceList(this.value)">${priceListOptions()}</select>${newerChip}</div></div>
         </div>
       </div>
     </div>
@@ -2679,11 +3337,9 @@ function buildTableCard(unit, sec){
     const subcatBadge=r.subcat?`<span class="tag gray" style="font-size:9.5px">${esc(r.subcat)}</span>`:'';
     const isSel=selSet.has(String(r.id));
     const isZero=Number(r.qty)===0;
-    return `<tr data-id="${r.id}" class="${isSel?'row-sel':''}${collapsed?' row-hidden':''}${isZero?' row-zero':''}" draggable="false"
-      onclick="rowClickSelect(event,'${sec}','${r.id}')"
-      ondragstart="rowDragStart(event,'${sec}','${r.id}')" ondragover="rowDragOver(event,'${sec}','${r.id}')"
-      ondrop="rowDrop(event,'${sec}','${r.id}')" ondragend="rowDragEnd('${sec}');this.draggable=false">
-      <td class="col-drag" onmousedown="this.closest('tr').draggable=true" title="Drag to reorder"><svg viewBox="0 0 8 14" fill="currentColor" width="8" height="14" style="color:var(--ink-faint)"><circle cx="2" cy="2" r="1.3"/><circle cx="6" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="6" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="6" cy="12" r="1.3"/></svg></td>
+    return `<tr data-id="${r.id}" class="${isSel?'row-sel':''}${collapsed?' row-hidden':''}${isZero?' row-zero':''}"
+      onclick="rowClickSelect(event,'${sec}','${r.id}')" ${dragAttrs('row',sec,r.id)}>
+      ${gripCell()}
       <td class="col-check"><input type="checkbox"${isSel?' checked':''} onchange="toggleRowSelect('${sec}','${r.id}',this.checked)"></td>
       <td class="col-no">${n}</td>
       <td class="col-cat"><div class="cat-stack" style="min-height:46px">${r.custom?'<span class="tag custom">CUSTOM</span>':`<span class="tag gray">${esc(r.category)}</span>`}${r.buffer===true?'<span class="tag buffer" title="Buffer / insurance item — counted in totals, excluded from the Sales Order">BUFFER</span>':''}${isZero?'<span class="tag zero" title="Qty is 0 — the item is listed but adds nothing to any total">QTY 0</span>':''}</div></td>
@@ -2731,7 +3387,7 @@ function buildTableCard(unit, sec){
     <button class="btn btn-sm sel-act" onclick="removeSelectedFromGroup('${sec}')">- Group</button>
     <span class="sel-div"></span>
     <button class="btn btn-sm sel-act" onclick="changeFinishSelected('${sec}')">Change Finish</button>
-    ${units.length>1?`<button class="btn btn-sm sel-act" onclick="showCopyToUnit('${sec}')">Copy to Unit</button>`:''}
+    ${units.length>1?`<button class="btn btn-sm sel-act" onclick="openCopyToContainer('${sec}')">Copy to Unit</button>`:''}
     <button class="btn btn-sm danger sel-act" onclick="deleteSelected('${sec}')">Delete</button>
     <button class="btn btn-sm ghost sel-act" onclick="clearSelection('${sec}')">Clear</button>
   </div>`;
@@ -2820,14 +3476,6 @@ function updateQty(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit
 function updateNotes(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.notes=val;markDirty();}}
 function toggleRowBuffer(sec,id){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(!r)return;r.buffer=r.buffer===true?false:true;markDirty();refreshTable(sec);toast(r.buffer?'Marked as buffer':'Buffer removed');}
 function removeRow(sec,id){const unit=getUnit();if(!unit)return;unit.items[sec]=unit.items[sec].filter(r=>r.id!=id);selectedRows[sec].delete(String(id));markDirty();refreshTable(sec);updateTabCounts();renderSidebarUnits();}
-function duplicateRow(sec,id){
-  const unit=getUnit();if(!unit)return;
-  const row=unit.items[sec].find(r=>r.id==id);if(!row)return;
-  const n=JSON.parse(JSON.stringify(row));n.id=Date.now()+Math.random();n.altGroup=null;
-  const idx=unit.items[sec].indexOf(row);unit.items[sec].splice(idx+1,0,n);
-  markDirty();
-  refreshTable(sec);updateTabCounts();renderSidebarUnits();toast('Row duplicated');
-}
 function toggleRowSelect(sec,id,checked){
   if(checked) selectedRows[sec].add(String(id)); else selectedRows[sec].delete(String(id));
   updateSelectionUI(sec);
@@ -2867,25 +3515,6 @@ function deleteSelected(sec){
   markDirty();
   refreshTable(sec);updateTabCounts();renderSidebarUnits();
   toast(ids.size+' item'+(ids.size===1?'':'s')+' deleted');
-}
-function showCopyToUnit(sec){
-  const ids=selectedRows[sec];if(!ids.size){toast('No items selected','warn');return;}
-  const unit=getUnit();
-  const others=units.filter(u=>u.id!==unit.id);
-  if(!others.length){toast('No other units available','warn');return;}
-  const opts=others.map(u=>`<div class="db-item-row" onclick="copyToUnit('${sec}','${u.id}');closeModal()">${esc(u.name)}</div>`).join('');
-  showModal(`<div class="modal-head"><h2>Copy to Unit</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-  <div class="modal-body"><p style="font-size:13px;color:var(--ink-faint);margin:0 0 10px">Copy ${ids.size} selected item${ids.size===1?'':'s'} to:</p>${opts}</div>
-  <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Cancel</button></div>`);
-}
-function copyToUnit(sec,targetId){
-  const src=getUnit();const tgt=getUnit(targetId);if(!src||!tgt)return;
-  const ids=selectedRows[sec];
-  const toCopy=src.items[sec].filter(r=>ids.has(String(r.id)));
-  toCopy.forEach(r=>tgt.items[sec].push({...r,id:Date.now()+Math.random(),altGroup:null,groupId:null}));   // land ungrouped in target
-  markDirty();
-  toast(`Copied ${toCopy.length} item${toCopy.length===1?'':'s'} to "${tgt.name}"`);
-  renderSidebarUnits();if(currentView==='overview')renderOverview();
 }
 function changeFinishSelected(sec){
   if(!selectedRows[sec].size){toast('No items selected','warn');return;}
@@ -2956,71 +3585,10 @@ function applyFinishChange(sec){
 // ====================================================================
 // DRAG — UNITS (sidebar)
 // ====================================================================
-function unitDragStart(e,id){
-  if(!_mousedownEl?.closest('.drag-handle')){e.preventDefault();return;} _mousedownEl=null;
-  dragUnit=id; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',id);
-  setTimeout(()=>{const el=document.querySelector(`.sb-item[data-unit="${id}"]`);if(el)el.classList.add('dragging');},0);
-}
-function unitDragOver(e,id){
-  e.preventDefault(); e.dataTransfer.dropEffect='move';
-  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('drop-above','drop-below'));
-  if(id===dragUnit)return;
-  const el=document.querySelector(`.sb-item[data-unit="${id}"]`);
-  if(el){const r=el.getBoundingClientRect();el.classList.add(e.clientY<r.top+r.height/2?'drop-above':'drop-below');}
-}
-function unitDrop(e,targetId){
-  e.preventDefault();
-  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('drop-above','drop-below'));
-  if(!dragUnit||dragUnit===targetId)return;
-  const srcIdx=units.findIndex(u=>u.id===dragUnit);
-  const tgtIdx=units.findIndex(u=>u.id===targetId);
-  if(srcIdx<0||tgtIdx<0)return;
-  const tgtEl=document.querySelector(`.sb-item[data-unit="${targetId}"]`);
-  const after=tgtEl&&e.clientY>tgtEl.getBoundingClientRect().top+tgtEl.getBoundingClientRect().height/2;
-  const [moved]=units.splice(srcIdx,1);
-  const newTgt=units.findIndex(u=>u.id===targetId);
-  units.splice(after?newTgt+1:newTgt,0,moved);
-  markDirty();
-  dragUnit=null; renderSidebarUnits();
-  if(currentView==='overview') renderOverview();
-}
-function unitDragEnd(){dragUnit=null;document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('dragging','drop-above','drop-below'));}
 
 // ====================================================================
 // DRAG — TABLE ROWS
 // ====================================================================
-function rowDragStart(e,sec,id){
-  if(!_mousedownEl?.closest('.col-drag')){e.preventDefault();return;} _mousedownEl=null;
-  dragRow={sec,id:String(id)}; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',id);
-  setTimeout(()=>{const tr=document.querySelector(`tr[data-id="${id}"]`);if(tr)tr.classList.add('dragging');},0);
-}
-function rowDragOver(e,sec,id){
-  e.preventDefault(); e.dataTransfer.dropEffect='move';
-  if(sec!==dragRow.sec)return;
-  document.querySelectorAll('tr[data-id]').forEach(r=>r.classList.remove('drop-above','drop-below'));
-  if(String(id)===dragRow.id)return;
-  const tr=document.querySelector(`tr[data-id="${id}"]`);
-  if(tr){const r=tr.getBoundingClientRect();tr.classList.add(e.clientY<r.top+r.height/2?'drop-above':'drop-below');}
-}
-function rowDrop(e,sec,targetId){
-  e.preventDefault();
-  document.querySelectorAll('tr[data-id]').forEach(r=>r.classList.remove('drop-above','drop-below'));
-  if(!dragRow.id||dragRow.sec!==sec||dragRow.id===String(targetId))return;
-  const unit=getUnit();if(!unit)return;
-  const items=unit.items[sec];
-  const srcIdx=items.findIndex(r=>String(r.id)===dragRow.id);
-  const tgtIdx=items.findIndex(r=>String(r.id)===String(targetId));
-  if(srcIdx<0||tgtIdx<0)return;
-  const tgtTr=document.querySelector(`tr[data-id="${targetId}"]`);
-  const after=tgtTr&&e.clientY>tgtTr.getBoundingClientRect().top+tgtTr.getBoundingClientRect().height/2;
-  const [moved]=items.splice(srcIdx,1);
-  const newTgt=items.findIndex(r=>String(r.id)===String(targetId));
-  items.splice(after?newTgt+1:newTgt,0,moved);
-  reflowSection(unit,sec);   // normalize: keep group members contiguous (within-group reorder is preserved)
-  markDirty();
-  dragRow={sec:null,id:null}; refreshTable(sec); renderSidebarUnits();
-}
-function rowDragEnd(sec){dragRow={sec:null,id:null};document.querySelectorAll('tr[data-id]').forEach(r=>r.classList.remove('dragging','drop-above','drop-below'));}
 
 // ====================================================================
 // CUSTOM ITEM
@@ -3075,8 +3643,11 @@ function itemsNow(){ return units.reduce((sum,u)=>sum+['kitchen','wardrobe','acc
 // ====================================================================
 function getState(){
   syncProjectMetaFromDOM();
-  return{version:3, revisionNumber, project:projectMeta, units, unitCounter,
-    alts, activeAltKey, activeVerNum, savedAt:new Date().toISOString()};
+  // The wrapper — tool / brand / format / savedAt / versions and the alternatives
+  // tree — is the kit's; units and unitCounter are Stella Mobili's own payload.
+  // `version: 3` stays alongside the kit's `format`: every `.smbq` in the wild
+  // carries it, and MulyaOne's importer checks it.
+  return buildEnvelope({version:3, revisionNumber, project:projectMeta, units, unitCounter});
 }
 // pickSaveHandle / writePicked / saveBlobAs / saveFile live in the kit; they reach
 // SM through KIT.hooks.getState + fileBaseName.
@@ -3089,10 +3660,7 @@ function applyLoadedState(st){
   units=st.units||[];unitCounter=st.unitCounter||units.length;activeUnitId=units[0]?.id||null;
   units.forEach(u=>{ if(!Array.isArray(u.groups)) u.groups=[]; pruneGroups(u); reflowUnit(u); });   // groups backward-compat
   revisionNumber=st.revisionNumber||1;
-  // Restore alternatives/versions (backward-compatible with older .smbq files)
-  alts=(Array.isArray(st.alts)&&st.alts.length)?st.alts:[{key:'A', name:'Initial scheme', versions:[]}];
-  activeAltKey=st.activeAltKey||alts[0].key;
-  activeVerNum=(st.activeVerNum!==undefined)?st.activeVerNum:null;
+  restoreEnvelope(st);   // the alternatives tree, whatever format the file is
   dirty=false;
   fileUnsaved=false;   // loaded from a .smbq file → matches disk (autosave-restore re-flags below)
   updateRevPill(); updateDirtyIndicator(); updateAltVerChip();
@@ -3105,35 +3673,6 @@ function applyLoadedState(st){
 // ====================================================================
 // SWITCH PRICE LIST
 // ====================================================================
-function switchPriceList(v){
-  if(!ALL_PRICE_DATA[v]){toast('Price list version not found','error');return;}
-  const pd=ALL_PRICE_DATA[v];
-  let updated=0, notFound=0;
-  units.forEach(unit=>{
-    ['kitchen','wardrobe','accessories'].forEach(sec=>{
-      unit.items[sec].forEach(r=>{
-        if(r.custom) return;
-        const dataPool=sec==='accessories'?pd.accessories:(sec==='kitchen'?pd.kitchen:pd.wardrobe);
-        const catItems=(dataPool[r.category])||[];
-        const descItem=catItems.find(it=>it.desc===r.desc);
-        if(!descItem){notFound++;return;}
-        let key;
-        if(sec==='accessories') key='(No Finish)__standard';
-        else if(sec==='kitchen') key=r.finish+'__'+(r.variant||'standard');
-        else key=r.finish+'__standard';
-        const newPrice=descItem.prices[key]||(sec!=='accessories'?descItem.prices[r.finish+'__standard']:null);
-        if(newPrice){r.price=newPrice;updated++;} else notFound++;
-      });
-    });
-  });
-  projectMeta.priceListVersion=v;
-  markDirty();
-  updateRevPill();
-  renderOverview();
-  if(currentView==='unit') renderUnitView(activeUnitId);
-  const label=v===PRICE_LIST_LATEST?v:`${v} (not latest)`;
-  toast(`Switched to ${label}: ${updated} item${updated===1?'':'s'} re-priced${notFound?` · ${notFound} not found`:''}`, updated?'success':'warn', 4000);
-}
 
 // ====================================================================
 // EXPORT (Excel / PDF) — buffer-mode choice
@@ -3158,21 +3697,6 @@ function bandTotal(band){ return band.rows.reduce((s,{r})=>s+r.price*r.qty,0); }
 function bandBufferTotal(band){ return band.rows.reduce((s,{r})=>s+(r.buffer===true?r.price*r.qty:0),0); }
 
 // Project Name + Client are mandatory before any export (they drive the document + filename).
-function requireProjectFields(){
-  syncProjectMetaFromDOM();
-  const fields=[['projName','Project Name',(projectMeta.name||'').trim()],
-                ['projClient','Client',(projectMeta.client||'').trim()],
-                ['projPIC','PIC',(projectMeta.pic||'').trim()]];
-  const missing=fields.filter(f=>!f[2]);
-  if(!missing.length) return true;
-  toast('Required before export: '+missing.map(f=>f[1]).join(', '),'warn',3500);
-  if(currentView!=='overview') showView('overview');
-  setTimeout(()=>{
-    missing.forEach(([id])=>{const e=el(id); if(e){e.classList.add('field-error'); setTimeout(()=>e.classList.remove('field-error'),3000);}});
-    const first=el(missing[0][0]); if(first) first.focus();
-  },80);
-  return false;
-}
 // Export filename: project name, date, quotation version, mode — Windows-safe.
 // dateStr defaults to today (used for .smbq saves + working-copy exports).
 function fileBaseNameDate(dateStr){
@@ -3185,32 +3709,19 @@ function anyBufferItems(){ return units.some(u=>unitBufferTotal(u)>0); }
 // ==== Export sets (version/alternative picker) ==============================
 // A "set" is {altKey, ver} where ver is a saved version number or 'working'
 // (the live calculation — only offered for the active alternative).
-function setUnits(altKey,ver){
-  if(ver==='working') return units;
-  const a=alts.find(x=>x.key===altKey); const v=a&&a.versions.find(x=>x.ver===ver);
-  return (v&&v.snapshot&&v.snapshot.units)||[];
-}
 // Document date for an export set: a saved version's own date, or today for the working copy.
 function setDate(set){
   if(set.ver==='working') return new Date().toISOString().slice(0,10);
   const a=alts.find(x=>x.key===set.altKey); const v=a&&a.versions.find(x=>x.ver===set.ver);
   return (v&&v.date)||new Date().toISOString().slice(0,10);
 }
-function setLabel(s){
-  return 'Alt '+s.altKey+(s.ver==='working'?' · current':' · v'+s.ver);
-}
-function defaultSets(){ return [{altKey:activeAltKey, ver:'working'}]; }
-function setsHaveBuffer(sets){ return (sets||defaultSets()).some(s=>setUnits(s.altKey,s.ver).some(u=>unitBufferTotal(u)>0)); }
-function setsVersionLabel(sets){
-  if(!sets||sets.length<=1) return setLabel((sets||defaultSets())[0]);
-  return sets.map(s=>s.altKey+(s.ver==='working'?'·cur':'·v'+s.ver)).join(' + ');
-}
+function setsHaveBuffer(sets){ return (sets||defaultExportSets()).some(s=>setUnits(s).some(u=>unitBufferTotal(u)>0)); }
 // "(Buffer)" only appears when buffer items are actually included in the document.
 // Alt segment: when the export covers only SOME of the alternatives, name them
 // (e.g. _Alt_A-B-C_). When every alternative is included, omit it — the filename stays
 // clean and the document itself states the version(s).
 function exportFileBase(incBuf, sets){
-  sets=(sets&&sets.length)?sets:defaultSets();
+  sets=(sets&&sets.length)?sets:defaultExportSets();
   const buf=(incBuf&&setsHaveBuffer(sets))?'BOQ(Buffer)':'BOQ';
   const keys=[...new Set(sets.map(s=>s.altKey))].sort();
   const allKeys=alts.map(a=>a.key).sort();
@@ -3220,94 +3731,6 @@ function exportFileBase(incBuf, sets){
   return fileBaseNameDate(dateStr)+'_'+altSeg+buf;
 }
 
-function openExportModal(kind){
-  if(!requireProjectFields()) return;
-  _expOrient='portrait';
-  const isPdf=kind==='pdf';
-  const title=isPdf?'Save PDF':'Export Excel';
-  // Sets picker: shown as soon as there is anything to choose (saved versions or >1 alt)
-  const anyVersions=alts.some(a=>a.versions.length>0);
-  const showPicker=alts.length>1||anyVersions;
-  let setsRows='';
-  if(showPicker){
-    setsRows='<div style="display:flex;flex-direction:column;gap:6px">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--ink-faint)">WHAT TO EXPORT</span><button class="btn btn-xs ghost" onclick="expSelectAll()">Select all</button></div>'
-      +alts.map(a=>{
-        const isActive=a.key===activeAltKey;
-        const opts=[];
-        if(isActive) opts.push(['working','Current working copy'+(dirty?' (unsaved edits)':'')]);
-        a.versions.forEach((v,i)=>opts.push([String(v.ver),'v'+v.ver+(i===0?' (latest)':'')+(v.status&&v.status!=='Superseded'?' — '+v.status:'')]));
-        const disabled=opts.length===0;
-        const defVer=isActive?((dirty||!a.versions.length)?'working':String(a.versions[0].ver)):(a.versions.length?String(a.versions[0].ver):'');
-        return `<label style="display:flex;align-items:center;gap:9px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer${disabled?';opacity:.45':''}">
-          <input type="checkbox" class="exp-alt" data-alt="${escAttr(a.key)}"${isActive&&!disabled?' checked':''}${disabled?' disabled':''}>
-          <span style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Alt ${escAttr(a.key)}<span style="font-weight:400;color:var(--ink-faint)"> — ${esc(a.name)}</span></span>
-          ${disabled?'<span style="font-size:11px;color:var(--ink-faint);flex-shrink:0">no saved versions</span>'
-            :`<select class="select compact exp-ver" data-alt="${escAttr(a.key)}" style="width:auto;max-width:215px;flex-shrink:0">${opts.map(o=>`<option value="${escAttr(o[0])}"${o[0]===defVer?' selected':''}>${esc(o[1])}</option>`).join('')}</select>`}
-        </label>`;
-      }).join('')
-      +'</div>';
-  }
-  const orientRow=isPdf?`
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--ink-faint)">PAGE</span>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-sm primary" id="orient-portrait" onclick="setExpOrient('portrait')">A4 Portrait</button>
-          <button class="btn btn-sm ghost" id="orient-landscape" onclick="setExpOrient('landscape')">A4 Landscape</button>
-        </div>
-        <span style="font-size:11px;color:var(--ink-faint)" id="orient-hint">two-line items · compact notes</span>
-      </div>`:'';
-  // Buffer question is offered when ANY exportable content (live or snapshot) has buffer items
-  const anyBufferPossible=anyBufferItems()||alts.some(a=>a.versions.some(v=>((v.snapshot&&v.snapshot.units)||[]).some(u=>unitBufferTotal(u)>0)));
-  if(!showPicker&&!anyBufferPossible&&!isPdf){ exportExcel(true, defaultSets()); return; }   // nothing to choose
-  const bufferSection=anyBufferPossible?`
-      <p style="font-size:12.5px;color:var(--ink-faint);margin:0">This BOQ contains buffer items. Choose what to export:</p>
-      <button class="export-opt" onclick="confirmExport('${kind}',true)">
-        <span class="eo-icon" style="background:color-mix(in srgb,var(--buffer) 14%,transparent);color:var(--buffer)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
-        <span class="eo-text"><strong>With buffer — for Quotation</strong>
-        <span>All items included. Buffer rows are marked${isPdf?' (blue-tinted rows)':''}; totals shown both incl. and excl. buffer.</span></span>
-      </button>
-      <button class="export-opt" onclick="confirmExport('${kind}',false)">
-        <span class="eo-icon" style="background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 8V21H3V8"/><path d="M23 3H1v5h22V3z"/><line x1="10" y1="12" x2="14" y2="12"/></svg></span>
-        <span class="eo-text"><strong>Without buffer — for Sales Order</strong>
-        <span>For ordering to Stella Mobili Jakarta. Buffer items are left out of the list and totals entirely.</span></span>
-      </button>`:'';
-  const foot=anyBufferPossible
-    ?'<button class="btn ghost" onclick="closeModal()">Cancel</button>'
-    :`<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="confirmExport('${kind}',true)">${isPdf?'Download PDF':'Export Excel'}</button>`;
-  showModal(`
-    <div class="modal-head"><h2>${title}</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-    <div class="modal-body" style="gap:12px">${setsRows}${orientRow}${bufferSection?'<div style="border-top:1px solid var(--line-soft)"></div>'+bufferSection:''}</div>
-    <div class="modal-foot">${foot}</div>`);
-}
-function getExportSets(){
-  const rows=[...document.querySelectorAll('.exp-alt')];
-  if(!rows.length) return defaultSets();   // picker hidden → working copy of the active alt
-  const sets=[];
-  rows.forEach(cb=>{
-    if(!cb.checked||cb.disabled) return;
-    const k=cb.dataset.alt;
-    const sel=document.querySelector('.exp-ver[data-alt="'+k+'"]');
-    const v=sel?sel.value:'working';
-    sets.push({altKey:k, ver:v==='working'?'working':parseInt(v,10)});
-  });
-  return sets.length?sets:null;
-}
-function expSelectAll(){ document.querySelectorAll('.exp-alt:not(:disabled)').forEach(cb=>{cb.checked=true;}); }
-function confirmExport(kind,incBuf){
-  const sets=getExportSets();
-  if(!sets){ toast('Select at least one alternative to export','warn'); return; }
-  const orient=_expOrient;
-  closeModal();
-  if(kind==='pdf') savePDF(incBuf,orient,sets); else exportExcel(incBuf,sets);
-}
-function setExpOrient(o){
-  _expOrient=o;
-  const p=document.getElementById('orient-portrait'), l=document.getElementById('orient-landscape'), h=document.getElementById('orient-hint');
-  if(p){p.className='btn btn-sm '+(o==='portrait'?'primary':'ghost');}
-  if(l){l.className='btn btn-sm '+(o==='landscape'?'primary':'ghost');}
-  if(h){h.textContent=o==='portrait'?'two-line items · compact notes':'one-line items · wide notes';}
-}
 
 // ====================================================================
 // EXCEL EXPORT — ExcelJS (inlined at build time; styled to match the PDF)
@@ -3316,7 +3739,7 @@ async function exportExcel(incBuf=true, sets=null){
   if(typeof ExcelJS==='undefined'){toast('ExcelJS not loaded — run the build','error');return;}
   if(!requireProjectFields()) return;
   try{
-  sets=(sets&&sets.length)?sets:defaultSets();
+  sets=(sets&&sets.length)?sets:defaultExportSets();
   // Save-As dialog FIRST (while the click is fresh), generation after
   const pick=await pickSaveHandle(exportFileBase(incBuf,sets)+'.xlsx');
   if(pick.mode==='cancelled'){ toast('Export cancelled','warn'); return; }
@@ -3348,7 +3771,7 @@ async function exportExcel(incBuf=true, sets=null){
     ws.mergeCells(r2.number,1,r2.number,6);
     r2.getCell(1).font={bold:true,size:8,color:{argb:BRASS}};
     ws.mergeCells(r2.number,7,r2.number,ncols);
-    const cc=r2.getCell(7); cc.value='PT. MITRA USAHA LANCAR JAYA · JL. TEGALSARI 37';
+    const cc=r2.getCell(7); cc.value=MULYA_LINE;
     cc.font={bold:true,size:8,color:{argb:BRASS}}; cc.alignment={horizontal:'right'};
     for(let i=1;i<=ncols;i++) r2.getCell(i).border={bottom:inkB};
     const labels=['PROJECT','CLIENT','PIC','DATE','VERSION','PRICE LIST'];
@@ -3424,7 +3847,7 @@ async function exportExcel(incBuf=true, sets=null){
 
   // ---- one Summary + unit sheets per selected set ----
   sets.forEach(set=>{
-    const sUnits=setUnits(set.altKey,set.ver);
+    const sUnits=setUnits(set);
     const verLabel=setLabel(set);
     const verDate=setDate(set);
     const prefix=multi?set.altKey+' · ':'';
@@ -3533,7 +3956,7 @@ async function exportExcel(incBuf=true, sets=null){
 // PDF — pdfmake (inlined at build): direct .pdf download, A4 portrait
 // ====================================================================
 function buildPdfDoc(incBuf, orient, sets){
-  sets=(sets&&sets.length)?sets:defaultSets();
+  sets=(sets&&sets.length)?sets:defaultExportSets();
   const land=orient==='landscape';
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
   // Palette + metrics per docs/design/boq-format/BOQ-FORMAT-SPEC.md (handoff 2026-07-12)
@@ -3547,10 +3970,8 @@ function buildPdfDoc(incBuf, orient, sets){
   const uTotal=u=>['kitchen','wardrobe','accessories'].reduce((s2,sec)=>s2+exportRowsFor(u,sec,incBuf).reduce((ss,r)=>ss+r.price*r.qty,0),0);
   const content=[];
 
-  const metaCell=(l,v)=>({stack:[
-    {text:l.toUpperCase(),fontSize:5.6,bold:true,color:BRASS,characterSpacing:0.9},
-    {text:String(v||'—'),fontSize:8.25,color:INK,margin:[0,1.5,0,0]},
-  ]});
+  const DOCT = docTokens({ink:INK, gray:GRAY, hair:HAIR, accent:BRASS});
+  const metaCell=(l,v)=>pdfMetaCell(l,v,DOCT);
   // vlabel overrides the Version cell — in a multi-set export each alternative's letterhead
   // shows ITS OWN version (e.g. "Alt B v1"), not the combined label.
   const metaCells=(vlabel,vdate)=>[
@@ -3564,29 +3985,25 @@ function buildPdfDoc(incBuf, orient, sets){
   // Built fresh each call (pdfmake mutates nodes) so the full letterhead can repeat atop
   // each alternative in a multi-set export — every alternative reads as a standalone BOQ.
   function pushLetterhead(brk,vlabel,vdate){
-    const leftStack={width:land?'auto':'*',stack:[
-      {svg:BOQ_LOGOS.stellaSvg,height:LOGO_H,width:LOGO_H*(121.92/34.58)},
-      {text:docLine,fontSize:6,color:BRASS,characterSpacing:0.6,margin:[0,6.75,0,0]},
-    ]};
-    const rightStack={width:'auto',stack:[
-      {svg:BOQ_LOGOS.mulyaSvg,height:LOGO_H,width:LOGO_H*(85.04/34.58),alignment:'right'},
-      {text:'PT. MITRA USAHA LANCAR JAYA · JL. TEGALSARI 37',fontSize:6,color:BRASS,characterSpacing:0.6,alignment:'right',margin:[0,6.75,0,0]},
-    ]};
-    const head=land
+    // Letterhead, captions, rules and meta cells come from the kit (kit-export.js);
+    // which six cells, and how wide, is Stella Mobili's.
+    const parts = pdfLetterhead({
+      tokens: DOCT, cw: CW,
+      brandLogo: {svg:BOQ_LOGOS.stellaSvg, height:LOGO_H, width:LOGO_H*(121.92/34.58)},
+      brandLine: docLine,
+      mulyaLogo: {svg:BOQ_LOGOS.mulyaSvg, height:LOGO_H, width:LOGO_H*(85.04/34.58)},
       // landscape: the six meta cells sit inline between the logos (spec)
-      ?{columns:[leftStack,
-        {width:'*',margin:[20,22,10,0],columns:metaCells(vlabel,vdate).map(c=>Object.assign({width:'auto'},c)),columnGap:19.5},
-        rightStack]}
-      :{columns:[leftStack,rightStack]};
-    if(brk) head.pageBreak='before';
-    content.push(head);
-    content.push({canvas:[{type:'line',x1:0,y1:7.5,x2:CW,y2:7.5,lineWidth:1.1,lineColor:INK}]});
+      middle: land ? {width:'*',margin:[20,22,10,0],columnGap:19.5,
+                      columns:metaCells(vlabel,vdate).map(c=>Object.assign({width:'auto'},c))} : null,
+    });
+    if(brk) parts[0].pageBreak='before';
+    if(!land) parts[0].columns[0].width='*';
+    content.push(parts[0], parts[1]);
     if(!land){
       // portrait: meta band on its own row under the header rule
       const MW=(CW-5*10.5)/5.4;   // spread ≈ mock grid 1.1fr 1.1fr 0.7fr 0.9fr 0.8fr 0.8fr
-      const mw=[MW*1.1,MW*1.1,MW*0.7,MW*0.9,MW*0.8,'*'];
-      content.push({margin:[0,6.75,0,0],columnGap:10.5,columns:metaCells(vlabel,vdate).map((c,i)=>Object.assign({width:mw[i]},c))});
-      content.push({canvas:[{type:'line',x1:0,y1:6.75,x2:CW,y2:6.75,lineWidth:0.4,lineColor:HAIR}]});
+      pdfMetaBand(metaCells(vlabel,vdate), CW, DOCT,
+                  {widths:[MW*1.1,MW*1.1,MW*0.7,MW*0.9,MW*0.8,'*']}).forEach(n=>content.push(n));
     }
     if(projectMeta.notes) content.push({text:[{text:'NOTES   ',fontSize:5.6,bold:true,color:BRASS,characterSpacing:0.9},{text:projectMeta.notes,fontSize:7.1,color:GRAY}],margin:[0,5,0,0]});
   }
@@ -3607,7 +4024,7 @@ function buildPdfDoc(incBuf, orient, sets){
   const pill=()=>({width:'auto',margin:[4,0.5,0,0],table:{body:[[{text:'BUFFER',fontSize:5.25,bold:true,color:BUFC,characterSpacing:0.75}]]},layout:{hLineWidth:()=>0.5,vLineWidth:()=>0.5,hLineColor:()=>BUFBORDER,vLineColor:()=>BUFBORDER,paddingLeft:()=>3,paddingRight:()=>2.25,paddingTop:()=>1,paddingBottom:()=>1}});
 
   sets.forEach((set,si)=>{
-    const sUnits=setUnits(set.altKey,set.ver);
+    const sUnits=setUnits(set);
     const alt=alts.find(a=>a.key===set.altKey);
     const grand=sUnits.reduce((s2,u)=>s2+uTotal(u),0);
     const grandBuf=incBuf?sUnits.reduce((s2,u)=>s2+unitBufferTotal(u),0):0;
@@ -3715,13 +4132,9 @@ function buildPdfDoc(incBuf, orient, sets){
     pageBreakBefore:(node,following)=>node.headlineLevel===1&&(following.length===0||(node.startPosition&&node.startPosition.verticalRatio>0.9)),
     defaultStyle:{font:'LibreFranklin',fontSize:7.5,color:INK},
     content,
-    footer:(cur,total)=>({margin:[33,6,33,0],stack:[
-      {canvas:[{type:'line',x1:0,y1:0,x2:CW,y2:0,lineWidth:0.4,lineColor:HAIR}]},
-      {margin:[0,5,0,0],columns:[
-        {text:(projectMeta.name||'')+' · '+verLabel+' · '+plv,fontSize:6,color:GRAY,characterSpacing:0.45},
-        {text:cur+' / '+total,fontSize:6,color:GRAY,alignment:'right'},
-      ]},
-    ]}),
+    // the spec's page footer, from the kit: hairline, caption, page x of y
+    footer: pdfFooter((projectMeta.name||'')+' · '+verLabel+' · '+plv, CW, DOCT,
+                      {margin:[33,6,33,0], gap:5}),
     info:{title:(projectMeta.name||'BOQ')+' — BOQ', author:'Stella Mobili BOQ Tool'},
   };
 }
@@ -3729,7 +4142,7 @@ async function savePDF(incBuf=true, orient='portrait', sets=null){
   if(typeof pdfMake==='undefined'){toast('pdfMake not loaded — run the build','error');return;}
   if(!requireProjectFields()) return;
   try{
-    sets=(sets&&sets.length)?sets:defaultSets();
+    sets=(sets&&sets.length)?sets:defaultExportSets();
     // Save-As dialog FIRST (while the click is fresh), generation after
     const pick=await pickSaveHandle(exportFileBase(incBuf,sets)+'.pdf');
     if(pick.mode==='cancelled'){ toast('Save cancelled','warn'); return; }
@@ -3753,7 +4166,6 @@ async function savePDF(incBuf=true, orient='portrait', sets=null){
 // nothing to any total. A plain `parseFloat(v)||fallback` would silently turn 0 into the
 // fallback, so the invalid/NaN case is handled explicitly. Rounds to 2 decimals (e.g. 1.23).
 function normQty(v,fallback){const n=Math.round(parseFloat(v)*100)/100;return isFinite(n)&&n>=0?n:fallback}
-function warnZeroQty(){toast('Qty is 0 — the item stays in the BOQ but adds nothing to the total','warn',5000)}
 
 // The qty stepper (QSTEPS markup + stepQty) lives in the kit.
 

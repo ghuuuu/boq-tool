@@ -568,4 +568,164 @@ Delete them from the kit rather than re-tokenising.
 
 ---
 
+## 12. What still belongs in the kit — measured after the BT parity work (2026-08-19)
+
+Beyond Teak was brought level with Stella Mobili on 2026-08-19 (BT tool v1.3.0:
+the alternatives tree wired up, versioned price lists, export picker, export
+guards, drag-reorder, duplicate/copy). **Every one of those features was written
+a second time, by hand, in BT's template.** CL would make it a third. This
+section records what that exercise showed should move into the kit, with the
+evidence.
+
+### 12.1 The measurement
+
+Same-named, near-identical functions now living in both templates and *not* in
+the kit (similarity by `difflib`, whole-function bodies):
+
+| Function | SM ↔ BT similarity |
+|---|---|
+| `rowDragOver` / `rowDragStart` / `rowDrop` | 0.99 / 0.95 / 0.90 |
+| `requireProjectFields` | 0.85 |
+| `duplicateRow` | 0.83 |
+| `switchPriceList` | 0.83 |
+| `openExportModal` / `getExportSets` / `confirmExport` | 0.79 / 0.69 / 0.64 |
+| `setsVersionLabel` / `setLabel` / `exportFileBase` | 0.68 / 0.77 / 0.64 |
+
+Plus the same code under different nouns: SM `unitDragStart/Over/Drop` ↔ BT
+`areaDragStart/Over/Drop` at **0.88 / 0.95 / 0.59**.
+
+By feature group, lines of duplicated behaviour:
+
+| Group | SM | BT |
+|---|---|---|
+| Reorder (rows + containers) | 92 | 68 |
+| Duplicate / copy | 43 | 44 |
+| Export picker + export sets | 123 | 90 |
+| Export guards + reminders | 15 | 30 |
+| Price-list versioning | 29 | 38 |
+| **Total** | **302** | **270** |
+
+### 12.2 Phase 1 — put CDN Lighting on the kit (no new kit code)
+
+**The largest gap is not missing kit code; it is a tool that never adopted the
+kit.** `CDNLighting_BOQ_Tool_Ref.html` (v1.0.0) has no `<!--__KIT_INJECTION__-->`,
+no `KIT.register`, no `KIT.start()`, and hand-rolled copies of `markDirty`,
+`updateSaveStatus`, `saveFile`, `loadFile`, `showModal` and `toast`. Adopting
+kit 1.9.2 hands it, for free: the chrome CSS and tokens, toast/modal, the
+save-status state machine, autosave + recover, drag-drop load, native Save As,
+**Revisions & Alternatives**, and the MulyaOne bridge. It also has no
+`getState()`, so it cannot be embedded at all until this is done.
+
+### 12.3 Phase 2 — move the five duplicated groups in
+
+Each needs a small brand hook; the kit owns the rest.
+
+| Moves into the kit | New `KIT.hooks` the brand supplies |
+|---|---|
+| **Reorder** — `rowDrag*` + container drag, the grip attributes, the `_mousedownEl` guard, drop-marker classes | `reorderList(kind, key)` → the array to splice; `afterReorder(kind)` → repaint |
+| **Duplicate / copy** — duplicate a row, duplicate a container, copy a selection into another container, the picker modal | `newId()`; `containers()` → `[{id,name}]`; `rowsOf(containerId, section)` |
+| **Export picker + sets** — the modal, `getExportSets`, `setLabel`, `setsVersionLabel`, `exportFileBase`, orientation, and (per §3.1) the letterhead + meta band | `unitsOfSnapshot(snap)`; `totalOf(units)`; `renderDocBody(sets, orient)` stays brand-side |
+| **Guards + reminders** — `requireProjectFields`, `warnZeroQty` | `requiredFields` → `[{sel,label,value()}]`; `goHome()` |
+| **Price-list versioning** — the version registry, the project's recorded version, the picker, the "newer available" chip, the switch toast | `repriceAll(version)` — the only genuinely brand-specific part |
+
+The kit already carries the vocabulary indirection this needs:
+`brand.config.json` has `brandKey`, `fileExt`, `docPrefix` and **`unitNoun`**, so
+the kit can call the thing a "unit" internally and print *area* / *room*.
+
+**§3.2 needs one correction.** It lists *price-list versioning* as per-brand.
+The mechanism is demonstrably shared — `ALL_PRICE_DATA` keyed by version,
+`PRICE_LIST_VERSIONS` / `PRICE_LIST_LATEST`, the project recording the version it
+was quoted from, a deliberate switch that re-prices and reports how many lines
+moved. What is per-brand is **re-pricing one row**, and the price-data *shape*.
+Move the first sentence's subject: the *policy* is chrome, the *maths* is core.
+
+### 12.4 Phase 3 — the envelope (riskiest, do last)
+
+`getState()` shapes have drifted: SM `version: 3`, BT `format: 2`, CL none. The
+kit should own the outer envelope — `{tool, brand, format, savedAt, toolVersion,
+priceListVersion, project, alts, activeAltKey, activeVerNum, grandTotal}` — with
+the brand contributing only its payload (`units` / `areas`). This changes a file
+format three brands and MulyaOne read, so it needs a compat matrix and loaders
+that accept every shape already in the wild before anything is written.
+
+### 12.5 What must not move (unchanged from §3.2)
+
+Add bars, item pickers and taxonomies; validation (`validateGola`, BT's
+finish-side selector, CL's spec composer); price maths and price-data shape; row
+semantics (SM's groups and buffer rows, BT's per-metre length and capping);
+brand data injections (`__PROFILE_ART_INJECTION__`); nav/view structure. Item
+**groups** and **buffer rows** stay opt-in per §3.3 — but the kit's export
+builder must be written to *allow* bands rather than assume them.
+
+### 12.6 Status — all three phases done (2026-08-19)
+
+**Phase 1 — CDN Lighting is on the kit.** `CDNLighting_BOQ_Tool_Ref.html` gained the
+`<!--__KIT_INJECTION__-->` marker, a `brand.config.json` (bronze palette, `.clbq`,
+`unitNoun: area`), a vendored `src/kit/` and `sync_kit.py`, and lost **73 CSS rules**
+that duplicated the kit's and **13 chrome functions** (`toast`, `showModal`/`closeModal`,
+`markDirty`, `updateSaveStatus`, `saveFile`, `loadFile`, `toggleSidebar`, `fmt`,
+`fmtNum`, `fmtDate`, `fmtShort`, `esc`, `escAttr`) plus its own `dirty` / `savedName`.
+It gained what it never had: autosave + recover, drag-drop load, native Save As, the
+**Revisions & Alternatives** tree, and `getState()` / `applyLoadedState()` — so CL can
+now be embedded in MulyaOne at all. `.clbq` is **format 2**; format 1 files still open.
+CL is **v1.1.0**.
+
+**Phase 2 — four of the five groups are in the kit (1.10.2).** Reorder, duplicate/copy,
+the export guards and price-list versioning now live in `kit.js`; SM and BT deleted their
+copies in the same release, and CL gets them for free. The kit took **SM's** drag
+technique (grip-armed `draggable`) over BT's, and gained `scrubCopy` because SM needs a
+copied row to leave its item group behind.
+
+**Phase 2, group 5 — the export picker (kit 1.11).** `openExportModal`, `getExportSets`,
+`confirmExport` and the whole set vocabulary are the kit's; the brand renders the document
+and nothing else. SM's buffer question survived the move intact: options can render as
+**cards with a hint**, so "With buffer — for Quotation" / "Without buffer — for Sales
+Order" still reads as a sentence rather than a dropdown. CL, which had no picker at all,
+now has one — its two exporters were parameterised to take the chosen sets.
+
+**Phase 3 — the envelope (kit 1.12).** `buildEnvelope(payload)` / `restoreEnvelope(d)`.
+Every tool writes `tool` / `brand` / `format: 3` / `savedAt` / `toolVersion` /
+`kitVersion` + the alternatives tree around its own payload. **Additive**: SM still writes
+`version: 3` beside it because every `.smbq` in the wild carries that and MulyaOne reads
+those files; old files of all three brands open and seed a single "Initial scheme" Alt A.
+Verified by round-tripping each tool's own save and a hand-made legacy file.
+
+**The export chrome itself (kit 1.13).** `kit-export.js` is no longer a placeholder. It
+carries `docTokens`, `pdfCaption`, `pdfRule`, `pdfLetterhead`, `pdfMetaCell`, `pdfMetaBand`,
+`pdfFooter` and `xlsxLetterhead` / `xlsxMetaBlock` / `xlsxFootNote`, plus **one copy of the
+company line** (`MULYA_LEGAL` / `MULYA_ADDR` / `MULYA_LINE`).
+
+Proof it was safe: each tool's pdfmake document definition was captured before the change
+and diffed after. **Stella Mobili's differs in exactly one node** — its company line gains
+", SURABAYA". Beyond Teak's differs in three: its meta band moved onto the spec's type
+scale (labels 0.8→0.9 tracking, values 8.5→8.25pt). CDN Lighting's body is untouched; its
+letterhead and footer are now the kit's.
+
+Unifying the address found a real bug: **Beyond Teak printed "Jl. Tegalsari no. 39"** on
+client PDFs, where MulyaOne's own contracts and invoices say 37.
+
+What is deliberately *not* shared: Stella Mobili's Excel letterhead, which writes a header
+per sheet with `addRow` rather than at absolute rows, and CDN Lighting's Excel wordmark,
+which exists because there is no CDN raster logo. Both use the kit's company line.
+
+> **Testing note.** ExcelJS writes its zip in timer-driven chunks, so `writeBuffer()` never
+> resolves while the tab is **backgrounded** — Chrome throttles the timers. It looks exactly
+> like a hang. Verify the sheet synchronously (cells, fonts, merges, images) instead of
+> awaiting the buffer, or bring the tab to the front.
+
+### 12.7 The migration rule that makes this safe
+
+The kit and each template share **one global scope**. A `let` declared in both is
+a `SyntaxError` that kills the whole tool (`_mousedownEl`, `dragRow`, `alts`,
+`activeAltKey`, `_exportKind` are all `let`); a `function` declared in both
+silently shadows, which is worse — the tool runs, and the wrong copy wins. So:
+**each move deletes the brand's copy in the same release**, one group at a time,
+with a rebuild + smoke test per tool before the next. Bump the kit minor per
+group, and re-run each tool's `check_html.py` plus a load → edit → commit a
+version → export round-trip.
+
+---
+
+---
+
 *© 2026 PT. Mitra Usaha Lancar Jaya · Internal tooling · BOQ tool suite*
