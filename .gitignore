@@ -1,5 +1,6 @@
 # Local Claude Code settings (machine-specific)
 .claude/settings.local.json
+.claude/.headroom_wrap_marker.json
 
 # User working files (BOQ saves)
 *.smbq
@@ -16,3 +17,6 @@ __pycache__/
 # OS junk
 Thumbs.db
 .DS_Store
+
+# Local agent tooling caches (machine-specific)
+.serena/
