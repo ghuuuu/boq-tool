@@ -767,6 +767,66 @@ CL's slide in on selection; the group buttons live on whichever one the tool has
 
 ---
 
+## 14. Exports, fonts and versioning (kit 1.15.0, 2026-09-02)
+
+Second half of the levelling pass. §13 made the tools *look* alike; this makes
+them *behave* alike everywhere the brand's own document is not the answer.
+
+### 14.1 Exports
+
+| Now kit-owned | Brand still supplies |
+|---|---|
+| `safeFileName(name, date)` — `{Project}_{YYYYMMDD}`, used by the `.bq` save too | `fileBaseName()` |
+| `exportFileBase(sets, opts)` — `…[_Alt_A-B]_BOQ[(Buffer)]` | `setDate(set)` (optional) |
+| `deliverExport()` and the picker-first order: Save As dialog on the click, write after the render | the document itself |
+| `standardExportOptions(kind)` — the *Page* and *Buffer items* questions, one wording | `pdfOrientation()` (optional) |
+| `setsHaveBuffer(sets)` | `bufferTotal()`, `rowIsBuffer()` |
+| The guards: `requireProjectFields` in `openExportModal`, empty-document in `confirmExport` | `requiredFields` |
+
+Beyond Teak and CDN Lighting had no Save As dialog at all — files went straight
+to Downloads. Their filenames were `{Project}_{YYYY-MM-DD}` against Stella
+Mobili's `{Project}_{YYYYMMDD}`; the compact form won, because a folder of
+exports then sorts chronologically by name. The buffer question existed in three
+wordings and two value sets (`incl`/`excl` vs `with`/`without`); `with`/`without`
+won. All three now require three named fields before an export
+(SM/BT *Project name · Client · PIC*, CL *Project name · Client · Issued by*)
+and refuse an empty document, once, in one wording.
+
+> **Note for testing.** A `file://` page has no `showSaveFilePicker`, so the kit
+> falls back to a plain download — which is how these tools are normally used.
+> In headless Chrome the picker *exists* but aborts, which reads as "user
+> cancelled" and stops the export; delete `window.showSaveFilePicker` in a test
+> page to exercise the real path.
+
+### 14.2 Fonts
+
+CDN Lighting embedded **Libre Franklin** as its UI face because those are the
+quotation's own types. It is now on the kit's **Hanken Grotesk** like its
+sisters, injected from `src/kit/fonts/` in all three builds (Beyond Teak had been
+reading its own copy out of `src/vendor/`). Libre Caslon Text + Libre Franklin
+are unchanged in `pdfMake.vfs` for every brand — those are the print spec's
+faces, and the PDFs are untouched.
+
+### 14.3 Versioning
+
+One system, four chips, one code path: `mountVersionChips()` runs from
+`KIT.start()` and renders **save status · price list · tool version · kit
+version** into `#verChips`. Every tool now declares `TOOL_VERSION` as a const
+(SM had it typed into the markup) and registers a `toolVersion()` hook, and every
+tool has the same price-list registry — `ALL_PRICE_DATA` / `PRICE_LIST_VERSIONS`
+/ `PRICE_LIST_LATEST` from `/*__PRICE_DATA_INJECTION__*/`, auto-detected from
+`price-data/price_lists/`. CDN Lighting's is **empty**, because it has no
+catalogue: the same code renders that as *No price list*, and the day a
+`fixtures_vYY.MM.DD.json` lands there the chip, the picker and the version
+hooks work with no further change. The kit-version chip the README had always
+described now actually exists.
+
+Tool versions after this pass: **SM v1.7.0 · BT v1.4.0 · CL v1.2.0**. The
+convention is unchanged — a const in the template, semver, bumped by hand when
+the user asks, never wired to the build.
+
+---
+
 ---
 
 *© 2026 PT. Mitra Usaha Lancar Jaya · Internal tooling · BOQ tool suite*

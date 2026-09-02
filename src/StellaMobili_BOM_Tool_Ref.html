@@ -138,10 +138,7 @@
     <span class="sep">/</span>
     <span class="here" id="crumb-view">Overview</span>
   </div>
-  <div class="topbar-actions">
-    <span class="rev-pill save-status saved" id="saveStatus" title="Autosave status">Saved</span>
-    <span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">v1.6.0</span>
-    <span class="rev-pill" id="revPill" title="Price list version">Pricelist</span>
+  <div class="topbar-actions" id="verChips">
     <button class="help-btn" id="helpBtn" onclick="openManual()" title="Open the user manual">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Help
@@ -232,7 +229,10 @@ let projectMeta = {name:'',client:'',pic:'',date:'',notes:'',priceListVersion:''
 let selectedRows = {kitchen:new Set(),wardrobe:new Set(),accessories:new Set()};
 
 function getPD(){ return ALL_PRICE_DATA[projectMeta.priceListVersion] || ALL_PRICE_DATA[PRICE_LIST_LATEST]; }
-function updateRevPill(){ const p=document.getElementById('revPill'); if(p) p.textContent='Pricelist '+(projectMeta.priceListVersion||PRICE_LIST_LATEST); }
+const TOOL_VERSION = 'v1.7.0';
+// The topbar chips are the kit's (mountVersionChips). This alias keeps SM's
+// existing call sites pointing at the shared refresh.
+function updateRevPill(){ updateVersionChips(); }
 
 // ====================================================================
 // INIT
@@ -240,6 +240,7 @@ function updateRevPill(){ const p=document.getElementById('revPill'); if(p) p.te
 // Tell the kit how to reach SM's domain (see BOQ-SHARED-CHROME.md §3 / kit.js).
 KIT.register({
   getState, applyLoadedState,
+  toolVersion: () => TOOL_VERSION,
   fileBaseName: () => { syncProjectMetaFromDOM(); return fileBaseNameDate(); },
   stateHasContent: st => Boolean(
     (st.units||[]).some(u=>u.items&&['kitchen','wardrobe','accessories'].some(sec=>(u.items[sec]||[]).length))
@@ -302,7 +303,7 @@ KIT.register({
   },
   // --- Export guards: the letterhead needs these three ---
   requiredFields: [
-    {sel:'#projName',   label:'Project Name', value:()=>{ syncProjectMetaFromDOM(); return projectMeta.name; }},
+    {sel:'#projName',   label:'Project name', value:()=>{ syncProjectMetaFromDOM(); return projectMeta.name; }},
     {sel:'#projClient', label:'Client',       value:()=>projectMeta.client},
     {sel:'#projPIC',    label:'PIC',          value:()=>projectMeta.pic},
   ],
@@ -319,23 +320,12 @@ KIT.register({
                        .reduce((n,sec)=>n+(u.items[sec]||[]).length,0),0),
   // The buffer question only makes sense when something exportable has buffer rows,
   // and it is worth asking in full sentences — it decides Quotation vs Sales Order.
-  exportOptions: kind => {
-    const out = [];
-    if(kind==='pdf') out.push({key:'orient', label:'Page', default:'portrait', choices:[
-      {value:'portrait',  label:'A4 Portrait  ·  two-line items, compact notes'},
-      {value:'landscape', label:'A4 Landscape  ·  one-line items'}]});
-    const anyBuffer = anyBufferItems() || alts.some(a=>a.versions.some(v=>
-      ((v.snapshot&&v.snapshot.units)||[]).some(u=>unitBufferTotal(u)>0)));
-    if(anyBuffer) out.push({key:'buffer', label:'Buffer items', style:'cards', default:'incl', choices:[
-      {value:'incl', label:'With buffer — for Quotation',
-       hint:'All items included. Buffer rows are marked; totals shown both incl. and excl. buffer.'},
-      {value:'excl', label:'Without buffer — for Sales Order',
-       hint:'For ordering to Stella Mobili Jakarta. Buffer rows are left out entirely.'}]});
-    return out;
-  },
+  exportOptions: standardExportOptions,
+  setDate,                       // a single-set export is named for that version's date
   runExport: (kind, sets, opts) => {
-    const incBuf = opts.buffer !== 'excl';
-    return kind==='pdf' ? savePDF(incBuf, opts.orient||'portrait', sets) : exportExcel(incBuf, sets);
+    const incBuf = opts.buffer !== 'without';
+    return kind==='pdf' ? savePDF(incBuf, opts.orient||'portrait', sets, opts)
+                        : exportExcel(incBuf, sets, opts);
   },
   // --- Price list: the kit owns the picker, SM owns the maths ---
   priceListVersions: () => PRICE_LIST_VERSIONS,
@@ -1609,11 +1599,8 @@ function bandBufferTotal(band){ return band.rows.reduce((s,{r})=>s+(r.buffer===t
 // Project Name + Client are mandatory before any export (they drive the document + filename).
 // Export filename: project name, date, quotation version, mode — Windows-safe.
 // dateStr defaults to today (used for .smbq saves + working-copy exports).
-function fileBaseNameDate(dateStr){
-  const date=fmtDateFile(dateStr||new Date().toISOString().slice(0,10));   // YYYYMMDD — sorts chronologically
-  const name=(projectMeta.name||'BOQ').trim().replace(/\s*[–—]\s*/g,'_').replace(/\s+-\s+/g,'_');
-  return (name+'_'+date).replace(/[\\/:*?"<>|]/g,'-');
-}
+// The stem is the kit's (safeFileName): {Project}_{YYYYMMDD}, one convention for the suite.
+function fileBaseNameDate(dateStr){ return safeFileName(projectMeta.name, dateStr); }
 function anyBufferItems(){ return units.some(u=>unitBufferTotal(u)>0); }
 
 // ==== Export sets (version/alternative picker) ==============================
@@ -1625,33 +1612,22 @@ function setDate(set){
   const a=alts.find(x=>x.key===set.altKey); const v=a&&a.versions.find(x=>x.ver===set.ver);
   return (v&&v.date)||new Date().toISOString().slice(0,10);
 }
-function setsHaveBuffer(sets){ return (sets||defaultExportSets()).some(s=>setUnits(s).some(u=>unitBufferTotal(u)>0)); }
 // "(Buffer)" only appears when buffer items are actually included in the document.
 // Alt segment: when the export covers only SOME of the alternatives, name them
 // (e.g. _Alt_A-B-C_). When every alternative is included, omit it — the filename stays
 // clean and the document itself states the version(s).
-function exportFileBase(incBuf, sets){
-  sets=(sets&&sets.length)?sets:defaultExportSets();
-  const buf=(incBuf&&setsHaveBuffer(sets))?'BOQ(Buffer)':'BOQ';
-  const keys=[...new Set(sets.map(s=>s.altKey))].sort();
-  const allKeys=alts.map(a=>a.key).sort();
-  const altSeg=(keys.length && keys.length<allKeys.length)?'Alt_'+keys.join('-')+'_':'';
-  // single-set export → that version's date; multi-set → today.
-  const dateStr=sets.length===1?setDate(sets[0]):null;
-  return fileBaseNameDate(dateStr)+'_'+altSeg+buf;
-}
+// exportFileBase / setsHaveBuffer / deliverExport / standardExportOptions: kit.js
 
 
 // ====================================================================
 // EXCEL EXPORT — ExcelJS (inlined at build time; styled to match the PDF)
 // ====================================================================
-async function exportExcel(incBuf=true, sets=null){
+async function exportExcel(incBuf=true, sets=null, xopts=null){
   if(typeof ExcelJS==='undefined'){toast('ExcelJS not loaded — run the build','error');return;}
-  if(!requireProjectFields()) return;
   try{
   sets=(sets&&sets.length)?sets:defaultExportSets();
-  // Save-As dialog FIRST (while the click is fresh), generation after
-  const pick=await pickSaveHandle(exportFileBase(incBuf,sets)+'.xlsx');
+  // Save-As dialog FIRST (while the click is fresh), generation after — kit
+  const pick=await pickSaveHandle(exportFileBase(sets,xopts)+'.xlsx');
   if(pick.mode==='cancelled'){ toast('Export cancelled','warn'); return; }
   const plv=projectMeta.priceListVersion||PRICE_LIST_LATEST;
   const hasBuf=setsHaveBuffer(sets), showBufCol=incBuf&&hasBuf;
@@ -2048,13 +2024,12 @@ function buildPdfDoc(incBuf, orient, sets){
     info:{title:(projectMeta.name||'BOQ')+' — BOQ', author:'Stella Mobili BOQ Tool'},
   };
 }
-async function savePDF(incBuf=true, orient='portrait', sets=null){
+async function savePDF(incBuf=true, orient='portrait', sets=null, xopts=null){
   if(typeof pdfMake==='undefined'){toast('pdfMake not loaded — run the build','error');return;}
-  if(!requireProjectFields()) return;
   try{
     sets=(sets&&sets.length)?sets:defaultExportSets();
-    // Save-As dialog FIRST (while the click is fresh), generation after
-    const pick=await pickSaveHandle(exportFileBase(incBuf,sets)+'.pdf');
+    // Save-As dialog FIRST (while the click is fresh), generation after — kit
+    const pick=await pickSaveHandle(exportFileBase(sets,xopts)+'.pdf');
     if(pick.mode==='cancelled'){ toast('Save cancelled','warn'); return; }
     pdfMake.createPdf(buildPdfDoc(incBuf, orient, sets)).getBlob(async blob=>{
       await writePicked(pick, blob);

@@ -621,7 +621,9 @@ purple (`#4c1d95` family) is fully retired. Spectral BOM still uses blue — nev
 
 ## Tool Versioning (the "v1.0.0" topbar chip)
 
-The tool-version chip (`#toolVer` in the topbar, hardcoded in the template) is bumped
+The tool version is a **`TOOL_VERSION` const** in the template (currently `v1.7.0`) — it was
+typed into the markup until kit 1.15.0; the kit's `mountVersionChips()` renders the chip now,
+and the value reaches it through the `toolVersion()` hook. It is bumped
 **manually, only when the user asks** — usually at the end of a working session. The user
 decides together with Claude whether the session's changes warrant bumping the minor
 (second number: feature additions the PIC would notice) or the patch (third number: small
@@ -630,6 +632,29 @@ the chip in `src/StellaMobili_BOM_Tool_Ref.html` and port the same value to the 
 canvas so both stay in step.
 
 ---
+
+## Exports, fonts and versioning (kit 1.15.0)
+Everything around the document is the kit's; the document itself is still this tool's.
+
+- **Filename.** `safeFileName(name, date)` -> `{Project}_{YYYYMMDD}` (a folder of exports
+  sorts chronologically by name), then `exportFileBase(sets, opts)` adds `_Alt_A-B` when the
+  document covers only some alternatives, and `_BOQ` / `_BOQ(Buffer)`. Same stem names the
+  save file.
+- **Delivery.** The Save As dialog opens on the click, while it is still a user gesture, and
+  the file is written after the render (`pickSaveHandle` -> build -> `writePicked`). A
+  `file://` page has no picker API in Chrome, so it falls back to a plain download - which
+  is how the tool is normally used. Cancelling the dialog cancels the export, with a toast.
+- **Questions.** `standardExportOptions(kind)` asks *Page* (A4 portrait / landscape) and,
+  only when the BOQ holds buffer, *With buffer - for Quotation* / *Without buffer - for
+  Sales Order*. Values are `with` / `without` suite-wide.
+- **Warnings.** The kit refuses an export with a missing required field
+  (`openExportModal`) or an empty document (`confirmExport`), once, in one wording. Do not
+  re-add a brand-side copy.
+- **Fonts.** Hanken Grotesk on screen, from the vendored kit, in every brand. Libre Caslon
+  Text + Libre Franklin stay in `pdfMake.vfs` - they are the print spec's faces.
+- **Version chips.** `mountVersionChips()` runs from `KIT.start()` and renders save status,
+  price list, tool version and kit version into `#verChips`. Do not write those chips by
+  hand; call `updateVersionChips()` after anything that changes the price list.
 
 ## Claude Design Project Sync
 

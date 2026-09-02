@@ -82,6 +82,8 @@ input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
 .help-btn svg{width:13px;height:13px}
 .alt-ver-chip{background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent)}
 .tool-ver-chip{background:transparent;color:var(--ink2);border-color:var(--line)}
+.pl-chip{background:var(--c-50);color:var(--c-700);border-color:var(--c-100)}
+.pl-chip.pl-old{background:var(--warn-bg);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
 .save-status{display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--ink-faint);border-color:var(--line);transition:color .2s,border-color .2s}
 .save-status.unsaved{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 8%,transparent)}
 .save-status.saving{color:var(--ink-faint);font-style:italic}

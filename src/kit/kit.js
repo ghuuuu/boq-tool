@@ -873,6 +873,64 @@ function confirmCopyToContainer(){
 }
 
 /* ====================================================================
+   VERSION CHIPS — the topbar's four states, one row, one code path
+   --------------------------------------------------------------------
+   Every tool carries the same four facts and had been writing them out
+   three different ways (SM used .rev-pill and its own #revPill wording,
+   BT and CL each defined a local .chip alias and a .pl-chip):
+
+     save status   the kit's autosave state machine  (#saveStatus)
+     price list    which list this BOQ is priced from (#plChip)
+     tool version  this brand's TOOL_VERSION          (#toolVer)
+     kit version   the shared chrome it is built on   (#kitVer)
+
+   Mount it once, in the topbar:  <div class="topbar-actions" id="verChips">
+   then  mountVersionChips()  in INIT, before the first render.
+
+     KIT.hooks.toolVersion()      -> 'v1.4.0'
+     KIT.hooks.priceListCurrent() -> the version this BOQ uses, or null
+     KIT.hooks.priceListLatest()  -> the newest published, or null
+
+   A brand with no price list (CDN Lighting, until its catalogue lands)
+   returns null from both and gets the same chip reading "No price list" —
+   same markup, same slot, same code, so the row still lines up.
+   ==================================================================== */
+function mountVersionChips(){
+  const m = document.getElementById('verChips'); if(!m) return;
+  m.insertAdjacentHTML('afterbegin',
+      '<span class="rev-pill save-status" id="saveStatus" title="Autosave status">Not saved</span>'
+    + '<span class="rev-pill pl-chip" id="plChip" title="Price list this BOQ is priced from">Price list —</span>'
+    + '<span class="rev-pill tool-ver-chip" id="toolVer" title="Tool version">—</span>'
+    + '<span class="rev-pill tool-ver-chip" id="kitVer" title="Shared chrome version (boq-kit)">kit —</span>');
+  updateVersionChips();
+  updateSaveStatus();
+}
+
+/** Refresh the price-list and version chips. Safe to call any time. */
+function updateVersionChips(){
+  const tv = document.getElementById('toolVer');
+  if(tv && KIT.hooks.toolVersion) tv.textContent = KIT.hooks.toolVersion();
+  const kv = document.getElementById('kitVer');
+  if(kv) kv.textContent = 'kit ' + (typeof KIT_VERSION !== 'undefined' ? KIT_VERSION : '—');
+  const pl = document.getElementById('plChip');
+  if(!pl) return;
+  const cur = KIT.hooks.priceListCurrent && KIT.hooks.priceListCurrent();
+  const latest = KIT.hooks.priceListLatest && KIT.hooks.priceListLatest();
+  if(!cur){
+    pl.textContent = 'No price list';
+    pl.title = 'This tool has no catalogue yet — every line is typed in.';
+    pl.classList.add('tool-ver-chip');
+    return;
+  }
+  pl.classList.remove('tool-ver-chip');
+  const old = latest && cur !== latest;
+  pl.textContent = 'Price list ' + cur;
+  pl.title = old ? 'Priced from ' + cur + ' — ' + latest + ' is available'
+                 : 'Price list this BOQ is priced from';
+  pl.classList.toggle('pl-old', !!old);
+}
+
+/* ====================================================================
    ITEM GROUPS — named clusters of rows inside one container
    --------------------------------------------------------------------
    A group ("Kitchen Island", "Lobby feature wall") gathers rows that
@@ -1207,6 +1265,115 @@ function exportAltSegment(sets){
   return keys.length && keys.length < all.length ? '_Alt_' + keys.join('-') : '';
 }
 
+/* ====================================================================
+   EXPORT DELIVERY — one filename, one save path, one set of questions
+   --------------------------------------------------------------------
+   The three tools render different documents on purpose, but everything
+   AROUND the document is the same job and had drifted into three
+   answers: Stella Mobili opened a native Save As dialog while Beyond
+   Teak and CDN Lighting dropped the file straight into Downloads; each
+   built its filename differently; and the same buffer question was
+   worded three ways with three sets of values.
+
+     KIT.hooks.fileBaseName()   -> '{Project}_{YYYYMMDD}'  (already used by saveFile)
+     KIT.hooks.setDate(set)     -> optional; that version's date for a single-set export
+     KIT.hooks.pdfOrientation() -> optional; this brand's default page, 'portrait' by
+                                   default, CDN Lighting's quotation is 'landscape'
+   ==================================================================== */
+
+/**
+ * The suite's export filename, without extension:
+ *     {Project}_{YYYYMMDD}[_Alt_A-B]_BOQ[(Buffer)]
+ * The Alt segment appears only when the document covers SOME of the
+ * alternatives — naming it when it covers all of them says nothing.
+ */
+/**
+ * The suite's file-name stem: a project name safe on every filesystem, then the
+ * date as YYYYMMDD so a folder of exports sorts chronologically by name.
+ * Used by .bq saves and by both exporters, in all three tools.
+ */
+function safeFileName(name, dateStr){
+  const n = String(name || (typeof BRAND!=='undefined' ? BRAND.brandName : '') || 'BOQ')
+    .replace(/\s*[–—-]\s*/g, '_')        // dashes between words become one _
+    .replace(/[\/:*?"<>|]+/g, '')                 // characters no filesystem accepts
+    .trim().replace(/\s+/g, '_') || 'BOQ';
+  return n + '_' + fmtDateFile(dateStr || new Date().toISOString().slice(0,10));
+}
+
+/**
+ * The suite's file-name stem: a project name safe on every filesystem, then the
+ * date as YYYYMMDD so a folder of exports sorts chronologically by name.
+ * Used by the .bq save and by both exporters, in all three tools.
+ */
+function safeFileName(name, dateStr){
+  const n = String(name || (typeof BRAND!=='undefined' ? BRAND.brandName : '') || 'BOQ')
+    .replace(/\s*[\u2013\u2014-]\s*/g, '_')      // a dash between words becomes one _
+    .replace(/[\\/:*?"<>|]+/g, '')               // characters no filesystem accepts
+    .trim().replace(/\s+/g, '_') || 'BOQ';
+  return n + '_' + fmtDateFile(dateStr || new Date().toISOString().slice(0,10));
+}
+
+function exportFileBase(sets, opts){
+  sets = (sets && sets.length) ? sets : defaultExportSets();
+  opts = opts || {};
+  const dateStr = (sets.length === 1 && KIT.hooks.setDate) ? KIT.hooks.setDate(sets[0]) : null;
+  const base = (KIT.hooks.fileBaseName ? KIT.hooks.fileBaseName() : 'BOQ');
+  const alt = exportAltSegment(sets);                       // '' or '_Alt_A-B'
+  const withBuffer = opts.buffer !== 'without' && setsHaveBuffer(sets);
+  return base + alt + '_BOQ' + (withBuffer ? '(Buffer)' : '');
+}
+
+/** Does any set in this document carry buffer rows? */
+function setsHaveBuffer(sets){
+  if(!KIT.hooks.bufferTotal) return false;                  // brand has no buffer concept
+  const isBuf = r => KIT.hooks.rowIsBuffer ? !!KIT.hooks.rowIsBuffer(r) : r.buffer === true;
+  return (sets || []).some(s => (setUnits(s) || []).some(c =>
+    Object.keys((c && c.items) || {}).some(k => (c.items[k] || []).some(isBuf))));
+}
+
+/**
+ * Produce and deliver a document the same way in every tool: the Save As
+ * dialog opens FIRST, on the click that is still a user gesture, and the
+ * file is written after the (slow) render. `produce` returns a Blob.
+ *
+ * A file:// page has no showSaveFilePicker (Chrome), so pickSaveHandle
+ * silently falls back to a plain download — same code, same toast.
+ */
+async function deliverExport(kind, filename, produce){
+  const pick = await pickSaveHandle(filename);
+  if(pick.mode === 'cancelled') return false;
+  let blob;
+  try { blob = await produce(); }
+  catch(e){ console.error(e); toast('Could not build the ' + kind.toUpperCase() + ' — ' + (e && e.message || e), 'error', 6000); return false; }
+  await writePicked(pick, blob);
+  toast(kind.toUpperCase() + ' exported' + (pick.mode === 'picker' ? '' : ' to your downloads'));
+  return true;
+}
+
+/**
+ * The questions the picker asks, identically everywhere: which page for a
+ * PDF, and — only when there is buffer to leave out — which copy this is.
+ * A brand adds its own options by concatenating onto this.
+ */
+function standardExportOptions(kind){
+  const out = [];
+  if(kind === 'pdf'){
+    const def = (KIT.hooks.pdfOrientation && KIT.hooks.pdfOrientation()) || 'portrait';
+    out.push({key:'orient', label:'Page', default:def, choices:[
+      {value:'portrait',  label:'A4 Portrait'},
+      {value:'landscape', label:'A4 Landscape'}]});
+  }
+  const bt = KIT.hooks.bufferTotal;
+  if(bt && bt() > 0){
+    out.push({key:'buffer', label:'Buffer items', style:'cards', default:'with', choices:[
+      {value:'with',    label:'With buffer — for Quotation',
+       hint:'Every line, insurance stock included. Buffer rows are marked and totalled separately.'},
+      {value:'without', label:'Without buffer — for Sales Order',
+       hint:'Buffer rows are left out of the document and out of its totals.'}]});
+  }
+  return out;
+}
+
 function openExportModal(kind){
   if(!requireProjectFields()) return;
   _exportKind = kind;
@@ -1294,6 +1461,7 @@ KIT.start = function(){
   if(KIT.started) return; KIT.started=true;
   try{ if(localStorage.getItem('sbCollapsed')==='1' && window.innerWidth>900)
         document.querySelector('.shell').classList.add('sidebar-collapsed'); }catch(e){}
+  mountVersionChips();   // save status / price list / tool / kit — one row, every tool
   initSidebarResize();
   initDropLoad();
   setInterval(()=>{ if(dirty) autosaveNow(); }, 30000);
