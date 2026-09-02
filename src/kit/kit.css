@@ -210,9 +210,11 @@ input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
 /* ===== Fields ===== */
 .field{display:flex;flex-direction:column;gap:5px}
 .field label{font-size:12px;color:var(--ink-faint);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-.input,.select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s;font-size:14px;font-family:inherit}
-.input:focus,.select:focus{outline:none;border-color:var(--c-500);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
-.input.compact{padding:6px 9px;font-size:14px}
+.input,.select,textarea.input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s;font-size:14px;font-family:inherit}
+.input:focus,.select:focus,textarea.input:focus{outline:none;border-color:var(--c-500);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
+.input.compact,.select.compact{padding:6px 9px;font-size:13.5px}
+.select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A7466' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:28px;cursor:pointer}
+.select.compact{padding-right:26px;background-position:right 8px center}
 .input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .input[type=number]::-webkit-outer-spin-button,.input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 /* Custom qty stepper — full-height up/down buttons flush to the field edge */
@@ -281,6 +283,37 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
 .row-actions .act-dup:hover{background:var(--c-50);color:var(--c-700)}
 .row-actions .act-del{color:color-mix(in srgb,var(--danger) 62%,var(--ink-faint))}
 .row-actions .act-del:hover{background:var(--danger-bg);color:var(--danger)}
+.row-actions .act-buf{color:color-mix(in srgb,var(--buffer) 70%,var(--ink-faint))}
+.row-actions .act-buf:hover{background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer)}
+.row-actions .act-buf.on{background:color-mix(in srgb,var(--buffer) 16%,transparent);color:var(--buffer)}
+.tag.buffer{background:color-mix(in srgb,var(--buffer) 12%,transparent);color:var(--buffer);border:1px solid color-mix(in srgb,var(--buffer) 38%,transparent);letter-spacing:.05em}
+.tag.zero{background:#fdf3e3;color:#9a6a12;border:1px solid #e8d3a8;letter-spacing:.05em}
+.buffer-note{font-weight:600;font-size:12px;color:var(--buffer);margin-left:8px}
+/* Category cell: stack the category / CUSTOM / BUFFER pills vertically */
+.cat-stack{display:inline-flex;flex-direction:column;align-items:stretch;justify-content:center;gap:3px;vertical-align:middle}
+.cat-stack .tag{margin-left:0;text-align:center;display:block}
+/* Qty 0 — the row stays in the BOQ but adds nothing to any total; dim it so it reads as a placeholder */
+tr.row-zero td.col-price,tr.row-zero td.col-total{color:var(--ink-faint)!important;font-weight:600!important}
+tr.row-zero .item-name{color:var(--ink-soft)}
+tr.row-zero .input.qty,tr.row-zero .cell-qty{color:#9a6a12;border-color:#e8d3a8}
+
+/* ===== Item groups — named, cross-section clusters of rows =====
+   A band row sits above each group's rows inside the section table. */
+.group-band>td{padding:6px 14px;background:var(--c-50);border-top:2px solid var(--gold);border-bottom:1px solid var(--c-200)}
+.group-band.other-band>td{background:var(--panel);border-top:1px dashed var(--line)}
+.group-head{display:flex;align-items:center;gap:9px;min-height:20px}
+.group-chev{cursor:pointer;color:var(--ink-faint);display:inline-flex;transition:transform .12s;flex-shrink:0}
+.group-chev.collapsed{transform:rotate(-90deg)}
+.group-band .g-check{margin:0}
+.group-name{font-weight:700;color:var(--c-800);font-size:13.5px}
+.other-band .group-name{color:var(--ink-faint);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em}
+.group-name-in{font-size:13.5px;font-weight:700;color:var(--c-800);border:1px solid var(--c-300);border-radius:5px;padding:0 6px;height:20px;line-height:18px;box-sizing:border-box;margin:0;background:#fff;font-family:inherit}
+.group-meta{color:var(--ink-faint);font-size:12px;font-variant-numeric:tabular-nums}
+.group-total{margin-left:auto;font-weight:700;color:var(--gold);font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:13px}
+.group-acts{display:inline-flex;gap:4px;flex-shrink:0}
+.group-acts button{background:none;border:none;cursor:pointer;color:var(--ink-faint);padding:3px;border-radius:5px;display:inline-flex}
+.group-acts button:hover{background:var(--c-100);color:var(--c-700)}
+tr.row-hidden{display:none}   /* a row inside a collapsed group */
 .notes-input{width:100%;border:1px solid transparent;padding:4px 6px;border-radius:5px;font-size:13px;font-family:inherit;color:var(--ink-faint);background:transparent;transition:border-color .15s}
 .notes-input:hover{border-color:var(--line)}
 .notes-input:focus{outline:none;border-color:var(--c-300);background:#fff}
@@ -288,13 +321,13 @@ table.bom-table{width:100%;border-collapse:collapse;font-size:14px}
 /* ===== Stat row ===== */
 .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
-.stat .stat-label{font-size:11.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px}
-.stat .stat-value{font-size:21.5px;font-weight:700;letter-spacing:-.02em;color:var(--ink);font-family:var(--font-num);font-variant-numeric:tabular-nums}
-.stat .stat-value .cur{font-size:12px;color:var(--ink-faint);font-weight:600;margin-right:3px;font-family:'Hanken Grotesk',sans-serif}
-.stat .stat-sub{font-size:12px;color:var(--ink-faint);margin-top:3px}
+.stat .stat-label,.stat .lbl{font-size:11.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px}
+.stat .stat-value,.stat .val{font-size:21.5px;font-weight:700;letter-spacing:-.02em;color:var(--ink);font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.stat .stat-value .cur,.stat .val .cur{font-size:12px;color:var(--ink-faint);font-weight:600;margin-right:3px;font-family:'Hanken Grotesk',sans-serif}
+.stat .stat-sub,.stat .sub{font-size:12px;color:var(--ink-faint);margin-top:3px}
 .stat.accent{background:var(--sidebar);border-color:transparent}
-.stat.accent .stat-label,.stat.accent .stat-sub{color:rgba(255,255,255,.7)}
-.stat.accent .stat-value,.stat.accent .stat-value .cur{color:#fff}
+.stat.accent .stat-label,.stat.accent .stat-sub,.stat.accent .lbl,.stat.accent .sub{color:rgba(255,255,255,.7)}
+.stat.accent .stat-value,.stat.accent .stat-value .cur,.stat.accent .val,.stat.accent .val .cur{color:#fff}
 
 /* ===== Summary / totals table ===== */
 .matrix-table{width:100%;border-collapse:collapse;font-size:14px}

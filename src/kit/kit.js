@@ -873,6 +873,205 @@ function confirmCopyToContainer(){
 }
 
 /* ====================================================================
+   ITEM GROUPS — named clusters of rows inside one container
+   --------------------------------------------------------------------
+   A group ("Kitchen Island", "Lobby feature wall") gathers rows that
+   belong together and MAY SPAN SECTIONS: a group's members can be
+   cabinets + accessories + a worktop at once. Group defs live on the
+   container (`c.groups = [{id,name,collapsed}]`, ordered); each row
+   carries `row.groupId` (null = ungrouped).
+
+   Each section's row array is kept in group order by reflowSection, so
+   display order == array order and the existing numbering / drag-reorder
+   logic is untouched. The table builder walks groupedBands() and drops a
+   band row above each group, plus one "Other items" band for the tail.
+
+   The kit owns groups; the brand says where its rows and money are:
+
+     KIT.hooks.currentContainer()     -> the unit/area on screen
+     KIT.hooks.sectionKeys()          -> every row-array key in a container
+     KIT.hooks.rowAmount(row)         -> that row's money value
+     KIT.hooks.bandColspan(key)       -> the band row's <td colspan>
+     KIT.hooks.setSelected(key,id,on) -> tick / untick one row
+     KIT.hooks.rowIsBuffer(row)       -> optional; defaults to row.buffer===true
+
+   Backward compatible: a file with no groups loads with `groups: []` and
+   every `groupId` null, which is exactly "one Other items band".
+   ==================================================================== */
+function _secKeys(){ return KIT.hooks.sectionKeys ? (KIT.hooks.sectionKeys()||[]) : []; }
+function _rowsIn(c, key){ return (c && c.items && c.items[key]) || []; }
+function _amount(r){ return (KIT.hooks.rowAmount ? +KIT.hooks.rowAmount(r) : 0) || 0; }
+function _isBuffer(r){ return KIT.hooks.rowIsBuffer ? !!KIT.hooks.rowIsBuffer(r) : r.buffer === true; }
+function _curC(){ return KIT.hooks.currentContainer ? KIT.hooks.currentContainer() : null; }
+
+function groupsOf(c){ if(!Array.isArray(c.groups)) c.groups=[]; return c.groups; }
+function groupById(c,gid){ return gid ? (groupsOf(c).find(g=>g.id===gid)||null) : null; }
+function newGroupId(){ return 'g'+Date.now().toString(36)+Math.floor(Math.random()*46656).toString(36); }
+
+/* Cross-section sums — a band shows the whole group, not just the tab you are on. */
+function groupTotal(c,gid){ let s=0; _secKeys().forEach(k=>_rowsIn(c,k).forEach(r=>{ if(r.groupId===gid) s+=_amount(r); })); return s; }
+function groupBufferTotal(c,gid){ let s=0; _secKeys().forEach(k=>_rowsIn(c,k).forEach(r=>{ if(r.groupId===gid&&_isBuffer(r)) s+=_amount(r); })); return s; }
+function groupCount(c,gid){ let n=0; _secKeys().forEach(k=>_rowsIn(c,k).forEach(r=>{ if(r.groupId===gid) n++; })); return n; }
+
+/* Stable-sort a section's rows into group order (container order; ungrouped/orphaned last). */
+function reflowSection(c,key){
+  const order=groupsOf(c).map(g=>g.id);
+  const rank=r=>{ const i=r.groupId?order.indexOf(r.groupId):-1; return i>=0?i:order.length; };
+  c.items[key]=_rowsIn(c,key).map((r,i)=>[r,i]).sort((a,b)=>(rank(a[0])-rank(b[0]))||(a[1]-b[1])).map(p=>p[0]);
+}
+function reflowContainer(c){ _secKeys().forEach(k=>reflowSection(c,k)); }
+/* Drop row groupIds that no longer point at a live group — treated as ungrouped. */
+function pruneGroups(c){
+  const live=new Set(groupsOf(c).map(g=>g.id));
+  _secKeys().forEach(k=>_rowsIn(c,k).forEach(r=>{ if(r.groupId&&!live.has(r.groupId)) r.groupId=null; }));
+}
+
+/**
+ * The reflowed rows of one section, split into bands ready to render:
+ * [{gid, rows}, …, {gid:null, rows}]. Empty groups are dropped; the
+ * ungrouped tail comes last.
+ */
+function groupedBands(c,key){
+  const rows=_rowsIn(c,key), bands=[];
+  groupsOf(c).forEach(g=>{
+    const rs=rows.filter(r=>r.groupId===g.id);
+    if(rs.length) bands.push({gid:g.id, rows:rs});
+  });
+  const loose=rows.filter(r=>!groupById(c,r.groupId));
+  if(loose.length) bands.push({gid:null, rows:loose});
+  return bands;
+}
+
+function createGroupWithSelected(key,name){
+  const c=_curC(); if(!c) return;
+  const g={id:newGroupId(), name:name||'New group', collapsed:false};
+  groupsOf(c).push(g);
+  assignSelectedToGroup(key,g.id);
+}
+function assignSelectedToGroup(key,gid){
+  const c=_curC(); if(!c) return;
+  const sel=KIT.hooks.selection(key)||[];
+  if(!sel.length){ toast('No items selected','warn'); return; }
+  sel.forEach(r=>{ r.groupId=gid; });
+  reflowSection(c,key); markDirty(); closeModal();
+  sel.forEach(r=>KIT.hooks.setSelected && KIT.hooks.setSelected(key, r.id, false));
+  KIT.hooks.afterRows(key);
+  const g=groupById(c,gid);
+  toast(sel.length+' item'+(sel.length===1?'':'s')+(gid?' → "'+(g?g.name:'group')+'"':' ungrouped'));
+}
+function removeSelectedFromGroup(key){ assignSelectedToGroup(key,null); }
+function renameGroup(c,gid,name){ const g=groupById(c,gid); if(g){ g.name=String(name||'').trim()||g.name; markDirty(); } }
+function deleteGroup(key,gid){
+  const c=_curC(); if(!c) return;
+  _secKeys().forEach(k=>_rowsIn(c,k).forEach(r=>{ if(r.groupId===gid) r.groupId=null; }));
+  c.groups=groupsOf(c).filter(g=>g.id!==gid);
+  reflowContainer(c); markDirty(); KIT.hooks.afterRows(key); toast('Group removed (items kept)');
+}
+function confirmDeleteGroup(key,gid){
+  const c=_curC(), g=groupById(c,gid); if(!g) return;
+  if(confirm('Remove group "'+g.name+'"? Items are kept and become ungrouped.')) deleteGroup(key,gid);
+}
+function toggleGroupCollapse(key,gid){
+  const c=_curC(), g=groupById(c,gid);
+  if(g){ g.collapsed=!g.collapsed; markDirty(); KIT.hooks.afterRows(key); }
+}
+function toggleGroupSelect(key,gid,checked){
+  const c=_curC(); if(!c) return;
+  _rowsIn(c,key).forEach(r=>{ if(r.groupId===gid && KIT.hooks.setSelected) KIT.hooks.setSelected(key, r.id, checked); });
+  KIT.hooks.afterRows(key);
+}
+
+/* The band header row that sits above a group's rows. */
+function groupBandHtml(c,gid,key){
+  const g=groupById(c,gid); if(!g) return '';
+  const cnt=groupCount(c,gid), tot=groupTotal(c,gid);
+  const here=_rowsIn(c,key).filter(r=>r.groupId===gid);
+  const selIds=new Set((KIT.hooks.selection(key)||[]).map(r=>String(r.id)));
+  const allSel=here.length>0 && here.every(r=>selIds.has(String(r.id)));
+  const span=(KIT.hooks.bandColspan && KIT.hooks.bandColspan(key)) || 12;
+  const k=escAttr(key), gq=escAttr(gid);
+  return '<tr class="group-band" data-gid="'+gq+'"><td colspan="'+span+'"><div class="group-head">'
+    + '<input type="checkbox" class="g-check"'+(allSel?' checked':'')+' onchange="toggleGroupSelect(&quot;'+k+'&quot;,&quot;'+gq+'&quot;,this.checked)" title="Select this group’s items in this tab">'
+    + '<span class="group-chev'+(g.collapsed?' collapsed':'')+'" onclick="toggleGroupCollapse(&quot;'+k+'&quot;,&quot;'+gq+'&quot;)" title="Collapse / expand"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></span>'
+    + '<span class="group-name" id="gname-'+gq+'" ondblclick="editGroupName(&quot;'+k+'&quot;,&quot;'+gq+'&quot;)" title="Double-click to rename">'+esc(g.name)+'</span>'
+    + '<span class="group-meta">'+cnt+' item'+(cnt===1?'':'s')+(cnt>here.length?' · '+here.length+' here':'')+'</span>'
+    + '<span class="group-total">'+fmt(tot)+'</span>'
+    + '<span class="group-acts">'
+    + '<button type="button" onclick="editGroupName(&quot;'+k+'&quot;,&quot;'+gq+'&quot;)" title="Rename group"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'
+    + '<button type="button" onclick="confirmDeleteGroup(&quot;'+k+'&quot;,&quot;'+gq+'&quot;)" title="Remove group (keep items)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-9 0v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6"/></svg></button>'
+    + '</span></div></td></tr>';
+}
+function otherBandHtml(key){
+  const span=(KIT.hooks.bandColspan && KIT.hooks.bandColspan(key)) || 12;
+  return '<tr class="group-band other-band"><td colspan="'+span+'"><div class="group-head"><span class="group-name">Other items</span></div></td></tr>';
+}
+
+function editGroupName(key,gid){
+  const c=_curC(), g=groupById(c,gid); if(!g) return;
+  const span=document.getElementById('gname-'+gid); if(!span) return;
+  const inp=document.createElement('input'); inp.type='text'; inp.value=g.name; inp.className='group-name-in';
+  let done=false;
+  const commit=()=>{ if(done) return; done=true; renameGroup(c,gid,inp.value); KIT.hooks.afterRows(key); };
+  inp.onclick=e=>e.stopPropagation();
+  inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') commit(); if(e.key==='Escape'){ done=true; KIT.hooks.afterRows(key); } };
+  inp.onblur=commit;
+  span.replaceWith(inp); inp.focus(); inp.select();
+}
+
+function showAddToGroup(key){
+  const sel=KIT.hooks.selection(key)||[];
+  if(!sel.length){ toast('No items selected','warn'); return; }
+  const c=_curC(), gs=groupsOf(c), k=escAttr(key);
+  const list=gs.map(g=>'<div class="db-item-row" onclick="assignSelectedToGroup(&quot;'+k+'&quot;,&quot;'+escAttr(g.id)+'&quot;)">'+esc(g.name)
+    +' <span style="color:var(--ink-faint);font-size:12px">· '+groupCount(c,g.id)+' item'+(groupCount(c,g.id)===1?'':'s')+'</span></div>').join('');
+  showModal('<div class="modal-head"><h2>Add '+sel.length+' item'+(sel.length===1?'':'s')+' to group</h2>'
+    + '<button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>'
+    + '<div class="modal-body">'
+    + '<div class="field"><label>New group</label><div style="display:flex;gap:8px">'
+    + '<input class="input" id="newgroup-name" placeholder="e.g. Kitchen Island" onkeydown="if(event.key===&quot;Enter&quot;){event.preventDefault();createGroupFromModal(&quot;'+k+'&quot;)}">'
+    + '<button class="btn primary" style="flex-shrink:0" onclick="createGroupFromModal(&quot;'+k+'&quot;)">Create</button></div></div>'
+    + (gs.length?'<div style="margin:12px 0 6px;font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em">Add to existing group</div>'+list:'')
+    + '</div><div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Cancel</button></div>');
+}
+function createGroupFromModal(key){
+  const name=String((document.getElementById('newgroup-name')||{}).value||'').trim();
+  if(!name){ toast('Enter a group name','warn'); return; }
+  createGroupWithSelected(key, name);
+}
+
+/* ====================================================================
+   ROW ACTIONS — the triple button on every item line
+   One markup for every brand: buffer (insurance stock) / duplicate /
+   delete, flush-joined into one segmented control.
+
+     rowActions('kitchen', row.id, {buffer: row.buffer===true})
+
+   Omit `buffer` entirely and the shield is left out — a brand with no
+   insurance-stock concept gets the same control, two buttons wide.
+   `compact: true` is the denser size for tight cell-input tables.
+   ==================================================================== */
+const _RA_SVG = {
+  buf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  dup:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+};
+function rowActions(key,id,o){
+  o=o||{};
+  const k=escAttr(key), i=escAttr(id);
+  let h='<span class="row-actions'+(o.compact?' compact':'')+'">';
+  if(o.buffer!==undefined){
+    const on=o.buffer===true;
+    h+='<button type="button" class="act-buf'+(on?' on':'')+'" onclick="toggleRowBuffer(&quot;'+k+'&quot;,&quot;'+i+'&quot;)" aria-label="Mark as buffer" title="'
+      +(on?'Buffer item — counted in totals, excluded from the Sales Order. Click to unmark.'
+          :'Mark as buffer (insurance stock: counts in totals, excluded from the Sales Order)')+'">'+_RA_SVG.buf+'</button>';
+  }
+  h+='<button type="button" class="act-dup" onclick="duplicateRow(&quot;'+k+'&quot;,&quot;'+i+'&quot;)" aria-label="Duplicate line" title="Duplicate item">'+_RA_SVG.dup+'</button>'
+   + '<button type="button" class="act-del" onclick="'+(o.onDelete||('deleteRow(&quot;'+k+'&quot;,&quot;'+i+'&quot;)'))+'" aria-label="Remove line" title="Delete item">'+_RA_SVG.del+'</button>'
+   + '</span>';
+  return h;
+}
+
+/* ====================================================================
    EXPORT GUARDS — the two reminders every tool needs
    KIT.hooks.requiredFields -> [{sel, label, value()}]   (host-owned fields)
    KIT.hooks.goHome()       -> show the view those fields live on

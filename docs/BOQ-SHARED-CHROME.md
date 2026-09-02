@@ -726,6 +726,47 @@ version → export round-trip.
 
 ---
 
+## 13. Item groups, buffer and the row controls go to the kit (2026-09-02)
+
+§3.3 and §12.5 both parked item **groups** and **buffer rows** as "SM-only, opt-in
+later". That call is now reversed, at the user's request: the three tools should
+read as one product with three accents, and the group band and the shield button
+were the two loudest places they did not.
+
+**Moved into the kit (1.14.0), harvested from Stella Mobili:**
+
+| Now kit-owned | Brand still supplies |
+|---|---|
+| Group model (`c.groups` + `row.groupId`), `reflowSection`, `pruneGroups`, `groupedBands` | `currentContainer()`, `sectionKeys()`, `rowAmount(row)` |
+| Band rows, rename/collapse/delete, *Add to group* modal | `bandColspan(key)`, `setSelected(key,id,on)` |
+| `rowActions(key,id,{buffer})` — the buffer / duplicate / delete triple button | `toggleRowBuffer(sec,id)`, optional `rowIsBuffer(row)` |
+| `.act-buf`, `.tag.buffer`, `.tag.zero`, `.cat-stack`, `tr.row-zero`, `tr.row-hidden` | — |
+| The `.select` chevron, the `.input`/`.select` base, `.stat .lbl/.val/.sub` aliases | — |
+
+**What each tool gained.** Beyond Teak and CDN Lighting picked up item groups,
+buffer flagging (with the with/without-buffer export question the kit already
+knew how to ask), the qty stepper in tables *and* add bars, the triple button,
+and the sidebar's drag-resize handle and collapse rail — all of which existed in
+the kit already and neither had wired up. Stella Mobili lost ~250 lines: its
+group engine, its buffer CSS and its hand-inlined row buttons are now one copy.
+
+**What stayed brand-specific.** The accent (`brand.config.json`), the item-entry
+core, the nouns (`unitNoun`: SM rooms, BT/CL areas), the tab set (Kitchen /
+Wardrobe / Accessories vs Profiles / Accessories / Custom vs Fixtures / Drivers
+& Control / Optional), and what the four stat cards count. Card 3 is *Working
+on — Alt X · vN* in all three now, and card 4 is the accent total; cards 1 and 2
+count containers and lines.
+
+**Not done, deliberately.** The exporters still lay documents out per section,
+not per group band — SM's `exportBands` remains SM's. BT and CL honour a group
+in the *tool* and in the with/without-buffer split, but a group does not yet
+print as a band in their PDF/Excel. That is a document-design change per brand,
+not chrome, and it needs the brands' own print specs to say what a band looks
+like. The selection bar also still differs: SM's is always visible, BT's and
+CL's slide in on selection; the group buttons live on whichever one the tool has.
+
+---
+
 ---
 
 *© 2026 PT. Mitra Usaha Lancar Jaya · Internal tooling · BOQ tool suite*

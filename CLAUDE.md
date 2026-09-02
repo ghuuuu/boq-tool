@@ -315,6 +315,16 @@ Row fields:
 - `groupId` → id of the item group this row belongs to (`null` = ungrouped). See **Item Groups** below.
 
 ### Item Groups
+> **Kit-owned since kit 1.14.0 (2026-09-02).** The engine — `groupsOf`, `groupById`,
+> `groupTotal`/`groupCount`, `reflowSection`/`reflowContainer`, `pruneGroups`,
+> `groupedBands`, `groupBandHtml`/`otherBandHtml`, `showAddToGroup`, rename/collapse/
+> delete — lives in `boq-kit/kit.js` and is shared with Beyond Teak and CDN Lighting.
+> SM keeps two aliases (`unitGroups = groupsOf`, `reflowUnit = reflowContainer`) so its
+> loader and exporters still read in units, and declares the rest in `KIT.register`:
+> `currentContainer` / `sectionKeys` / `rowAmount` / `bandColspan` / `setSelected`.
+> The buffer shield, the BUFFER/QTY-0 tags and the row triple button are the kit's too
+> (`rowActions(sec, id, {buffer})`). The description below still describes the behaviour.
+
 A **group** clusters related rows into a named package (e.g. "Kitchen Island") and **can span
 sections** — a group's members may be Kitchen base units + Accessories handles + a Solid Surface
 top at once. Group defs live on the unit: `unit.groups = [{id, name, collapsed}]` (ordered);
