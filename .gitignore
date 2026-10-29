@@ -1,22 +1,22 @@
-# Local Claude Code settings (machine-specific)
-.claude/settings.local.json
-.claude/.headroom_wrap_marker.json
-
 # User working files (BOQ saves)
+*.boq
 *.smbq
-
-# Brand source art — the master Illustrator file + SVGs the exported-PDF/Excel logos
-# are derived from. Kept locally, not versioned (the built logos are already embedded in
-# the tool via src/assets/). See docs/assets/.
-docs/assets/
+*.btbq
+*.clbq
+*.json.save
 
 # Python
 __pycache__/
 *.pyc
 
+# Node / editor
+node_modules/
+.vscode/
+.idea/
+.claude/
+.serena/
+
 # OS junk
 Thumbs.db
 .DS_Store
-
-# Local agent tooling caches (machine-specific)
-.serena/
+*.tmp

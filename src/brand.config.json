@@ -1,14 +1,14 @@
 {
-  "brandKey": "SM",
-  "brandName": "Stella Mobili",
+  "brandKey": "BOQ",
+  "brandName": "BOQ Tool",
   "toolName": "BOQ Tool",
-  "fileExt": ".smbq",
-  "docPrefix": "BOQ-SM",
+  "fileExt": ".boq",
+  "docPrefix": "BOQ",
   "unitNoun": "unit",
-  "autosaveKey": "smboq_autosave",
+  "autosaveKey": "boq_autosave",
   "logo": {
-    "svg": "assets/stella-mobili-logo.svg",
-    "png": "assets/stella-mobili-logo.png"
+    "svg": "assets/boq-logo.svg",
+    "png": "assets/boq-logo.png"
   },
   "palette": {
     "bg": "#F1ECE1",

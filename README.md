@@ -1,108 +1,114 @@
-# Stella Mobili BOQ Tool
+# BOQ Tool — Open Source & Whitelabel Bill of Quantities Web App
 
-Internal **Bill of Quantities** input tool for **Stella Mobili** — one of the brands managed by
-PT. Mitra Usaha Lancar Jaya (**Mulya**).
+A powerful, standalone, browser-based **Bill of Quantities (BOQ) and Costing Tool** designed for interior designers, architects, furniture makers, and contractors.
 
-It's a single, self-contained HTML file that opens in any browser — no server, no install.
-A PIC (Person In Charge) uses it to build a room-by-room BOQ for a client project, then export
-it for price verification by Stella Mobili Jakarta.
+It is delivered as a **single, self-contained HTML file** (`BOQ_Tool.html`, ~3.8 MB) that runs completely offline with **zero server, zero install, and zero external dependencies**.
 
 ---
 
-## What it does
+## 🌟 Key Highlights
 
-- Build a **room-by-room BOQ** for a client project
-- Select cabinet items by **category, finish, and handle style** (Kitchen / Wardrobe / Accessories)
-- Bundle rows into **item groups** — named packages that can span sections, with their own subtotals (exports are laid out group-first)
-- Track **revisions & alternatives** (quotable version history, each version with its own date)
-- Flag **buffer / insurance stock** (counted in totals, excluded from the Sales Order downstream)
-- **Save / load** progress as a versioned `.smbq` file (plain JSON)
-- **Export to Excel** (one sheet per room + summary)
-- **Save to PDF** (A4, branded letterhead)
-
-Prices shown are **Showroom prices** and are embedded in the tool at build time.
+- **0 Database by Default**: Ships completely unencumbered with no proprietary database or client pricing. Works immediately out of the box with custom item entry and direct inline price editing.
+- **Whitelabel Ready**: Brand name, file extensions, document prefix, color palette, and logos are centrally configured via a single JSON file (`src/brand.config.json`).
+- **100% Offline & Portable**: ExcelJS, pdfmake, vector fonts, and chrome UI are baked directly into the standalone HTML artifact. Open it with a double click in Chrome, Edge, Safari, or Firefox anywhere.
+- **Project Save & Load**: Save entire multi-room projects into a single `.boq` file (human-readable JSON) or drag-and-drop to open.
+- **Excel & PDF Exports**: Instant generation of formatted `.xlsx` workbooks (one tab per unit + summary) and publication-ready A4 PDFs (portrait or landscape).
+- **Revisions & Alternatives**: Built-in tree for versioning (v1, v2...) and side-by-side design alternatives (Alt A, Alt B...) with dirty tracking and autosave recovery.
 
 ---
 
-## Usage
+## 🚀 Quick Start
 
-Open **`StellaMobili_BOM_Tool.html`** in any modern browser (double-click it). That's it.
-
-The file is fully self-contained — the price data is baked in, so it works offline and can be
-shared as a single file. Save your work with the disk icon (produces a `.smbq` file you can
-reopen later).
-
-> A short user manual ships next to the tool — `SM_BOQ_Manual_EN.html` (English) and
-> `SM_BOQ_Manual_ID.html` (Indonesian, switch language at the top of the page). The
-> **Help** button in the tool's topbar opens it, so keep the two manual files in the
-> same folder as `StellaMobili_BOM_Tool.html` when you deploy.
+1. Double-click **`BOQ_Tool.html`** in your file manager to open it in any web browser.
+2. In the **Overview** tab, enter your Project Name, Client, and PIC.
+3. Click **+ Add** in the sidebar to add rooms or units (e.g. *Kitchen*, *Master Bedroom*, *Living Area*).
+4. Click **+ Custom** on the Add Bar to enter items with category, description, finish/material, dimensions (WxHxD), quantity, and unit price.
+5. Edit unit prices and quantities **directly in the table** anytime.
+6. Click **Save .boq** to save your work, or **Export Excel** / **Save PDF** to generate client deliverables.
 
 ---
 
-## Project layout
+## 🛠️ Project Structure
 
-```
-StellaMobili_BOM_Tool.html          # BUILD OUTPUT — the tool you actually open (generated, ~7 MB)
-SM_BOQ_Manual_EN.html               # User manual (English) — opened by the tool's Help button; deploy alongside the tool
-SM_BOQ_Manual_ID.html               # User manual (Indonesian) — EN/ID switcher at the top
-README.md                           # This file
-CLAUDE.md                           # Full developer/architecture guide
-src/                                # Source + build scripts
-  StellaMobili_BOM_Tool_Ref.html    # TEMPLATE / source of truth — edit THIS (all CSS + HTML + app JS)
-  build_tool.py                     # Build: inject price data into the template -> built HTML
-  extract_price_data.py             # Extract price lists from the source Excels
-  check_html.py                     # Sanity-check the built HTML
-price-data/                         # All price data
-  Price List Ref/                   # Source price-list Excels (read-only reference)
-  price_lists/                      # Extracted price data (one JSON per section per version) + index.json
-docs/                               # Human documentation
-  UPDATING_PRICE_LIST.md            # How to update the price list
-  design/boq-system.md              # CRM integration design doc
-archive/                            # Old backups & superseded scripts (not used by the build)
+```text
+BOQ_Tool.html               # STANDALONE BUILD OUTPUT — the app you open in the browser (~3.8 MB)
+BOQ_Manual_EN.html          # User guide (opened via the in-app Help button)
+README.md                   # This file
+CLAUDE.md                   # Architecture & developer guide
+src/
+  BOQ_Tool_Ref.html         # TEMPLATE source of truth (HTML, CSS, core application logic)
+  brand.config.json         # Central whitelabel configuration (colors, names, file extension)
+  build_tool.py             # Compiler: inlines libraries, kit, fonts, and assets into BOQ_Tool.html
+  check_html.py             # Sanity & integrity test script
+  assets/
+    boq-logo.svg            # Vector logo (used in PDF export and UI)
+    boq-logo.png            # Raster logo (used in Excel export)
+  kit/                      # Shared UI chrome, save/load engine, and export layout
+  vendor/                   # Offline libraries (ExcelJS, pdfmake, Roboto & Libre fonts)
+price-data/
+  price_lists/              # Optional directory for pre-compiled product catalogues
+    index.json              # Catalog version registry
+    catalog_template.json   # Template demonstrating catalog schema
 ```
 
-> **Do not hand-edit `StellaMobili_BOM_Tool.html`** — it is generated. Edit the template
-> (`src/StellaMobili_BOM_Tool_Ref.html`) and rebuild.
+---
+
+## 🎨 Whitelabeling Guide
+
+You can rebrand this tool to your company's identity in under 2 minutes:
+
+1. Open `src/brand.config.json`.
+2. Edit the metadata:
+   ```json
+   {
+     "brandKey": "ACME",
+     "brandName": "Acme Interiors",
+     "toolName": "Estimator",
+     "fileExt": ".acmebq",
+     "docPrefix": "EST",
+     "unitNoun": "room",
+     "autosaveKey": "acme_boq_autosave"
+   }
+   ```
+3. Adjust the `palette` hex values (background, accents, sidebar, ink) to match your corporate branding.
+4. Replace `src/assets/boq-logo.svg` and `src/assets/boq-logo.png` with your logos.
+5. Rebuild the app:
+   ```bash
+   python src/build_tool.py
+   ```
 
 ---
 
-## Building
+## 📦 Supplying an Optional Product Database
 
-The build injects the price data into the template and writes the standalone tool.
+If your organization has standard product lines or catalogs with pre-set pricing:
+
+1. Create a catalogue file in `price-data/price_lists/` following `catalog_template.json` (e.g. `kitchen_v1.0.0.json`).
+2. Update `price-data/price_lists/index.json`:
+   ```json
+   {
+     "latest": "v1.0.0",
+     "versions": ["v1.0.0"]
+   }
+   ```
+3. Run `python src/build_tool.py`. The build script will automatically detect the catalog files and inject them into `BOQ_Tool.html`.
+
+---
+
+## 🔨 Building & Verification
+
+To compile the single-file HTML artifact after making changes:
 
 ```bash
-# 1. (only if prices changed) re-extract price lists from the source Excels
-python src/extract_price_data.py
-
-# 2. build the tool
+# Compile template + assets into BOQ_Tool.html
 python src/build_tool.py
 
-# 3. sanity-check the output
+# Verify build integrity (size, markers, structure)
 python src/check_html.py
 ```
 
-- **Change UI or logic** → edit `src/StellaMobili_BOM_Tool_Ref.html`, then run step 2.
-- **Change prices** → edit `price-data/price_lists/*_v*.json` (and `index.json`), then run step 2.
-- **Add a new price-list version** → drop `kitchen_vX.json` / `wardrobe_vX.json` /
-  `accessories_vX.json` into `price_lists/`; the build auto-detects it and the newest
-  version becomes the default.
-
-Requires Python 3 with `pandas` / `openpyxl` (only for the Excel extraction step).
-
 ---
 
-## Save format (`.smbq`)
+## 📄 License
 
-`.smbq` files are plain JSON (current format `version: 3`) carrying the full project state:
-project meta, all units/items, and the revisions & alternatives tree. The loader is
-backward-compatible with older files.
-
----
-
-## Status
-
-This is a **standalone preview** of what will become a module inside **MulyaOne** (the internal
-CRM). It is intentionally self-contained — please keep it server-free. CRM integration happens
-as a separate build.
-
-See [`CLAUDE.md`](CLAUDE.md) for the full architecture, data model, and contribution notes.
+Open-source and free to adapt for personal, studio, or enterprise use.

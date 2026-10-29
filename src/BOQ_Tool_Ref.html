@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SM BOQ Tool</title>
+<title>BOQ Tool — Bill of Quantities</title>
 <!-- UI font (Hanken Grotesk) is self-hosted by the kit — no CDN, works offline. -->
 <script>/*__EXCELJS_INJECTION__*/</script>
 <script>/*__PDFMAKE_INJECTION__*/</script>
 <!--__KIT_INJECTION__-->
 <style>
 /* ============================================================
-   SM BOQ — brand-specific styles.
+   BOQ Tool — styles.
    Design tokens, the base reset and all shared chrome (topbar, sidebar,
    buttons, cards, fields, tables, modals, toasts) come from the kit, injected
    above this block: src/kit/kit.css + src/brand.config.json.
@@ -127,8 +127,8 @@
       </svg>
     </div>
     <div class="brand-name">
-      <strong>Stella Mobili BOQ</strong>
-      <span>Costing System</span>
+      <strong>BOQ Tool</strong>
+      <span>Costing & Estimation</span>
     </div>
   </div>
   <div class="crumb">
@@ -143,7 +143,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Help
     </button>
-    <input type="file" id="loadInput" accept=".smbq,.json" style="display:none" onchange="loadFile(this)">
+    <input type="file" id="loadInput" accept=".boq,.json,.smbq" style="display:none" onchange="loadFile(this)">
   </div>
 </header>
 
@@ -194,12 +194,12 @@
   </main>
 </div>
 
-<!-- Drop anywhere to open a .smbq (shown only while a file is dragged over the window) -->
+<!-- Drop anywhere to open a .boq (shown only while a file is dragged over the window) -->
 <div class="drop-zone" id="dropZone">
   <div class="drop-card">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="42" height="42"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
     <div class="drop-title">Drop to open</div>
-    <div class="drop-sub">Release a <strong>.smbq</strong> file anywhere on this page to load it</div>
+    <div class="drop-sub">Release a <strong>.boq</strong> file anywhere on this page to load it</div>
   </div>
 </div>
 
@@ -228,8 +228,8 @@ let projectMeta = {name:'',client:'',pic:'',date:'',notes:'',priceListVersion:''
 // Revisions & Alternatives tree. Brand code still reads/assigns them freely.
 let selectedRows = {kitchen:new Set(),wardrobe:new Set(),accessories:new Set()};
 
-function getPD(){ return ALL_PRICE_DATA[projectMeta.priceListVersion] || ALL_PRICE_DATA[PRICE_LIST_LATEST]; }
-const TOOL_VERSION = 'v1.7.0';
+function getPD(){ return (ALL_PRICE_DATA && (ALL_PRICE_DATA[projectMeta.priceListVersion] || ALL_PRICE_DATA[PRICE_LIST_LATEST])) || { kitchen:{}, wardrobe:{}, accessories:{} }; }
+const TOOL_VERSION = 'v1.0.0';
 // The topbar chips are the kit's (mountVersionChips). This alias keeps SM's
 // existing call sites pointing at the shared refresh.
 function updateRevPill(){ updateVersionChips(); }
@@ -252,8 +252,8 @@ KIT.register({
     return `${nu} unit${nu===1?'':'s'}, ${ni} item${ni===1?'':'s'}`+(pn?`, project “${pn}”`:'');
   },
   onSidebarToggle: () => { hideUnitFlyout(0); hideSbTip(); },
-  manualUrl: 'SM_BOQ_Manual_EN.html',
-  // When embedded in MulyaOne: the project record owns these fields, and the host
+  manualUrl: 'BOQ_Manual_EN.html',
+  // When embedded in an ERP/Host app: the project record owns these fields, and the host
   // exports server-side, so the tool's own export buttons would dead-end.
   lockedFields: ['#projName','#projClient','#projPIC'],
   hideWhenEmbedded: 'button[onclick*="openExportModal"]',
@@ -327,18 +327,20 @@ KIT.register({
     return kind==='pdf' ? savePDF(incBuf, opts.orient||'portrait', sets, opts)
                         : exportExcel(incBuf, sets, opts);
   },
-  // --- Price list: the kit owns the picker, SM owns the maths ---
+  // --- Price list: the kit owns the picker ---
   priceListVersions: () => PRICE_LIST_VERSIONS,
-  priceListLatest:   () => PRICE_LIST_LATEST,
-  priceListCurrent:  () => projectMeta.priceListVersion || PRICE_LIST_LATEST,
+  priceListLatest:   () => PRICE_LIST_LATEST || 'None',
+  priceListCurrent:  () => projectMeta.priceListVersion || PRICE_LIST_LATEST || 'None',
   repriceAll: v => {
     const pd=ALL_PRICE_DATA[v];
+    if(!pd) return {updated:0, notFound:0};
     let updated=0, notFound=0;
     units.forEach(unit=>{
       ['kitchen','wardrobe','accessories'].forEach(sec=>{
         unit.items[sec].forEach(r=>{
           if(r.custom) return;
           const dataPool=sec==='accessories'?pd.accessories:(sec==='kitchen'?pd.kitchen:pd.wardrobe);
+          if(!dataPool) return;
           const catItems=(dataPool[r.category])||[];
           const descItem=catItems.find(it=>it.desc===r.desc);
           if(!descItem){notFound++;return;}
@@ -358,8 +360,8 @@ KIT.register({
   },
 });
 
-projectMeta.priceListVersion = PRICE_LIST_LATEST;
-addUnit('Kitchen');
+projectMeta.priceListVersion = PRICE_LIST_LATEST || '';
+addUnit('Room 1');
 dirty = false;
 fileUnsaved = false;   // fresh empty project — nothing to save yet
 showView('overview');
@@ -534,7 +536,7 @@ const reflowUnit = reflowContainer;
 function renderOverview(){
   const grand = units.reduce((s,u)=>s+unitTotal(u),0);
   const {name:projName,client,pic,notes,priceListVersion} = projectMeta;
-  const isOld = priceListVersion && priceListVersion !== PRICE_LIST_LATEST;
+  const isOld = priceListVersion && PRICE_LIST_LATEST && priceListVersion !== PRICE_LIST_LATEST;
   const newerChip = isOld ? `<span class="pl-newer-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${PRICE_LIST_LATEST} available</span>` : '';
   const e = document.getElementById('view-overview');
   e.innerHTML = `
@@ -544,11 +546,11 @@ function renderOverview(){
         <div class="row" style="gap:8px">
           <button class="btn btn-sm primary" onclick="saveFile()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            Save .smbq
+            Save .boq
           </button>
           <button class="btn btn-sm primary-outline" onclick="document.getElementById('loadInput').click()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Load .smbq
+            Load .boq
           </button>
           <span style="width:1px;height:22px;background:var(--line);margin:0 2px"></span>
           <button class="btn btn-sm slate" onclick="openExportModal('excel')">
@@ -563,11 +565,11 @@ function renderOverview(){
       </div>
       <div class="card-body">
         <div class="meta-grid">
-          <div class="field"><label>Project Name <span class="req">*</span></label><input class="input compact" type="text" id="projName" placeholder="e.g. Pak Budi – Kebayoran Baru" oninput="onMetaInput()" value="${esc(projName)}"></div>
+          <div class="field"><label>Project Name <span class="req">*</span></label><input class="input compact" type="text" id="projName" placeholder="e.g. Living Room & Kitchen Project" oninput="onMetaInput()" value="${esc(projName)}"></div>
           <div class="field"><label>Client <span class="req">*</span></label><input class="input compact" type="text" id="projClient" placeholder="Client name" oninput="onMetaInput()" value="${esc(client)}"></div>
           <div class="field"><label>PIC <span class="req">*</span></label><input class="input compact" type="text" id="projPIC" placeholder="PIC name" oninput="onMetaInput()" value="${esc(pic)}"></div>
-          <div class="field"><label>Notes to SM Jakarta</label><input class="input compact" type="text" id="projNotes" placeholder="Revision notes, special requests..." oninput="onMetaInput()" value="${esc(notes)}"></div>
-          <div class="field"><label>Price List</label><div style="display:flex;align-items:center;gap:8px"><select class="select compact" id="projPL" onchange="switchPriceList(this.value)">${priceListOptions()}</select>${newerChip}</div></div>
+          <div class="field"><label>Project Notes</label><input class="input compact" type="text" id="projNotes" placeholder="General notes, specifications, revisions..." oninput="onMetaInput()" value="${esc(notes)}"></div>
+          <div class="field"><label>Price List</label><div style="display:flex;align-items:center;gap:8px"><select class="select compact" id="projPL" onchange="switchPriceList(this.value)">${priceListOptions() || '<option value="">(None - Custom Pricing)</option>'}</select>${newerChip}</div></div>
         </div>
       </div>
     </div>
@@ -717,14 +719,14 @@ function updateUnitStats(){
 // ====================================================================
 // CATEGORY CONSTANTS
 // ====================================================================
-const KIT_CATS = ['Base Unit','Wall Unit','Tall Unit','Artdeco Base Unit','Artdeco Wall Unit','Artdeco Tall Unit','Glass Doors','Ornament Artdeco'];
-const NO_HANDLE_CATS = new Set(['Glass Doors','Ornament Artdeco','Artdeco Base Unit','Artdeco Wall Unit','Artdeco Tall Unit']);
+const KIT_CATS = ['Base Unit','Wall Unit','Tall Unit','Panel & Filler','Countertop'];
+const NO_HANDLE_CATS = new Set(['Countertop','Panel & Filler']);
 
-const WD_CATS = ['Wardrobe Swing Door 110','Wardrobe Swing Door 170','Wardrobe Sliding Door','Swing Glass Door','Sliding Glass Door','Upper Cabinet','Upper Cabinet Mirror','Base Cabinet BLUM','Base Cabinet STD','Aluminium Marble Door Frame','Wardrobe Component'];
-const WD_GLASS_CATS  = new Set(['Swing Glass Door','Sliding Glass Door','Upper Cabinet Mirror']);
-const WD_NOFIN_CATS  = new Set(['Aluminium Marble Door Frame','Wardrobe Component']);
+const WD_CATS = ['Wardrobe Swing Door','Wardrobe Sliding Door','Upper Cabinet','Base Cabinet','Wardrobe Internal'];
+const WD_GLASS_CATS  = new Set();
+const WD_NOFIN_CATS  = new Set(['Wardrobe Internal']);
 
-const ACC_CATS = ['Solid Surface','Lighting','Wardrobe Accessories','Kitchen Accessories','Mirror','Handles'];
+const ACC_CATS = ['Hardware & Fittings','Lighting','Appliances','Accessories','Handles'];
 
 // ====================================================================
 // ADD BAR
@@ -827,17 +829,21 @@ function detectThickness(f){
 }
 function initKitFinishes(){
   const cat = el('kit-cat')?.value; if(!cat) return;
-  const items = getPD().kitchen[cat]||[];
+  const items = (getPD().kitchen && getPD().kitchen[cat]) || [];
   const fs = new Set();
-  items.forEach(it => Object.keys(it.prices).forEach(k => {
+  items.forEach(it => Object.keys(it.prices||{}).forEach(k => {
     const finish = k.split('__')[0];
     if(finish && finish !== '(No Finish)') fs.add(finish);
   }));
-  const hasNoFinish = items.some(it => Object.keys(it.prices).some(k => k.startsWith('(No Finish)')));
+  const hasNoFinish = items.some(it => Object.keys(it.prices||{}).some(k => k.startsWith('(No Finish)')));
   if(hasNoFinish && fs.size === 0) fs.add('(No Finish)');
   const sel = el('kit-finish'); if(!sel) return;
-  const cur = sel.value;
-  sel.innerHTML = [...fs].sort().map(f=>`<option${f===cur?' selected':''}>${esc(f)}</option>`).join('');
+  if(fs.size === 0){
+    sel.innerHTML = '<option value="">(Custom / None)</option>';
+  } else {
+    const cur = sel.value;
+    sel.innerHTML = [...fs].sort().map(f=>`<option${f===cur?' selected':''}>${esc(f)}</option>`).join('');
+  }
 }
 function updateHandleVisibility(){
   const cat = el('kit-cat')?.value||'';
@@ -854,12 +860,12 @@ function onKitFinishChange(){
 function kitGolaAvailable(){
   const c = el('kit-cat')?.value||'', f = el('kit-finish')?.value||'';
   if(NO_HANDLE_CATS.has(c)) return false;
-  return (getPD().kitchen[c]||[]).some(it=>(f+'__gola') in it.prices);
+  return ((getPD().kitchen && getPD().kitchen[c])||[]).some(it=>(f+'__gola') in (it.prices||{}));
 }
 function kitStandardAvailable(){
   const c = el('kit-cat')?.value||'', f = el('kit-finish')?.value||'';
   if(NO_HANDLE_CATS.has(c)) return false;
-  return (getPD().kitchen[c]||[]).some(it=>(f+'__standard') in it.prices);
+  return ((getPD().kitchen && getPD().kitchen[c])||[]).some(it=>(f+'__standard') in (it.prices||{}));
 }
 // Show/hide the Standard & Gola buttons for the current category+finish; hide any handle
 // with no items, and switch the active variant to whichever one is actually available.
@@ -905,15 +911,19 @@ function onWdCatChange(){
 }
 function initWdFinishes(){
   const cat = el('wd-cat')?.value; if(!cat) return;
-  const items = getPD().wardrobe[cat]||[];
+  const items = (getPD().wardrobe && getPD().wardrobe[cat]) || [];
   const fs = new Set();
-  items.forEach(it => Object.keys(it.prices).forEach(k => {
+  items.forEach(it => Object.keys(it.prices||{}).forEach(k => {
     const f = k.split('__')[0];
     if(f && f !== '(No Finish)') fs.add(f);
   }));
   const sel = el('wd-finish'); if(!sel) return;
-  const cur = sel.value;
-  sel.innerHTML = [...fs].sort().map(f=>`<option${f===cur?' selected':''}>${esc(f)}</option>`).join('');
+  if(fs.size === 0){
+    sel.innerHTML = '<option value="">(Custom / None)</option>';
+  } else {
+    const cur = sel.value;
+    sel.innerHTML = [...fs].sort().map(f=>`<option${f===cur?' selected':''}>${esc(f)}</option>`).join('');
+  }
   onWdFinishChange();
 }
 function onWdFinishChange(){
@@ -923,7 +933,7 @@ function onWdFinishChange(){
   clearSearch('wd');
 }
 function detectWdThickness(cat, finish){
-  const items = getPD().wardrobe[cat]||[];
+  const items = (getPD().wardrobe && getPD().wardrobe[cat]) || [];
   const key = finish + '__standard';
   for(const it of items){
     if(it.thicknesses && it.thicknesses[key]) return it.thicknesses[key];
@@ -966,8 +976,8 @@ function onAccCatChange(){ clearSearch('acc'); }
 function getPool(p){
   if(p==='kit'){
     const c=el('kit-cat')?.value, f=el('kit-finish')?.value, v=el('kit-variant')?.value||'standard';
-    return (getPD().kitchen[c]||[]).filter(it=>{
-      const keys=Object.keys(it.prices);
+    return ((getPD().kitchen && getPD().kitchen[c])||[]).filter(it=>{
+      const keys=Object.keys(it.prices||{});
       if(keys.every(k=>k.startsWith('(No Finish)'))) return true;
       if(v==='gola') return (f+'__gola') in it.prices;
       return (f+'__standard') in it.prices;
@@ -976,7 +986,7 @@ function getPool(p){
   if(p==='wd'){
     const c=el('wd-cat')?.value||'';
     if(!c) return [];
-    const items=getPD().wardrobe[c]||[];
+    const items=(getPD().wardrobe && getPD().wardrobe[c])||[];
     if(WD_NOFIN_CATS.has(c)) return items;
     if(WD_GLASS_CATS.has(c)){
       const glass=el('wd-glass')?.value, t2=el('wd-glass2')?.value;
@@ -990,7 +1000,7 @@ function getPool(p){
   }
   if(p==='acc'){
     const c=el('acc-cat')?.value||'';
-    return getPD().accessories[c]||[];
+    return (getPD().accessories && getPD().accessories[c])||[];
   }
   return [];
 }
@@ -1051,7 +1061,7 @@ function searchEnter(p, sec){
 function showDropdown(p, items){
   const resEl=el(p+'-results'); if(!resEl) return;
   searchPools[p]=items;
-  if(!items.length){ resEl.innerHTML=`<div class="search-empty">No items found</div>`; positionDropdown(p); resEl.classList.remove('hidden'); return; }
+  if(!items.length){ resEl.innerHTML=`<div class="search-empty">No catalog items. Click <strong>+ Custom</strong> to add custom items.</div>`; positionDropdown(p); resEl.classList.remove('hidden'); return; }
   const q=(el(p+'-search')?.value||'').toLowerCase();
   const tokens=q?q.split(/\s+/).filter(Boolean):[];
   resEl.innerHTML = items.map((it,i)=>{
@@ -1260,7 +1270,7 @@ function buildTableCard(unit, sec){
         </div>
       </td>
       <td><div class="item-name">${esc(r.desc)}</div><div class="item-sub">${subcatBadge}${dimsBadge}</div></td>
-      <td class="col-price mono">${fmt(r.price)}</td>
+      <td class="col-price mono"><input class="input compact price-input mono" type="number" min="0" step="any" value="${r.price}" title="Unit price (click to edit)" onchange="updateRowPrice('${sec}','${r.id}',this.value)" onclick="event.stopPropagation()" style="width:115px;text-align:right"></td>
       <td class="col-qty"><span class="qtybox"><input class="input compact qty" type="number" value="${r.qty}" min="0" step="any" onchange="updateQty('${sec}','${r.id}',this.value)">${QSTEPS}</span></td>
       <td class="col-total mono" style="font-weight:700;color:var(--pu-700)">${fmt(r.price*r.qty)}</td>
       <td><input class="notes-input" type="text" placeholder="Notes…" value="${escAttr(r.notes||'')}" onchange="updateNotes('${sec}','${r.id}',this.value)">${r.notes?`<span class="notes-print-val">${esc(r.notes)}</span>`:''}</td>
@@ -1372,6 +1382,8 @@ function commitFinish(sec,id){
 // ====================================================================
 // ROW OPERATIONS
 // ====================================================================
+function updatePrice(sec,id,val){updateRowPrice(sec,id,val);}
+function updateRowPrice(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.price=Math.max(0,parseFloat(val)||0);markDirty();refreshTable(sec);updateTabCounts();renderSidebarUnits();}}
 function updateQty(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.qty=normQty(val,r.qty);markDirty();refreshTable(sec);if(r.qty===0)warnZeroQty();}}
 function updateNotes(sec,id,val){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(r){r.notes=val;markDirty();}}
 function toggleRowBuffer(sec,id){const unit=getUnit();if(!unit)return;const r=unit.items[sec].find(r=>r.id==id);if(!r)return;r.buffer=r.buffer===true?false:true;markDirty();refreshTable(sec);toast(r.buffer?'Marked as buffer':'Buffer removed');}
@@ -1497,28 +1509,40 @@ function openCustomModal(sec){
   customModalSection=sec;
   showModal(`<div class="modal-head"><h2>Add Custom Item</h2><button class="icon-x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
   <div class="modal-body">
-    <div class="field"><label>Description</label><input class="input" type="text" id="cm-desc" placeholder="Item description"></div>
-    <div class="field"><label>Finish / Material</label><input class="input" type="text" id="cm-finish" placeholder="e.g. Custom, Solid Teak…"></div>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px">
+      <div class="field"><label>Category</label><input class="input" type="text" id="cm-cat" value="Custom" placeholder="Category"></div>
+      <div class="field"><label>Description <span class="req">*</span></label><input class="input" type="text" id="cm-desc" placeholder="Item description"></div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field"><label>Thickness</label><input class="input" type="text" id="cm-thickness" placeholder="e.g. 18mm, 25mm (optional)"></div>
+      <div class="field"><label>Finish / Material</label><input class="input" type="text" id="cm-finish" placeholder="e.g. Laminate, Veneer, Lacquer"></div>
+      <div class="field"><label>Thickness</label><input class="input" type="text" id="cm-thickness" placeholder="e.g. 18mm, 25mm"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+      <div class="field"><label>Width (mm)</label><input class="input" type="number" id="cm-w" placeholder="W"></div>
+      <div class="field"><label>Height (mm)</label><input class="input" type="number" id="cm-h" placeholder="H"></div>
+      <div class="field"><label>Depth (mm)</label><input class="input" type="number" id="cm-d" placeholder="D"></div>
       <div class="field"><label>Unit</label><input class="input" type="text" id="cm-unit" value="set"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field"><label>Unit Price (IDR)</label><input class="input" type="number" id="cm-price" placeholder="0" min="0"></div>
+      <div class="field"><label>Unit Price</label><input class="input" type="number" id="cm-price" placeholder="0" min="0"></div>
       <div class="field"><label>Qty</label><span class="qtybox"><input class="input compact qty" type="number" id="cm-qty" value="1" min="0" step="any" onkeydown="if(event.key==='Enter')confirmCustom()">${QSTEPS}</span></div>
     </div>
-    <div class="field"><label>Notes</label><input class="input" type="text" id="cm-notes" placeholder="Optional"></div>
+    <div class="field"><label>Notes</label><input class="input" type="text" id="cm-notes" placeholder="Optional specifications or notes"></div>
   </div>
   <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="confirmCustom()">Add Item</button></div>`);
 }
 function confirmCustom(){
   const unit=getUnit();if(!unit)return;
   const desc=(el('cm-desc')?.value||'').trim();if(!desc){toast('Description required','warn');return;}
+  const cat=(el('cm-cat')?.value||'Custom').trim()||'Custom';
   const cqty=normQty(el('cm-qty')?.value,1);
+  const w=parseFloat(el('cm-w')?.value)||null;
+  const h=parseFloat(el('cm-h')?.value)||null;
+  const d=parseFloat(el('cm-d')?.value)||null;
   unit.items[customModalSection].push({
-    id:Date.now()+Math.random(), category:'Custom', subcat:'', desc,
+    id:Date.now()+Math.random(), category:cat, subcat:'', desc,
     finish:(el('cm-finish')?.value||'').trim(), variant:'', thickness:(el('cm-thickness')?.value||'').trim(),
-    unit:el('cm-unit')?.value||'set', w:null, h:null, d:null,
+    unit:el('cm-unit')?.value||'set', w, h, d,
     qty:cqty, price:parseFloat(el('cm-price')?.value)||0,
     notes:(el('cm-notes')?.value||'').trim(), custom:true, altGroup:null, buffer:false
   });
@@ -1544,13 +1568,11 @@ function itemsNow(){ return units.reduce((sum,u)=>sum+['kitchen','wardrobe','acc
 function getState(){
   syncProjectMetaFromDOM();
   // The wrapper — tool / brand / format / savedAt / versions and the alternatives
-  // tree — is the kit's; units and unitCounter are Stella Mobili's own payload.
-  // `version: 3` stays alongside the kit's `format`: every `.smbq` in the wild
-  // carries it, and MulyaOne's importer checks it.
+  // tree — is the kit's; units and unitCounter are the tool's payload.
   return buildEnvelope({version:3, revisionNumber, project:projectMeta, units, unitCounter});
 }
 // pickSaveHandle / writePicked / saveBlobAs / saveFile live in the kit; they reach
-// SM through KIT.hooks.getState + fileBaseName.
+// the tool through KIT.hooks.getState + fileBaseName.
 // Restore a full saved state (used by loadFile and the autosave recovery).
 function applyLoadedState(st){
   if(st.project){
@@ -1562,7 +1584,7 @@ function applyLoadedState(st){
   revisionNumber=st.revisionNumber||1;
   restoreEnvelope(st);   // the alternatives tree, whatever format the file is
   dirty=false;
-  fileUnsaved=false;   // loaded from a .smbq file → matches disk (autosave-restore re-flags below)
+  fileUnsaved=false;   // loaded from a file → matches disk (autosave-restore re-flags below)
   updateRevPill(); updateDirtyIndicator(); updateAltVerChip();
   renderSidebarUnits();showView('overview');
 }
@@ -1578,7 +1600,7 @@ function applyLoadedState(st){
 // EXPORT (Excel / PDF) — buffer-mode choice
 // ====================================================================
 // incBuf=true  -> Quotation prep: all items, buffer rows highlighted, totals incl. & excl. buffer
-// incBuf=false -> Sales Order prep (SM Jakarta): buffer items left out of lists and totals entirely
+// incBuf=false -> Quotation / order without buffer items
 function exportRowsFor(unit, sec, incBuf){ return unit.items[sec].filter(r=>incBuf||r.buffer!==true); }
 // Group-first export layout for one unit: an ordered list of bands, each carrying its member
 // rows (across sections, tagged with their section). Groups in unit.groups order, then a final
@@ -1598,7 +1620,7 @@ function bandBufferTotal(band){ return band.rows.reduce((s,{r})=>s+(r.buffer===t
 
 // Project Name + Client are mandatory before any export (they drive the document + filename).
 // Export filename: project name, date, quotation version, mode — Windows-safe.
-// dateStr defaults to today (used for .smbq saves + working-copy exports).
+// dateStr defaults to today (used for saves + working-copy exports).
 // The stem is the kit's (safeFileName): {Project}_{YYYYMMDD}, one convention for the suite.
 function fileBaseNameDate(dateStr){ return safeFileName(projectMeta.name, dateStr); }
 function anyBufferItems(){ return units.some(u=>unitBufferTotal(u)>0); }
@@ -1645,45 +1667,30 @@ async function exportExcel(incBuf=true, sets=null, xopts=null){
   const solid=argb=>({type:'pattern',pattern:'solid',fgColor:{argb}});
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='Stella Mobili BOQ Tool';
+  wb.creator='BOQ Tool';
   const usedSheetNames=new Set();   // Excel sheet names are case-insensitive
-  const stellaImg=wb.addImage({base64:BOQ_LOGOS.stella,extension:'png'});
-  const mulyaImg=wb.addImage({base64:BOQ_LOGOS.mulya,extension:'png'});
+  const brandImg=(BOQ_LOGOS.brand && wb.addImage({base64:BOQ_LOGOS.brand,extension:'png'})) || null;
 
-  // Brand header (rows 1–5): logos, doc line + company, meta band — mirrors the PDF header
+  // Brand header (rows 1–5): logo, doc line, meta band — mirrors the PDF header
   const addBrandHeader=(ws,ncols,verLabel,verDate)=>{
     const r1=ws.addRow([]); r1.height=40;
     const r2=ws.addRow([docLine]); r2.height=14;
     ws.mergeCells(r2.number,1,r2.number,6);
     r2.getCell(1).font={bold:true,size:8,color:{argb:BRASS}};
     ws.mergeCells(r2.number,7,r2.number,ncols);
-    const cc=r2.getCell(7); cc.value=MULYA_LINE;
+    const cc=r2.getCell(7); cc.value='BILL OF QUANTITIES';
     cc.font={bold:true,size:8,color:{argb:BRASS}}; cc.alignment={horizontal:'right'};
     for(let i=1;i<=ncols;i++) r2.getCell(i).border={bottom:inkB};
     const labels=['PROJECT','CLIENT','PIC','DATE','VERSION','PRICE LIST'];
-    const values=[projectMeta.name,projectMeta.client,projectMeta.pic,fmtDate(verDate||new Date().toISOString().slice(0,10)),verLabel,plv];
+    const values=[projectMeta.name,projectMeta.client,projectMeta.pic,fmtDate(verDate||new Date().toISOString().slice(0,10)),verLabel,plv||'—'];
     const r3=ws.addRow(['',...labels]);
     labels.forEach((_,k)=>{r3.getCell(k+2).font={bold:true,size:7,color:{argb:BRASS}};});
     const r4=ws.addRow(['',...values.map(v=>v||'—')]);
     values.forEach((_,k)=>{r4.getCell(k+2).font={size:10,color:{argb:INK}};});
     for(let i=1;i<=ncols;i++) r4.getCell(i).border={bottom:hairB};
     ws.addRow([]);
-    // NB: addImage LAST — an image anchor counts as a row in ExcelJS, so adding it
-    // before the rows would shift every subsequent addRow down by one.
-    ws.addImage(stellaImg,{tl:{col:0,row:0},ext:{width:162,height:46}});   // 121.92/34.58 aspect
-    // MULYA right-aligned to the table's right edge: walk columns from the right and
-    // anchor with NATIVE EMU offsets (fractional tl.col is unreliable — ExcelJS converts
-    // fractions against a fixed default column width, not the actual one).
-    // Column chars → px ≈ w*7+5 (Calibri 11); 1px = 9525 EMU.
-    const MW_IMG=113;   // 85.04/34.58 aspect at 46px height
-    let rem=MW_IMG;
-    for(let i=ncols;i>=1;i--){
-      const wpx=Math.round((ws.getColumn(i).width||8.43)*7+5);
-      if(wpx>=rem){
-        ws.addImage(mulyaImg,{tl:{nativeCol:i-1,nativeColOff:(wpx-rem)*9525,nativeRow:0,nativeRowOff:0},ext:{width:MW_IMG,height:46}});
-        break;
-      }
-      rem-=wpx;
+    if(brandImg){
+      ws.addImage(brandImg,{tl:{col:0,row:0},ext:{width:160,height:46}});
     }
   };
   const styleHeaderRow=row=>{
@@ -1866,18 +1873,18 @@ function buildPdfDoc(incBuf, orient, sets){
     metaCell('Version',vlabel||verLabel), metaCell('Price list',plv),
   ];
 
-  // ---- header: brand logo left, MULYA constant top-right (branding rules) ----
+  // ---- header: brand logo left, header right ----
   // logos as vector SVG (crisp at any print size); aspect ratios from the SVG viewBoxes.
   // Built fresh each call (pdfmake mutates nodes) so the full letterhead can repeat atop
   // each alternative in a multi-set export — every alternative reads as a standalone BOQ.
   function pushLetterhead(brk,vlabel,vdate){
     // Letterhead, captions, rules and meta cells come from the kit (kit-export.js);
-    // which six cells, and how wide, is Stella Mobili's.
     const parts = pdfLetterhead({
       tokens: DOCT, cw: CW,
-      brandLogo: {svg:BOQ_LOGOS.stellaSvg, height:LOGO_H, width:LOGO_H*(121.92/34.58)},
+      brandLogo: {svg:BOQ_LOGOS.brandSvg, height:LOGO_H, width:LOGO_H*(160/46)},
       brandLine: docLine,
-      mulyaLogo: {svg:BOQ_LOGOS.mulyaSvg, height:LOGO_H, width:LOGO_H*(85.04/34.58)},
+      mulyaLogo: null,
+      mulyaLines: ['PROJECT ESTIMATION & BILL OF QUANTITIES'],
       // landscape: the six meta cells sit inline between the logos (spec)
       middle: land ? {width:'*',margin:[20,22,10,0],columnGap:19.5,
                       columns:metaCells(vlabel,vdate).map(c=>Object.assign({width:'auto'},c))} : null,
@@ -2021,7 +2028,7 @@ function buildPdfDoc(incBuf, orient, sets){
     // the spec's page footer, from the kit: hairline, caption, page x of y
     footer: pdfFooter((projectMeta.name||'')+' · '+verLabel+' · '+plv, CW, DOCT,
                       {margin:[33,6,33,0], gap:5}),
-    info:{title:(projectMeta.name||'BOQ')+' — BOQ', author:'Stella Mobili BOQ Tool'},
+    info:{title:(projectMeta.name||'BOQ')+' — BOQ', author:'BOQ Tool'},
   };
 }
 async function savePDF(incBuf=true, orient='portrait', sets=null, xopts=null){

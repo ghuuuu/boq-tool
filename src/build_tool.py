@@ -1,64 +1,77 @@
 """
-Build StellaMobili_BOM_Tool.html by injecting the versioned price-list data
-(price-data/price_lists/) into the app template (src/StellaMobili_BOM_Tool_Ref.html).
+Build BOQ_Tool.html by injecting the versioned price-list data (if any)
+into the app template (src/BOQ_Tool_Ref.html).
 
 The TEMPLATE is the editable source of truth: it holds all the CSS, body markup, and
-the full app JavaScript, with a single marker  /*__PRICE_DATA_INJECTION__*/  where the
-price data goes. This script's ONLY job is to load every price_lists/*_v*.json, build
-the ALL_PRICE_DATA / PRICE_LIST_VERSIONS / PRICE_LIST_LATEST constants, and drop them in.
-
-To change the tool's UI/logic  -> edit src/StellaMobili_BOM_Tool_Ref.html, then rebuild.
-To update prices               -> edit/add price-data/price_lists/*_v*.json, then rebuild.
+the full app JavaScript, with markers where generated content is dropped in:
+  /*__PRICE_DATA_INJECTION__*/   -> ALL_PRICE_DATA / PRICE_LIST_VERSIONS / PRICE_LIST_LATEST
+  /*__EXCELJS_INJECTION__*/      -> ExcelJS (offline .xlsx export)
+  /*__PDFMAKE_INJECTION__*/      -> pdfmake + Roboto fonts (offline .pdf export)
+  /*__BRAND_ASSETS_INJECTION__*/ -> BOQ_LOGOS (brand logos) + Libre fonts for PDF
+  <!--__KIT_INJECTION__-->       -> boq-kit chrome CSS and JS + brand tokens
 
 Run: python src/build_tool.py
 """
 import json, re, os, glob, base64
 
-ROOT     = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TEMPLATE = f"{ROOT}/src/StellaMobili_BOM_Tool_Ref.html"
-PL_DIR   = f"{ROOT}/price-data/price_lists"
-OUT_HTML = f"{ROOT}/StellaMobili_BOM_Tool.html"
-MARKER   = "/*__PRICE_DATA_INJECTION__*/"
-KIT_DIR  = f"{ROOT}/src/kit"
+ROOT      = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TEMPLATE  = f"{ROOT}/src/BOQ_Tool_Ref.html"
+PL_DIR    = f"{ROOT}/price-data/price_lists"
+OUT_HTML  = f"{ROOT}/BOQ_Tool.html"
+MARKER    = "/*__PRICE_DATA_INJECTION__*/"
+KIT_DIR   = f"{ROOT}/src/kit"
 BRAND_CFG = f"{ROOT}/src/brand.config.json"
 
-# ── 1. Load ALL versioned price JSONs ─────────────────────────────────────
-def load_pl(tp, ver):
-    with open(f"{PL_DIR}/{tp}_{ver}.json", encoding="utf-8") as f:
-        return json.load(f)["items"]
+def b64(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode("ascii")
 
-# Auto-detect every version present in price_lists/ (via kitchen_v*.json)
-_kit_files = sorted(glob.glob(f"{PL_DIR}/kitchen_v*.json"))
+def txt(path):
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+# ── 1. Load versioned price JSONs (if any) ─────────────────────────────────
+def load_pl_safe(tp, ver):
+    path = f"{PL_DIR}/{tp}_{ver}.json"
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("items", {})
+    return {}
+
+_pl_files = sorted(glob.glob(f"{PL_DIR}/*_v*.json"))
 ALL_VERSIONS = sorted(set(
-    m.group(1) for m in (re.search(r'(v\d+\.\d+\.\d+)', f) for f in _kit_files) if m
+    m.group(1) for m in (re.search(r'(v\d+\.\d+\.\d+)', f) for f in _pl_files) if m
 ))
-if not ALL_VERSIONS:
-    raise FileNotFoundError(f"No kitchen_v*.json found in {PL_DIR}")
-LATEST_VERSION = ALL_VERSIONS[-1]
-print(f"Price list versions: {', '.join(ALL_VERSIONS)}")
-print(f"Latest: {LATEST_VERSION}")
 
 all_price_data = {}
-for ver in ALL_VERSIONS:
-    all_price_data[ver] = {
-        "kitchen":     load_pl("kitchen",     ver),
-        "wardrobe":    load_pl("wardrobe",    ver),
-        "accessories": load_pl("accessories", ver),
-    }
-    kb = sum(len(json.dumps(v, ensure_ascii=False)) for v in all_price_data[ver].values()) / 1024
-    print(f"  {ver}: {kb:.0f} KB")
+if ALL_VERSIONS:
+    LATEST_VERSION = ALL_VERSIONS[-1]
+    print(f"Price list versions found: {', '.join(ALL_VERSIONS)}")
+    print(f"Latest: {LATEST_VERSION}")
+    for ver in ALL_VERSIONS:
+        all_price_data[ver] = {
+            "kitchen":     load_pl_safe("kitchen", ver),
+            "wardrobe":    load_pl_safe("wardrobe", ver),
+            "accessories": load_pl_safe("accessories", ver),
+        }
+        kb = sum(len(json.dumps(v, ensure_ascii=False)) for v in all_price_data[ver].values()) / 1024
+        print(f"  {ver}: {kb:.0f} KB")
+else:
+    LATEST_VERSION = ""
+    print("Price list: none (0 database / custom items mode)")
 
 all_price_data_json = json.dumps(all_price_data, ensure_ascii=False, separators=(',', ':'))
 print(f"ALL_PRICE_DATA total: {len(all_price_data_json)/1024:.0f} KB")
 
-# ── 2. Build the injection block (matches the constants the app JS expects) ─
+# ── 2. Build the injection block ───────────────────────────────────────────
 injection = (
     "const ALL_PRICE_DATA = " + all_price_data_json + ";\n"
     "const PRICE_LIST_VERSIONS = " + json.dumps(ALL_VERSIONS) + ";\n"
     "const PRICE_LIST_LATEST = " + json.dumps(LATEST_VERSION) + ";"
 )
 
-# ── 3. Inject into the template and write the output ──────────────────────
+# ── 3. Inject into the template ───────────────────────────────────────────
 with open(TEMPLATE, encoding="utf-8") as f:
     template = f.read()
 
@@ -70,7 +83,7 @@ if template.count(MARKER) != 1:
 
 output = template.replace(MARKER, injection)
 
-# ── 3b. Inline ExcelJS so the built tool works fully offline ───────────────
+# ── 3b. Inline ExcelJS ────────────────────────────────────────────────────
 EXCELJS_MARKER = "/*__EXCELJS_INJECTION__*/"
 EXCELJS_PATH   = f"{ROOT}/src/vendor/exceljs.min.js"
 if output.count(EXCELJS_MARKER) != 1:
@@ -83,7 +96,7 @@ with open(EXCELJS_PATH, encoding="utf-8") as f:
 output = output.replace(EXCELJS_MARKER, exceljs_src)
 print(f"ExcelJS inlined: {len(exceljs_src)/1024:.0f} KB (offline Excel export)")
 
-# ── 3c. Inline pdfmake (+ Roboto fonts) for direct offline PDF download ────
+# ── 3c. Inline pdfmake (+ Roboto fonts) ───────────────────────────────────
 PDFMAKE_MARKER = "/*__PDFMAKE_INJECTION__*/"
 if output.count(PDFMAKE_MARKER) != 1:
     raise RuntimeError(
@@ -97,40 +110,30 @@ for fn in ("pdfmake.min.js", "vfs_fonts.js"):
 output = output.replace(PDFMAKE_MARKER, pdfmake_src)
 print(f"pdfmake inlined: {len(pdfmake_src)/1024:.0f} KB (offline PDF download)")
 
-# ── 3d. Inline brand assets: logos + BOQ export fonts (offline PDF branding) ─
+# ── 3d. Inline brand assets: logos + PDF fonts ────────────────────────────
 ASSETS_MARKER = "/*__BRAND_ASSETS_INJECTION__*/"
 if output.count(ASSETS_MARKER) != 1:
     raise RuntimeError(
         f"Expected exactly 1 brand-assets marker {ASSETS_MARKER!r} in {TEMPLATE}, "
         f"found {output.count(ASSETS_MARKER)}"
     )
-def b64(path):
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode("ascii")
 
-logos = {
-    "stella": b64(f"{ROOT}/src/assets/stella-mobili-logo.png"),
-    "mulya":  b64(f"{ROOT}/src/assets/mulya-logo.png"),
-}
-def txt(path):
-    with open(path, encoding="utf-8") as f:
-        return f.read()
+logo_png_path = f"{ROOT}/src/assets/boq-logo.png"
+logo_svg_path = f"{ROOT}/src/assets/boq-logo.svg"
+logo_png_b64 = b64(logo_png_path) if os.path.exists(logo_png_path) else ""
+logo_svg_str = txt(logo_svg_path) if os.path.exists(logo_svg_path) else ""
 
-# SVG versions (vector, used by the PDF export; PNGs above are for Excel)
-logos_svg = {
-    "stella": txt(f"{ROOT}/src/assets/stella-mobili-logo.svg"),
-    "mulya":  txt(f"{ROOT}/src/assets/mulya-logo.svg"),
-}
+logos = {"brand": logo_png_b64}
+logos_svg = {"brand": logo_svg_str}
+
 FONT_FILES = [
     "LibreFranklin-Regular.ttf", "LibreFranklin-SemiBold.ttf",
     "LibreCaslonText-Regular.ttf", "LibreCaslonText-Bold.ttf",
 ]
 fonts_vfs = {fn: b64(f"{ROOT}/src/vendor/fonts/{fn}") for fn in FONT_FILES}
 assets_injection = (
-    "const BOQ_LOGOS={stella:'data:image/png;base64," + logos["stella"] + "',"
-    "mulya:'data:image/png;base64," + logos["mulya"] + "',"
-    "stellaSvg:" + json.dumps(logos_svg["stella"]) + ","
-    "mulyaSvg:" + json.dumps(logos_svg["mulya"]) + "};\n"
+    "const BOQ_LOGOS={brand:'data:image/png;base64," + logos["brand"] + "',"
+    "brandSvg:" + json.dumps(logos_svg["brand"]) + "};\n"
     "if(typeof pdfMake!=='undefined'){Object.assign(pdfMake.vfs,"
     + json.dumps(fonts_vfs) + ");"
     "pdfMake.fonts={Roboto:{normal:'Roboto-Regular.ttf',bold:'Roboto-Medium.ttf',"
@@ -139,12 +142,9 @@ assets_injection = (
     "LibreCaslon:{normal:'LibreCaslonText-Regular.ttf',bold:'LibreCaslonText-Bold.ttf'}};}"
 )
 output = output.replace(ASSETS_MARKER, assets_injection)
-print(f"Brand assets inlined: logos {sum(len(v) for v in logos.values())/1024:.0f} KB + fonts {sum(len(v) for v in fonts_vfs.values())/1024:.0f} KB (base64)")
+print(f"Brand assets inlined: logos + fonts {sum(len(v) for v in fonts_vfs.values())/1024:.0f} KB (base64)")
 
-# ── 3e. Inline the shared chrome (boq-kit) + this brand's config ───────────
-# src/kit/ is a vendored copy of the boq-kit repo (refresh: python src/sync_kit.py).
-# The kit CSS goes in BEFORE the template's own <style> so a brand rule can still
-# override a kit rule. See docs/BOQ-SHARED-CHROME.md §4.
+# ── 3e. Inline the shared chrome (boq-kit) + brand config ──────────────────
 KIT_MARKER = "<!--__KIT_INJECTION__-->"
 if output.count(KIT_MARKER) != 1:
     raise RuntimeError(
@@ -152,13 +152,12 @@ if output.count(KIT_MARKER) != 1:
         f"found {output.count(KIT_MARKER)}"
     )
 if not os.path.isdir(KIT_DIR):
-    raise FileNotFoundError(f"No vendored kit at {KIT_DIR} — run: python src/sync_kit.py")
+    raise FileNotFoundError(f"No vendored kit at {KIT_DIR}")
 
 with open(BRAND_CFG, encoding="utf-8") as f:
     brand = json.load(f)
 kit_version = txt(f"{KIT_DIR}/KIT_VERSION").strip()
 
-# palette key -> CSS custom property. Extra aliases keep legacy rules working.
 _TOKEN_ALIASES = {"brass": ["--brass", "--gold"], "brassBg": ["--brass-bg", "--gold-bg"]}
 def _css_vars(pal):
     out = []
@@ -175,7 +174,6 @@ def _css_vars(pal):
     return out
 
 brand_css = ":root{" + ";".join(_css_vars(brand["palette"])) + "}"
-# Self-hosted UI font — the tool must not depend on the Google Fonts CDN at runtime.
 screen_font = (
     "@font-face{font-family:'Hanken Grotesk';font-style:normal;"
     "font-weight:400 800;font-display:swap;"

@@ -10,7 +10,7 @@
       "pattern": "^[A-Z]{2,4}$",
       "description": "Short brand tag; also the ERP envelope brand field. SM | CL | BT"
     },
-    "brandName": { "type": "string", "description": "Stella Mobili" },
+    "brandName": { "type": "string", "description": "BOQ Tool" },
     "toolName":  { "type": "string", "description": "BOQ Tool — used in the topbar + title" },
     "fileExt":   { "type": "string", "pattern": "^\\.[a-z]{3,5}$", "description": ".smbq" },
     "docPrefix": { "type": "string", "description": "BOQ-SM → BOQ-SM-YY-###-v{n}" },

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SM BOQ Tool — User Manual (EN)</title>
+<title>BOQ Tool — User Manual (EN)</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -319,17 +319,17 @@
 <!-- ═══════════════════════════════════════ COVER ═══════════════════════════════════════ -->
 <div class="cover">
   <div class="cover-top">
-    <div class="cover-brand">PT. Mitra Usaha Lancar Jaya · <span>MulyaOne</span> · Internal Tooling</div>
-    <div class="cover-title">SM BOQ Tool<br>User Manual</div>
-    <div class="cover-subtitle">Stella Mobili — Bill of Quantities Input Tool</div>
+    <div class="cover-brand"><span>BOQ Tool</span> · User Guide</div>
+    <div class="cover-title">BOQ Tool<br>User Manual</div>
+    <div class="cover-subtitle">Standalone Bill of Quantities & Costing Tool</div>
   </div>
   <div class="cover-mid">
-    <p>This manual covers everything a new PIC needs to build a room-by-room Bill of Quantities, manage items, export to Excel and PDF, and send to SM Jakarta for price verification.</p>
+    <p>This manual covers everything a new PIC needs to build a room-by-room Bill of Quantities, manage items, export to Excel and PDF, and send to Head Office / Pricing Dept for price verification.</p>
     <p style="margin-top:3mm;font-size:9pt;opacity:.7">Quick-start format — estimated reading time: 10 minutes</p>
   </div>
   <div class="cover-bottom">
     <div>
-      <strong>Stella Mobili</strong><br>
+      <strong>BOQ Tool</strong><br>
       Jl. Tegalsari 37<br>
       More Value · More Possibilities
     </div>
@@ -364,8 +364,8 @@
 <!-- ═══════════════════════════════════════ CHAPTER 1 ═══════════════════════════════════════ -->
 <div class="chapter">
   <h1>1 · Introduction</h1>
-  <p>The <strong>SM BOQ Tool</strong> is a standalone browser-based Bill of Quantities tool built for Stella Mobili PICs. Use it to build a room-by-room list of furniture items — kitchen cabinets, wardrobes, and accessories — with showroom pricing, then export to Excel or PDF for client presentation and send to SM Jakarta for final price verification.</p>
-  <p><strong>No installation needed.</strong> Open <code>StellaMobili_BOM_Tool.html</code> in any modern browser (Chrome, Edge, or Firefox recommended). The entire tool — including the full price database — runs inside that single file.</p>
+  <p>The <strong>BOQ Tool</strong> is a standalone browser-based Bill of Quantities tool built for BOQ Tool PICs. Use it to build a room-by-room list of furniture items — kitchen cabinets, wardrobes, and accessories — with showroom pricing, then export to Excel or PDF for client presentation and send to Head Office / Pricing Dept for final price verification.</p>
+  <p><strong>No installation needed.</strong> Open <code>BOQ_Tool.html</code> in any modern browser (Chrome, Edge, or Firefox recommended). The entire tool — including the full price database — runs inside that single file.</p>
   <div class="info">
     All prices shown are <strong>Showroom Prices</strong> (excl. PPN). Sales pricing and discounting are handled separately by the Sales team.
   </div>
@@ -397,7 +397,7 @@
 <h1>3 · Starting a New Project</h1>
 <ol class="steps">
   <li>Open the tool — it starts with one default unit called "Kitchen" and an empty project.</li>
-  <li>In the <strong>Overview</strong> view, fill in: <strong>Project Name</strong>, <strong>Client</strong>, <strong>PIC</strong>, and <strong>Notes to SM Jakarta</strong> (Price List sits narrow on the right). There is no project-wide date field — the quotation date lives on each saved version instead (see Chapter 8).</li>
+  <li>In the <strong>Overview</strong> view, fill in: <strong>Project Name</strong>, <strong>Client</strong>, <strong>PIC</strong>, and <strong>Notes to Head Office / Pricing Dept</strong> (Price List sits narrow on the right). There is no project-wide date field — the quotation date lives on each saved version instead (see Chapter 8).</li>
   <li>Check the <strong>Price List</strong> dropdown — it defaults to the latest version. Leave it as-is for new projects.</li>
   <li>Rename the default unit by clicking its name in the sidebar and typing a new name (e.g. "Master Bedroom"). Add more units with the <strong>+ Add Unit</strong> button in Overview.</li>
 </ol>
@@ -506,27 +506,27 @@
 <h1>8 · Saving &amp; Loading</h1>
 
 <h2>Saving</h2>
-<p>Click <strong>Save .smbq</strong> in the Overview header. The browser saves a file named <code>{Project Name}_{Date}.smbq</code> (e.g. <code>Pak Budi_Kebayoran Baru_13-07-2026.smbq</code>, dates shown day-month-year). This saves the <strong>whole project</strong> to one file on your computer — every unit, item, and all your saved versions &amp; alternatives.</p>
+<p>Click <strong>Save .boq</strong> in the Overview header. The browser saves a file named <code>{Project Name}_{Date}.boq</code> (e.g. <code>Pak Budi_Kebayoran Baru_13-07-2026.boq</code>, dates shown day-month-year). This saves the <strong>whole project</strong> to one file on your computer — every unit, item, and all your saved versions &amp; alternatives.</p>
 
 <div class="tip">
-  <strong>Crash protection:</strong> the tool auto-saves your working state into the browser's local storage (on this computer, in this browser — not a file) a few seconds after every edit, and warns you before closing the tab. If the browser ever closes unexpectedly, reopen the tool — it will offer to <strong>restore your unsaved work</strong>. This is a safety net, not a replacement for saving your <code>.smbq</code> file.
+  <strong>Crash protection:</strong> the tool auto-saves your working state into the browser's local storage (on this computer, in this browser — not a file) a few seconds after every edit, and warns you before closing the tab. If the browser ever closes unexpectedly, reopen the tool — it will offer to <strong>restore your unsaved work</strong>. This is a safety net, not a replacement for saving your <code>.boq</code> file.
 </div>
 
 <h2>Loading</h2>
-<p>Click <strong>Load .smbq</strong> in the Overview header. Select a <code>.smbq</code> file. The tool restores the full project: all units, items, quantities, notes, and the price list version stored at save time.</p>
-<p><strong>Faster: drag and drop.</strong> Drag a <code>.smbq</code> file from Windows Explorer onto <em>any part</em> of the tool — a "Drop to open" panel appears over the page, and releasing the file loads it. No need to find the Load button or navigate the file dialog. If the project you have open still has changes that were never saved to a <code>.smbq</code> file, the tool asks before replacing it, so a stray drag can't lose your work. Dropping anything that isn't a <code>.smbq</code> is simply refused.</p>
+<p>Click <strong>Load .boq</strong> in the Overview header. Select a <code>.boq</code> file. The tool restores the full project: all units, items, quantities, notes, and the price list version stored at save time.</p>
+<p><strong>Faster: drag and drop.</strong> Drag a <code>.boq</code> file from Windows Explorer onto <em>any part</em> of the tool — a "Drop to open" panel appears over the page, and releasing the file loads it. No need to find the Load button or navigate the file dialog. If the project you have open still has changes that were never saved to a <code>.boq</code> file, the tool asks before replacing it, so a stray drag can't lose your work. Dropping anything that isn't a <code>.boq</code> is simply refused.</p>
 
 <div class="info">
-  <strong>The .smbq file is plain text (JSON)</strong> — safe to email, archive, or back up. SM Jakarta will eventually manage revision history through the CRM system.
+  <strong>The .boq file is plain text (JSON)</strong> — safe to email, archive, or back up. Head Office / Pricing Dept will eventually manage revision history through the CRM system.
 </div>
 
 <h2>Revisions &amp; Alternatives</h2>
-<p>The <strong>Revisions &amp; Alternatives</strong> panel (in Overview) is how you save quotable snapshots of your work — this is separate from saving a <code>.smbq</code> file to disk.</p>
+<p>The <strong>Revisions &amp; Alternatives</strong> panel (in Overview) is how you save quotable snapshots of your work — this is separate from saving a <code>.boq</code> file to disk.</p>
 <ul>
   <li><strong>Save as v1, v2, …</strong> — commit the current calculation as a numbered version. While a version is still a <strong>Draft</strong>, saving updates it in place; once you mark it <strong>Ready for quotation</strong>, the next save creates the next version and marks older ones <strong>Superseded</strong>.</li>
   <li><strong>Alternatives (Alt A, Alt B, …)</strong> — offer the client different schemes side by side (e.g. two finish or layout options). Each alternative keeps its own version history.</li>
   <li><strong>Each version has its own date.</strong> When you save a version it is dated today; the date is shown next to the <code>v#</code> chip (with a dashed underline). Click it to change that version's date — so v1 can read an earlier date than v2. This date is what prints on that version's exported document. Dates are shown day-month-year (e.g. 13-07-2026).</li>
-  <li>The <strong>Revisions &amp; Alternatives</strong> panel and the <strong>Working On</strong> card show which Alt · version you're editing; the topbar chip shows the live <strong>autosave status</strong>. All of it travels inside the <code>.smbq</code> file.</li>
+  <li>The <strong>Revisions &amp; Alternatives</strong> panel and the <strong>Working On</strong> card show which Alt · version you're editing; the topbar chip shows the live <strong>autosave status</strong>. All of it travels inside the <code>.boq</code> file.</li>
 </ul>
 <div class="tip">
   <strong>Exporting a draft?</strong> If you export the working copy before saving a version, the document is dated <strong>today</strong>. To put a specific date on a quotation, save it as a version and set that version's date.
@@ -546,18 +546,18 @@
 <p>If your BOQ contains <strong>buffer items</strong> (insurance stock, marked with the shield), every export first asks which document you want:</p>
 <ul>
   <li><strong>With buffer — for Quotation</strong>: all items included. Buffer rows are marked (blue-tinted in the PDF and in Excel, with a Buffer column) and totals are shown both <em>including</em> and <em>excluding</em> buffer. The file is named <code>…_BOQ(Buffer)</code>.</li>
-  <li><strong>Without buffer — for Sales Order</strong>: for ordering to SM Jakarta. Buffer items are left out of the list and totals entirely. The file is named <code>…_BOQ</code>.</li>
+  <li><strong>Without buffer — for Sales Order</strong>: for ordering to Head Office / Pricing Dept. Buffer items are left out of the list and totals entirely. The file is named <code>…_BOQ</code>.</li>
 </ul>
 <p>If the BOQ has no buffer items, the question is skipped and the export runs directly.</p>
 
 <h2>Export to Excel <span class="badge gold">EXCEL</span></h2>
-<p>Click <strong>Export Excel</strong> in the Overview header. The tool generates a styled <code>.xlsx</code> file in the branded document format — the Stella Mobili and MULYA logos at the top of every sheet, a project detail band, minimal ink-and-brass styling, blue-tinted buffer rows, and Rp number formats — with one sheet per unit plus a <strong>Summary</strong> sheet (unit totals and the full item list). Items are laid out <strong>group-first</strong>: each group is a band with its own subtotal, followed by an <em>Other items</em> band; a unit with no groups just lists its items flat. File name: <code>{Project Name}_{Date}_BOQ(Buffer).xlsx</code> (day-month-year) — the alternative/version is stated inside the document, not in the filename. Excel export works fully <strong>offline</strong> — no internet needed.</p>
+<p>Click <strong>Export Excel</strong> in the Overview header. The tool generates a styled <code>.xlsx</code> file in the branded document format — the BOQ Tool and MULYA logos at the top of every sheet, a project detail band, minimal ink-and-brass styling, blue-tinted buffer rows, and Rp number formats — with one sheet per unit plus a <strong>Summary</strong> sheet (unit totals and the full item list). Items are laid out <strong>group-first</strong>: each group is a band with its own subtotal, followed by an <em>Other items</em> band; a unit with no groups just lists its items flat. File name: <code>{Project Name}_{Date}_BOQ(Buffer).xlsx</code> (day-month-year) — the alternative/version is stated inside the document, not in the filename. Excel export works fully <strong>offline</strong> — no internet needed.</p>
 
 <h2>Save to PDF</h2>
-<p>Click <strong>Save PDF</strong> in the Overview header. The export popup lets you choose the page format — <strong>A4 Portrait</strong> (two-line items, compact notes) or <strong>A4 Landscape</strong> (one-line items, wide notes column). The tool generates the PDF itself and saves it directly — no print dialog, no printer settings, works offline. The document follows the branded BOQ format: Stella Mobili logo top-left, MULYA logo top-right, project detail band (with the exported version's date), one unit per section with elegant serif titles, <strong>group-first bands</strong> (group name + subtotal, a small KITCHEN / WARDROBE / ACCESSORIES tag per row, and an <em>Other items</em> band for anything ungrouped), blue-tinted buffer rows with a BUFFER tag (in the with-buffer version), grand total block, and page numbers. Filename: <code>{Project Name}_{Date}_BOQ(Buffer).pdf</code>.</p>
+<p>Click <strong>Save PDF</strong> in the Overview header. The export popup lets you choose the page format — <strong>A4 Portrait</strong> (two-line items, compact notes) or <strong>A4 Landscape</strong> (one-line items, wide notes column). The tool generates the PDF itself and saves it directly — no print dialog, no printer settings, works offline. The document follows the branded BOQ format: BOQ Tool logo top-left, MULYA logo top-right, project detail band (with the exported version's date), one unit per section with elegant serif titles, <strong>group-first bands</strong> (group name + subtotal, a small KITCHEN / WARDROBE / ACCESSORIES tag per row, and an <em>Other items</em> band for anything ungrouped), blue-tinted buffer rows with a BUFFER tag (in the with-buffer version), grand total block, and page numbers. Filename: <code>{Project Name}_{Date}_BOQ(Buffer).pdf</code>.</p>
 
 <h2>Choosing where files are saved</h2>
-<p>When the tool is opened by <strong>double-clicking the HTML file</strong>, the browser saves exports straight to your <strong>Downloads</strong> folder (browsers do not allow a location dialog for double-clicked pages). To be asked for a folder on every export, turn on this one-time browser setting: <strong>Chrome → Settings → Downloads → "Ask where to save each file before downloading"</strong>. After that, every PDF, Excel, and .smbq save opens the normal Windows Save As dialog.</p>
+<p>When the tool is opened by <strong>double-clicking the HTML file</strong>, the browser saves exports straight to your <strong>Downloads</strong> folder (browsers do not allow a location dialog for double-clicked pages). To be asked for a folder on every export, turn on this one-time browser setting: <strong>Chrome → Settings → Downloads → "Ask where to save each file before downloading"</strong>. After that, every PDF, Excel, and .boq save opens the normal Windows Save As dialog.</p>
 
 <!-- ═══════════════════════════════════════ CHAPTER 10 ═══════════════════════════════════════ -->
 <h1 class="chapter">10 · Tips &amp; Tricks</h1>
@@ -588,7 +588,7 @@
     </tr>
     <tr>
       <td>Per-item instructions</td>
-      <td>Use the <strong>Notes</strong> column for special instructions that should appear on the export (e.g. "custom size", "check availability with SM Jakarta").</td>
+      <td>Use the <strong>Notes</strong> column for special instructions that should appear on the export (e.g. "custom size", "check availability with Head Office / Pricing Dept").</td>
     </tr>
     <tr>
       <td>Bundle a package</td>
@@ -596,7 +596,7 @@
     </tr>
     <tr>
       <td>Track which version you sent</td>
-      <td>The <strong>Working On</strong> card in Overview shows the Alt · version you're on. Mark a version <strong>Ready for quotation</strong> before sending to SM Jakarta, and note the Alt/version label so you can match it if there are questions.</td>
+      <td>The <strong>Working On</strong> card in Overview shows the Alt · version you're on. Mark a version <strong>Ready for quotation</strong> before sending to Head Office / Pricing Dept, and note the Alt/version label so you can match it if there are questions.</td>
     </tr>
     <tr>
       <td>Item not in database</td>
@@ -610,7 +610,7 @@
 </table>
 
 <div class="page-footer">
-  <span>SM BOQ Tool — User Manual (EN) · Stella Mobili · PT. Mitra Usaha Lancar Jaya</span>
+  <span>BOQ Tool — User Manual (EN) · BOQ Tool · Your Company</span>
   <span>July 2026</span>
 </div>
 

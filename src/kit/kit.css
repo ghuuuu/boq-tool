@@ -1,5 +1,5 @@
 /* ============================================================
-   boq-kit · kit.css — shared chrome for the Mulya BOQ tools
+   boq-kit · kit.css — shared chrome for the BOQ tools
    ------------------------------------------------------------
    Injected by each tool's build BEFORE the tool's own <style>, so a brand
    template can still override a kit rule when it genuinely has to.

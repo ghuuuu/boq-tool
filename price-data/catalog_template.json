@@ -1,0 +1,23 @@
+{
+  "version": "v1.0.0",
+  "type": "sample",
+  "extractedAt": "2026-10-29",
+  "items": {
+    "Sample Category": [
+      {
+        "subcat": "Standard Units",
+        "desc": "Sample Cabinet Unit W600",
+        "w": 600,
+        "h": 720,
+        "d": 580,
+        "thickness": "18mm",
+        "unit": "set",
+        "notes": "Sample specification note",
+        "prices": {
+          "Standard Finish__standard": 1000000,
+          "Premium Finish__standard": 1250000
+        }
+      }
+    ]
+  }
+}
